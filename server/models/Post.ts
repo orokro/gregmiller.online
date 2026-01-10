@@ -17,8 +17,15 @@ const schema = new mongoose.Schema({
 	content: String,
 	date: Date,
 	flickrSetId: String,
-	legacyId: Number
+	legacyId: Number,
+	// --- NEW FIELDS ---
+	tags: [String],
+	categories: [String],
+	featuredImage: String, // e.g., "/wp-content/uploads/2012/05/pic.jpg"
+	nextGenGallery: [{     // For the local galleries
+		url: String,
+		caption: String
+	}]
 });
 
-// "posts" is the collection name
 export const Post = mongoose.model('Post', schema, 'posts');

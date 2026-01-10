@@ -13,11 +13,10 @@ import { Post } from '../models/Post';
 // define the API route handler
 export default defineEventHandler(async (event) => {
 
-	// Fetch latest 10 posts
 	const posts = await Post.find()
 		.sort({ date: -1 })
 		.limit(10)
-		.select('title slug date flickrSetId snippet'); // Select only what we need for the list
+		.select('title slug date flickrSetId featuredImage tags categories');
 
 	return posts;
 });

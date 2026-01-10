@@ -1,5 +1,6 @@
 # My directories and things
 misc
+public/wp-content
 
 # Nuxt dev/build outputs
 .output
