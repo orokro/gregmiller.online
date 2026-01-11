@@ -4,6 +4,11 @@
 
 	The main header component for the site, including navigation and category links.
 -->
+<script setup>
+
+const { data: categories } = await useFetch('/api/categories');
+
+</script>
 <template>
 
 	<header class="app-header">
@@ -27,13 +32,8 @@
 	</header>
 
 </template>
-<script setup>
-
-const { data: categories } = await useFetch('/api/categories');
-
-</script>
-
 <style scoped>
+
 .app-header {
 	background: #fff;
 	border-bottom: 1px solid #eee;
@@ -100,4 +100,5 @@ nav a.router-link-active {
 .category-link {
 	font-size: 0.9rem;
 }
+
 </style>
