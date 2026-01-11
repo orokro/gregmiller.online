@@ -1,8 +1,15 @@
+<!--
+	index.vue
+	---------
+
+	This is the main page of the site
+-->
 <script setup>
 
 // imports
 const { data, error } = await useFetch('/api/posts');
 
+// Log the results for debugging
 if (error.value) {
     console.error('API Error:', error.value);
 } else {
@@ -17,16 +24,19 @@ const getPostLink = (post) => {
 };
 
 </script>
-
 <template>
+
 	<div class="container">
+
 		<div v-if="error" class="error">
 			<p>Error loading posts: {{ error }}</p>
 		</div>
 
 		<div v-else-if="data" class="post-grid">
 			<article v-for="post in data" :key="post._id" class="card">
+
                 <NuxtLink :to="getPostLink(post)" class="card-link">
+
                     <div v-if="post.featuredImage" class="card-image">
                         <img :src="post.featuredImage" :alt="post.title" loading="lazy" />
                     </div>
@@ -50,9 +60,12 @@ const getPostLink = (post) => {
                             <span v-if="post.flickrSetId" class="badge flickr">📸 Flickr Set</span>
                         </div>
                     </div>
+
                 </NuxtLink>
+
 			</article>
 		</div>
+
 	</div>
 </template>
 <style scoped>
