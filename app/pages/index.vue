@@ -5,8 +5,12 @@
 			<p>Archives & Projects</p>
 		</header>
 
-		<div v-if="posts" class="post-grid">
-			<article v-for="post in posts" :key="post._id" class="card">
+		<div v-if="error" class="error">
+			<p>Error loading posts: {{ error }}</p>
+		</div>
+
+		<div v-else-if="data" class="post-grid">
+			<article v-for="post in data" :key="post._id" class="card">
 
 				<div v-if="post.featuredImage" class="card-image">
 					<img :src="post.featuredImage" :alt="post.title" loading="lazy" />
@@ -35,9 +39,17 @@
 		</div>
 	</div>
 </template>
-<script setup lang="ts">
+<script setup>
 
-const { data: posts } = await useFetch('/api/posts');
+// imports
+const { data, error } = await useFetch('/api/posts');
+
+if (error.value) {
+    console.error('API Error:', error.value);
+} else {
+    console.log('API Data:', data.value);
+}
+
 </script>
 <style scoped>
 .container {

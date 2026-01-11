@@ -1,5 +1,5 @@
 /*
-	posts.get.ts
+	posts.get.js
 	------------
 
 	This API route handles GET requests to fetch a list of blog posts.
@@ -9,14 +9,27 @@
 
 // imports
 import { Post } from '../models/Post';
+import { connectDb } from '../utils/db';
 
 // define the API route handler
 export default defineEventHandler(async (event) => {
+    console.log('API: /api/posts called');
+	await connectDb();
 
-	const posts = await Post.find()
-		.sort({ date: -1 })
-		.limit(10)
-		.select('title slug date flickrSetId featuredImage tags categories');
+	const query = getQuery(event);
+	const filter = {};
+
+	if (query.category) {
+		filter.categories = query.category;
+	}
+
+    console.log('API: Fetching posts with filter:', filter);
+    // Fetch the latest 10 posts, sorted by date descending
+    const posts = await Post.find(filter)
+        .sort({ date: -1 })
+        .limit(10);
+    
+    console.log(`API: Found ${posts.length} posts`);
 
 	return posts;
 });
