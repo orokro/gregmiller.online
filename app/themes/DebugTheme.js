@@ -105,9 +105,20 @@ export class DebugTheme {
 	updateBox(manager, data, rect) {
 
 		// Resize the center cube to match the div size
-		const cube = data.empties.center.getObjectByName("debug_cube");
-		if (cube) {
-			cube.scale.set(rect.width, rect.height, 100); // 100px deep
-		}
+        const cube = data.empties.center.getObjectByName("debug_cube");
+
+        if (cube) {
+            const depth = 100; // Arbitrary depth for the debug box
+
+            // 1. Scale
+            cube.scale.set(rect.width, rect.height, depth);
+
+            // 2. Position Shift
+            // By default, a box is centered at (0,0,0).
+            // We want the front face to be at Z = 0.
+            // Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
+            // We need to move it back by depth/2 so it extends from 0 to -depth.
+            cube.position.z = -depth / 2;
+        }
 	}
 }

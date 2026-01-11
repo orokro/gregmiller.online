@@ -39,6 +39,17 @@ onMounted(() => {
 </script>
 <style scoped>
 
+/* Global Reset for Box Sizing */
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	overflow-x: hidden; /* Prevent horizontal scroll from 3D canvas if any */
+}
+
 .app-root {
 	position: relative;
 	width: 100%;

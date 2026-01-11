@@ -59,6 +59,19 @@ export class ThreeManager {
 
 
 	/**
+	 * Clean up resources and event listeners when destroying the manager.
+	 */
+    destroy() {
+
+        if (this.resizeObserver)
+			this.resizeObserver.disconnect();
+
+        window.removeEventListener('scroll', this.onScroll.bind(this));
+        // ... dispose renderer ...
+    }
+
+
+	/**
 	 * Sets up the scene, camera, renderer, and events.
 	 */
 	init() {
@@ -89,16 +102,22 @@ export class ThreeManager {
 		this.setupBackground();
 
 		// 6. Bind Events
-		window.addEventListener('resize', this.onResize.bind(this));
-		window.addEventListener('scroll', this.onScroll.bind(this));
+        // window.addEventListener('resize', this.onResize.bind(this)); // <-- REMOVE THIS
+        window.addEventListener('scroll', this.onScroll.bind(this));
 
-		// 7. Load Default Theme
-		this.setTheme(DebugTheme);
+        // NEW: Use ResizeObserver for robust layout detection
+        this.resizeObserver = new ResizeObserver(() => {
+            this.onResize();
+        });
+        this.resizeObserver.observe(document.body);
 
-		// 8. Start Loop
-		this.isOk = true;
-		this.onResize(); // Force initial sync
-		this.tick();
+        // 7. Load Default Theme
+        this.setTheme(DebugTheme);
+
+        // 8. Start Loop
+        this.isOk = true;
+        // this.onResize(); // <-- ResizeObserver fires immediately on observe, so we don't strictly need this manual call anymore
+        this.tick();
 	}
 
 
@@ -341,6 +360,10 @@ export class ThreeManager {
 	 * Handle window resize events.
 	 */
 	onResize() {
+
+		// Safety check if destroyed
+        if (!this.renderer)
+			return;
 
 		this.width = window.innerWidth;
 		this.height = window.innerHeight;
