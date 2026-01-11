@@ -72,6 +72,8 @@ onUnmounted(() => {
 
 .container-3d {
 	position: relative;
+    /* FIX: Force container to fill flex parents so it matches 'width: 100%' children */
+    width: 100%;
 }
 
 .container-3d.no-3d {

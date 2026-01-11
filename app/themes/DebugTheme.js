@@ -32,11 +32,11 @@ export class DebugTheme {
 
 		// Load assets if needed (graph paper)
 		// For now we just use colors
-		if (manager.bgPlane) {
-			manager.bgPlane.material.color.set(0xe0e0e0);
-			manager.bgPlane.material.map = null;
-			manager.bgPlane.material.needsUpdate = true;
-		}
+		// if (manager.bgPlane) {
+		// 	manager.bgPlane.material.color.set(0xe0e0e0);
+		// 	manager.bgPlane.material.map = null;
+		// 	manager.bgPlane.material.needsUpdate = true;
+		// }
 
 		// Prepare reusable materials/geometries
 		this.boxMaterial = new THREE.MeshBasicMaterial({

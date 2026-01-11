@@ -37,6 +37,7 @@ export class ThreeManager {
 		this.width = window.innerWidth;
 		this.height = window.innerHeight;
 		this.scrollY = window.scrollY;
+		this.scrollX = window.scrollX;
 
 		// Asset Management
 		this.assets = new Map();
@@ -67,7 +68,12 @@ export class ThreeManager {
 			this.resizeObserver.disconnect();
 
         window.removeEventListener('scroll', this.onScroll.bind(this));
-        // ... dispose renderer ...
+
+        // Dispose renderer
+		if (this.renderer) {
+			this.renderer.dispose();
+			this.renderer = null;
+		}
     }
 
 
@@ -114,9 +120,10 @@ export class ThreeManager {
         // 7. Load Default Theme
         this.setTheme(DebugTheme);
 
+		// we gucci
+		this.isOk = true;
+
         // 8. Start Loop
-        this.isOk = true;
-        // this.onResize(); // <-- ResizeObserver fires immediately on observe, so we don't strictly need this manual call anymore
         this.tick();
 	}
 
@@ -127,13 +134,37 @@ export class ThreeManager {
 	 */
 	setupBackground() {
 
-		// Created at bgZ depth. Scaled to fill view in onResize.
+		// We parent the BG to the camera so it follows us forever.
+		// We will animate the texture offset to simulate parallax.
 		const geometry = new THREE.PlaneGeometry(1, 1);
-		const material = new THREE.MeshBasicMaterial({ color: 0xe0e0e0 }); // Default gray
+
+		// Load Texture
+		const loader = new THREE.TextureLoader();
+		const texture = loader.load('/img/bg_graph_paper.jpg');
+
+		// IMPORTANT: Enable wrapping so we can shift UVs infinitely
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+
+		// Make our own material so we can control opacity and color tint
+		const material = new THREE.MeshBasicMaterial({
+			map: texture,
+			color: 0xffffff,
+			transparent: true,
+			opacity: 1
+		});
 
 		this.bgPlane = new THREE.Mesh(geometry, material);
-		this.bgPlane.position.z = this.config.bgZ;
-		this.scene.add(this.bgPlane);
+
+		// Put it deep in the scene
+		// Since it's a child of CAMERA, this Z is relative to Camera.
+		// Camera is at +1000. We want BG at -500 world space.
+		// So relative Z = -1500.
+		this.bgPlane.position.z = -1500;
+
+		// Add to Camera, not Scene!
+		this.camera.add(this.bgPlane);
+		this.scene.add(this.camera);
 	}
 
 
@@ -370,11 +401,25 @@ export class ThreeManager {
 		this.renderer.setSize(this.width, this.height);
 		this.updateFOV();
 
-		// Scale background plane
-		const distBg = this.camera.position.z - this.config.bgZ;
+		// Update BG Plane Scale to fill the camera view
+		// Since it's parented to camera, we calculate size at its relative depth (-1500)
+		const distBg = 1500; // Hardcoded matches the z-position set in setupBackground
 		const vH = 2 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
 		const vW = vH * this.camera.aspect;
-		if (this.bgPlane) this.bgPlane.scale.set(vW, vH, 1);
+
+		// Scale background plane & adjust texture repeat for consistent grid size
+		if (this.bgPlane) {
+			this.bgPlane.scale.set(vW, vH, 1);
+
+			// Update Texture repeat to keep scale consistent regardless of screen size
+			// Assuming texture is 512px
+			if (this.bgPlane.material.map) {
+				const tex = this.bgPlane.material.map;
+
+				// This math makes the grid size constant on screen
+				tex.repeat.set(vW / 1000, vH / 1000);
+			}
+		}
 
 		// Update all elements
 		this.registeredElements.forEach((_, id) => this.updateElementPosition(id));
@@ -388,7 +433,20 @@ export class ThreeManager {
 	onScroll() {
 
 		this.scrollY = window.scrollY;
+		this.scrollX = window.scrollX;
+
+		// 1. Move Camera
 		this.camera.position.y = -this.scrollY;
+		this.camera.position.x = this.scrollX; // Track Horizontal Scroll
+
+		// 2. Parallax Background
+		// We shift the texture offset, not the plane position (since plane is locked to camera)
+		if (this.bgPlane && this.bgPlane.material.map) {
+			const parallaxFactor = 0.0005; // Adjust speed
+			this.bgPlane.material.map.offset.y = this.scrollY * parallaxFactor;
+			this.bgPlane.material.map.offset.x = this.scrollX * parallaxFactor;
+		}
+
 		this.requestRender();
 	}
 
@@ -418,12 +476,13 @@ export class ThreeManager {
 
 		// 1. Position Main Group (Center of Element)
 		const docTop = rect.top + this.scrollY;
-		const docLeft = rect.left;
+		const docLeft = rect.left + this.scrollX;
 		const halfW = rect.width / 2;
 		const halfH = rect.height / 2;
 
 		// X: -ScreenW/2 + Left + HalfWidth
 		group.position.x = (-this.width / 2) + docLeft + halfW;
+
 		// Y: ScreenH/2 - Top - HalfHeight
 		group.position.y = (this.height / 2) - docTop - halfH;
 
