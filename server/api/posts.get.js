@@ -13,7 +13,8 @@ import { connectDb } from '../utils/db';
 
 // define the API route handler
 export default defineEventHandler(async (event) => {
-    console.log('API: /api/posts called');
+
+    // console.log('API: /api/posts called');
 	await connectDb();
 
 	const query = getQuery(event);
@@ -23,12 +24,13 @@ export default defineEventHandler(async (event) => {
 		filter.categories = query.category;
 	}
 
-    console.log('API: Fetching posts with filter:', filter);
+    // console.log('API: Fetching posts with filter:', filter);
+
     // Fetch the latest 10 posts, sorted by date descending
     const posts = await Post.find(filter)
         .sort({ date: -1 })
         .limit(10);
-    
+
     console.log(`API: Found ${posts.length} posts`);
 
 	return posts;
