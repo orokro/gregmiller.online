@@ -85,6 +85,7 @@ import Container3D from '~/components/Container3D.vue';
 }
 
 .box-content {
+	box-sizing: border-box;
 	background: rgba(255, 255, 255, 0.8);
 	padding: 2rem;
 	border-radius: 8px;

@@ -37,7 +37,7 @@ onMounted(() => {
 });
 
 </script>
-<style scoped>
+<style>
 
 /* Global Reset for Box Sizing */
 *, *::before, *::after {

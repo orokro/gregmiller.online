@@ -158,9 +158,9 @@ export class ThreeManager {
 
 		// Put it deep in the scene
 		// Since it's a child of CAMERA, this Z is relative to Camera.
-		// Camera is at +1000. We want BG at -500 world space.
-		// So relative Z = -1500.
-		this.bgPlane.position.z = -1500;
+		// Camera is at +1000. We want BG at -100 world space.
+		// So relative Z = -1100.
+		this.bgPlane.position.z = -1101;
 
 		// Add to Camera, not Scene!
 		this.camera.add(this.bgPlane);
@@ -403,20 +403,20 @@ export class ThreeManager {
 
 		// Update BG Plane Scale to fill the camera view
 		// Since it's parented to camera, we calculate size at its relative depth (-1500)
-		const distBg = 1500; // Hardcoded matches the z-position set in setupBackground
+		// Calculate how big the plane needs to be to fill the view at depth -1101
+		// We use the exact relative distance here
+		const distBg = 1101;
 		const vH = 2 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
 		const vW = vH * this.camera.aspect;
 
-		// Scale background plane & adjust texture repeat for consistent grid size
 		if (this.bgPlane) {
 			this.bgPlane.scale.set(vW, vH, 1);
 
-			// Update Texture repeat to keep scale consistent regardless of screen size
-			// Assuming texture is 512px
 			if (this.bgPlane.material.map) {
 				const tex = this.bgPlane.material.map;
 
-				// This math makes the grid size constant on screen
+				// CRITICAL: This defines our "World Scale" for the texture.
+				// We say: "One texture repeat equals 1000 World Units".
 				tex.repeat.set(vW / 1000, vH / 1000);
 			}
 		}
@@ -442,9 +442,15 @@ export class ThreeManager {
 		// 2. Parallax Background
 		// We shift the texture offset, not the plane position (since plane is locked to camera)
 		if (this.bgPlane && this.bgPlane.material.map) {
-			const parallaxFactor = 0.0005; // Adjust speed
-			this.bgPlane.material.map.offset.y = this.scrollY * parallaxFactor;
-			this.bgPlane.material.map.offset.x = this.scrollX * parallaxFactor;
+
+            // "1000" here must match the divisor used in tex.repeat.set() above.
+            const worldUnitScale = 1000;
+
+			// We move the texture opposite to the camera to simulate a static world.
+            // Since plane is parented to camera, it moves WITH camera.
+            // We counteract that movement 1:1.
+			this.bgPlane.material.map.offset.y = -this.scrollY / worldUnitScale;
+			this.bgPlane.material.map.offset.x = this.scrollX / worldUnitScale;
 		}
 
 		this.requestRender();
@@ -471,14 +477,47 @@ export class ThreeManager {
 		if (!data)
 			return;
 
-		const rect = data.element.getBoundingClientRect();
+		// ------------------------------------------------------------
+        // CORNER SYSTEM MEASUREMENT
+        // ------------------------------------------------------------
+
+        // Find our corner markers
+        const el = data.element;
+        const cTL = el.querySelector('.top-left');
+        const cBR = el.querySelector('.bottom-right');
+
+        // If markers are missing (e.g. before Vue mount finishes), bail
+        if (!cTL || !cBR) return;
+
+        const rectTL = cTL.getBoundingClientRect();
+        const rectBR = cBR.getBoundingClientRect();
+
+        // Calculate precise edges
+        // TL Top is exactly Container Top
+        // TL Left is exactly Container Left
+        // BR Top is exactly Container Bottom (because it's bottom: -1px, height: 1px)
+        // BR Left is exactly Container Right (because it's right: -1px, width: 1px)
+
+        const top = rectTL.top;
+        const left = rectTL.left;
+        const bottom = rectBR.top;
+        const right = rectBR.left;
+
+        const width = right - left;
+        const height = bottom - top;
+
+        // ------------------------------------------------------------
+        // 3D POSITIONING
+        // ------------------------------------------------------------
+
+
 		const group = data.group;
 
 		// 1. Position Main Group (Center of Element)
-		const docTop = rect.top + this.scrollY;
-		const docLeft = rect.left + this.scrollX;
-		const halfW = rect.width / 2;
-		const halfH = rect.height / 2;
+		const docTop = top + this.scrollY;
+		const docLeft = left + this.scrollX;
+		const halfW = width / 2;
+		const halfH = height / 2;
 
 		// X: -ScreenW/2 + Left + HalfWidth
 		group.position.x = (-this.width / 2) + docLeft + halfW;
@@ -506,8 +545,10 @@ export class ThreeManager {
 		empties.br.position.set(halfW, -halfH, 0);
 
 		// 3. Notify Theme (for resizing content)
+		// We pass a synthetic rect to match the old API, just in case
+        const syntheticRect = { width, height, top, left };
 		if (data.type === 'box' && this.currentTheme) {
-			this.currentTheme.updateBox(this, data, rect);
+			this.currentTheme.updateBox(this, data, syntheticRect);
 		}
 	}
 
