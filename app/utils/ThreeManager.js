@@ -10,7 +10,10 @@
 // imports
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DebugTheme } from '../themes/DebugTheme'; // Default theme
+
+// Themes
+import { GlassTheme } from '../themes/GlassTheme';
+import { DebugTheme } from '../themes/DebugTheme';
 
 // the money
 export class ThreeManager {
@@ -51,6 +54,7 @@ export class ThreeManager {
 
 		// Theming
 		this.currentTheme = null;
+		this.envTexture = null;
 
 		// Loop Control
 		this.isOk = false;       // WebGL Capability
@@ -119,11 +123,11 @@ export class ThreeManager {
         });
         this.resizeObserver.observe(document.body);
 
-        // 7. Load Default Theme
-        this.setTheme(DebugTheme);
-
 		// we gucci
 		this.isOk = true;
+
+        // 7. Load Default Theme
+        this.setTheme(GlassTheme);
 
         // 8. Start Loop
         this.tick();
@@ -154,11 +158,14 @@ export class ThreeManager {
 		texture.wrapT = THREE.RepeatWrapping;
 
 		// Make our own material so we can control opacity and color tint
-		const material = new THREE.MeshBasicMaterial({
+		const material = new THREE.MeshPhysicalMaterial({
 			map: texture,
 			color: 0xffffff,
-			transparent: true,
-			opacity: 1
+			roughness: 0,
+			metalness: 0,
+			emissive:  0x666666,
+			// transparent: true,
+			// opacity: 0.1
 		});
 
 		this.bgPlane = new THREE.Mesh(geometry, material);
@@ -231,6 +238,50 @@ export class ThreeManager {
 		if (mode === 'active')
 			this.tick(); // kickstart if stopped
 	}
+
+
+	/**
+     * Set the scene environment texture (for reflections/lighting).
+     * @param {string} url - Path to image (jpg/hdr)
+     * @param {number} exposure - Exposure level (default 1.0)
+     */
+    setEnvironmentTexture(url, exposure = 1.0) {
+
+        if (!this.renderer)
+			return;
+
+        // Clean up old
+        this.clearEnvironmentTexture();
+
+        const loader = new THREE.TextureLoader();
+        loader.load(url, (texture) => {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.colorSpace = THREE.SRGBColorSpace;
+
+            this.scene.environment = texture;
+            this.envTexture = texture;
+
+            // Optional: If we wanted the background to be the image too
+            // this.scene.background = texture;
+
+            this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            this.renderer.toneMappingExposure = exposure;
+
+            this.requestRender();
+        });
+    }
+
+
+	/**
+     * Clear the environment texture.
+     */
+    clearEnvironmentTexture() {
+        if (this.envTexture) {
+            this.envTexture.dispose();
+            this.envTexture = null;
+        }
+        this.scene.environment = null;
+    }
 
 
 	/* ==========================================================================

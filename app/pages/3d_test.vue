@@ -27,6 +27,12 @@ import Container3D from '~/components/Container3D.vue';
 				<div class="box-content">
 					<h2>Center Box</h2>
 					<p>I should have a red wireframe around me.</p>
+					<p>I should have a red wireframe around me.</p>
+					<p>I should have a red wireframe around me.</p>
+					<p>I should have a red wireframe around me.</p>
+					<p>I should have a red wireframe around me.</p>
+					<p>I should have a red wireframe around me.</p>
+
 				</div>
 			</Container3D>
 		</section>
@@ -87,10 +93,10 @@ import Container3D from '~/components/Container3D.vue';
 
 .box-content {
 	box-sizing: border-box;
-	background: rgba(255, 255, 255, 0.8);
+	/* background: rgba(255, 255, 255, 0.2); */
 	padding: 2rem;
 	border-radius: 8px;
-	box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+	/* box-shadow: 0 4px 10px rgba(0,0,0,0.1); */
 	text-align: center;
 	/* Ensure the div has size */
 	min-width: 200px;
