@@ -30,7 +30,9 @@ export class ThreeManager {
 			cameraZ: 1000,     // The camera distance
 			planeZ: 0,         // The plane where 1 unit = 1 pixel
 			bgZ: -500,         // The depth of the background plane
-			bgColor: 0xf0f0f0  // Default fog/bg color (themes can override)
+			bgColor: 0xf0f0f0,  // Default fog/bg color (themes can override)
+			perspectiveX: 0,
+            perspectiveY: 0
 		};
 
 		// State
@@ -140,7 +142,12 @@ export class ThreeManager {
 
 		// Load Texture
 		const loader = new THREE.TextureLoader();
-		const texture = loader.load('/img/bg_graph_paper.jpg');
+		const texture = loader.load(
+			'/img/bg_graph_paper.jpg',
+			() => {
+				this.requestRender();
+			}
+		);
 
 		// IMPORTANT: Enable wrapping so we can shift UVs infinitely
 		texture.wrapS = THREE.RepeatWrapping;
@@ -383,6 +390,25 @@ export class ThreeManager {
 		const fov = 2 * Math.atan((this.height / 2) / dist) * (180 / Math.PI);
 		this.camera.fov = fov;
 		this.camera.aspect = this.width / this.height;
+
+		// FIX 2a: Lens Shift (Part 1)
+        // Reset view offset to recalculate it cleanly
+        this.camera.clearViewOffset();
+
+        // Apply the offset to the PROJECTION, forcing the center back to the middle
+        // Note: signs must align with onScroll addition.
+        this.camera.setViewOffset(
+            this.width,
+            this.height,
+            this.config.perspectiveX,
+            -this.config.perspectiveY, // Y axis in ViewOffset is Top-Down usually
+            this.width,
+            this.height
+        );
+
+		this.camera.position.y = -this.scrollY - this.config.perspectiveY;
+		this.camera.position.x = this.scrollX - this.config.perspectiveX;
+
 		this.camera.updateProjectionMatrix();
 	}
 
@@ -406,7 +432,7 @@ export class ThreeManager {
 		// Calculate how big the plane needs to be to fill the view at depth -1101
 		// We use the exact relative distance here
 		const distBg = 1101;
-		const vH = 2 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
+		const vH = 4 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
 		const vW = vH * this.camera.aspect;
 
 		if (this.bgPlane) {
@@ -436,8 +462,12 @@ export class ThreeManager {
 		this.scrollX = window.scrollX;
 
 		// 1. Move Camera
-		this.camera.position.y = -this.scrollY;
-		this.camera.position.x = this.scrollX; // Track Horizontal Scroll
+		this.camera.position.y = -this.scrollY - this.config.perspectiveY;
+		this.camera.position.x = this.scrollX - this.config.perspectiveX; // Track Horizontal Scroll
+
+		// Move the camera PHYSICALLY to the side
+		// this.camera.position.y = -this.scrollY + this.config.perspectiveY;
+		// this.camera.position.x = this.scrollX + this.config.perspectiveX;
 
 		// 2. Parallax Background
 		// We shift the texture offset, not the plane position (since plane is locked to camera)

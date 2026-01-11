@@ -82,6 +82,7 @@ import Container3D from '~/components/Container3D.vue';
 	display: flex;
 	justify-content: center;
 	gap: 2rem;
+
 }
 
 .box-content {
