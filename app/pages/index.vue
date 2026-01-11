@@ -1,44 +1,3 @@
-<template>
-	<div class="container">
-		<header>
-			<h1>Greg Miller Online</h1>
-			<p>Archives & Projects</p>
-		</header>
-
-		<div v-if="error" class="error">
-			<p>Error loading posts: {{ error }}</p>
-		</div>
-
-		<div v-else-if="data" class="post-grid">
-			<article v-for="post in data" :key="post._id" class="card">
-
-				<div v-if="post.featuredImage" class="card-image">
-					<img :src="post.featuredImage" :alt="post.title" loading="lazy" />
-				</div>
-				<div v-else class="card-image placeholder">
-					<span>No Image</span>
-				</div>
-
-				<div class="card-content">
-					<div class="meta">
-						<span class="date">{{ new Date(post.date).toLocaleDateString() }}</span>
-						<span v-if="post.categories?.length" class="category">{{ post.categories[0] }}</span>
-					</div>
-
-					<h2>{{ post.title }}</h2>
-
-					<div class="tags" v-if="post.tags?.length">
-						<span v-for="tag in post.tags.slice(0, 3)" :key="tag">#{{ tag }}</span>
-					</div>
-
-					<div class="badges">
-						<span v-if="post.flickrSetId" class="badge flickr">📸 Flickr Set</span>
-					</div>
-				</div>
-			</article>
-		</div>
-	</div>
-</template>
 <script setup>
 
 // imports
@@ -50,7 +9,52 @@ if (error.value) {
     console.log('API Data:', data.value);
 }
 
+const getPostLink = (post) => {
+    const d = new Date(post.date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `/${year}/${month}/${post.slug}`;
+};
+
 </script>
+
+<template>
+	<div class="container">
+		<div v-if="error" class="error">
+			<p>Error loading posts: {{ error }}</p>
+		</div>
+
+		<div v-else-if="data" class="post-grid">
+			<article v-for="post in data" :key="post._id" class="card">
+                <NuxtLink :to="getPostLink(post)" class="card-link">
+                    <div v-if="post.featuredImage" class="card-image">
+                        <img :src="post.featuredImage" :alt="post.title" loading="lazy" />
+                    </div>
+                    <div v-else class="card-image placeholder">
+                        <span>No Image</span>
+                    </div>
+
+                    <div class="card-content">
+                        <div class="meta">
+                            <span class="date">{{ new Date(post.date).toLocaleDateString() }}</span>
+                            <span v-if="post.categories?.length" class="category">{{ post.categories[0] }}</span>
+                        </div>
+
+                        <h2>{{ post.title }}</h2>
+
+                        <div class="tags" v-if="post.tags?.length">
+                            <span v-for="tag in post.tags.slice(0, 3)" :key="tag">#{{ tag }}</span>
+                        </div>
+
+                        <div class="badges">
+                            <span v-if="post.flickrSetId" class="badge flickr">📸 Flickr Set</span>
+                        </div>
+                    </div>
+                </NuxtLink>
+			</article>
+		</div>
+	</div>
+</template>
 <style scoped>
 .container {
 	max-width: 1200px;
@@ -80,6 +84,13 @@ header {
 .card:hover {
 	transform: translateY(-5px);
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
 }
 
 .card-image {
