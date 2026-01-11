@@ -1,5 +1,13 @@
+<!--
+	[month]/[year]/[slug].vue
+	-------------------------
+
+	This page displays a single post based on the year, month, and slug in the URL.
+-->
 <template>
+
 	<div class="post-container" v-if="post">
+
 		<header class="post-header">
 			<h1 class="title">{{ post.title }}</h1>
 			<div class="meta">
@@ -12,6 +20,7 @@
 
 		<div class="post-content" v-html="post.content"></div>
 	</div>
+
 </template>
 <script setup>
 
@@ -56,4 +65,5 @@ if (error.value) {
 	max-width: 100%;
 	height: auto;
 }
+
 </style>
