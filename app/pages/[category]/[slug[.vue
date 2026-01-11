@@ -5,6 +5,16 @@
 	This page displays a list of posts for a given category
 	The category is determined by the URL slug.
 -->
+<script setup>
+
+const route = useRoute();
+const categorySlug = route.params.slug;
+
+const { data: posts } = await useFetch('/api/posts', {
+	query: { category: categorySlug }
+});
+
+</script>
 <template>
 
 	<div class="container">
@@ -29,16 +39,6 @@
 	</div>
 
 </template>
-<script setup>
-
-const route = useRoute();
-const categorySlug = route.params.slug;
-
-const { data: posts } = await useFetch('/api/posts', {
-	query: { category: categorySlug }
-});
-
-</script>
 <style scoped>
 
 .container {

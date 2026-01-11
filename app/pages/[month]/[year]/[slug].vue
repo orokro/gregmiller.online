@@ -4,6 +4,17 @@
 
 	This page displays a single post based on the year, month, and slug in the URL.
 -->
+<script setup>
+
+const route = useRoute();
+
+// We only really need the slug to find the post
+const { data: post, error } = await useFetch(`/api/post/${route.params.slug}`);
+
+if (error.value) {
+	throw createError({ statusCode: 404, statusMessage: 'Post not found' });
+}
+</script>
 <template>
 
 	<div class="post-container" v-if="post">
@@ -22,17 +33,6 @@
 	</div>
 
 </template>
-<script setup>
-
-const route = useRoute();
-
-// We only really need the slug to find the post
-const { data: post, error } = await useFetch(`/api/post/${route.params.slug}`);
-
-if (error.value) {
-	throw createError({ statusCode: 404, statusMessage: 'Post not found' });
-}
-</script>
 <style scoped>
 
 /* Minimal "Reader" Styles */

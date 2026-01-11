@@ -4,6 +4,9 @@
 
 	The Urban Ex page. This is a placeholder while I migrate content from the old site.
 -->
+<script setup>
+
+</script>
 <template>
 
 	<div class="static-page">
