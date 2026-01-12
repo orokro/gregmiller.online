@@ -11,9 +11,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+
 // Themes
 import { GlassTheme } from '../themes/GlassTheme';
 import { DebugTheme } from '../themes/DebugTheme';
+
 // Simple UUID generator (Works everywhere, no crypto requirement)
 function uuid() {
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -44,6 +46,7 @@ export class ThreeManager {
 			perspectiveX: 0,
 			perspectiveY: 0
 		};
+
 		// State
 		this.width = window.innerWidth;
 		this.height = window.innerHeight;
@@ -53,8 +56,10 @@ export class ThreeManager {
 		// Asset Management
 		this.assets = new Map();
 		this.loadingPromises = new Map();
+
 		// DOM elements synced to 3D
 		this.registeredElements = new Map();
+
 		// Theming
 		this.currentTheme = null;
 		this.envTexture = null;
@@ -62,6 +67,7 @@ export class ThreeManager {
 		// Loop Control
 		this.isOk = false;       // WebGL Capability
 		this.isDirty = true;
+
 		// For lazy rendering
 		this.frameMode = 'lazy'; // 'lazy' or 'active' (60fps)
 
@@ -109,6 +115,7 @@ export class ThreeManager {
 		// 2. Scene Setup
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(this.config.bgColor);
+
 		// 3. Camera Setup
 		this.camera = new THREE.PerspectiveCamera(50, this.width / this.height, 10, 10000);
 		this.camera.position.z = this.config.cameraZ;
@@ -137,7 +144,7 @@ export class ThreeManager {
 			window.visualViewport.addEventListener('resize', this.onVisualResize);
 		}
 
-		// NEW: Robust ResizeObserver
+		// Make sure onResize is called at least once to set initial sizes and FOV
 		this.resizeObserver = new ResizeObserver((entries) => {
 			let needsGlobalUpdate = false;
 			for (const entry of entries) {
@@ -149,6 +156,7 @@ export class ThreeManager {
 		});
 		this.resizeObserver.observe(document.body);
 
+		// we're good to go!
 		this.isOk = true;
 
 		// 7. Load Default Theme
@@ -166,8 +174,12 @@ export class ThreeManager {
 	 * Sets up the infinite background plane.
 	 */
 	setupBackground() {
+
+		// build a plane for the background
 		const geometry = new THREE.PlaneGeometry(1, 1);
 		const loader = new THREE.TextureLoader();
+
+		// our our default background texture (a subtle graph paper)
 		const texture = loader.load(
 			'/img/bg_graph_paper.jpg',
 			() => {
@@ -177,6 +189,9 @@ export class ThreeManager {
 		texture.colorSpace = THREE.SRGBColorSpace;
 		texture.wrapS = THREE.RepeatWrapping;
 		texture.wrapT = THREE.RepeatWrapping;
+
+		// build a texture-mapped material for the background
+		// no tone mapping, we want the colors to be exactly as they are in the texture
 		const material = new THREE.MeshPhysicalMaterial({
 			map: texture,
 			color: 0xffffff,
@@ -185,8 +200,8 @@ export class ThreeManager {
 		});
 		material.toneMapped = false;
 
+		// add the background plane to the scene, positioned at the back
 		this.bgPlane = new THREE.Mesh(geometry, material);
-
 		this.bgPlane.position.z = -1101;
 		this.camera.add(this.bgPlane);
 		this.scene.add(this.camera);
@@ -197,17 +212,28 @@ export class ThreeManager {
 	   THEME SYSTEM
 	   ========================================================================== */
 
+	/**
+	 * Set the current theme, which defines how 3D elements are built and updated.
+	 *
+	 * @param {Constructor} ThemeClass - theme class
+	 */
 	setTheme(ThemeClass) {
-		if (!ThemeClass) return;
+
+		// gtfo if no theme
+		if (!ThemeClass)
+			return;
 		console.log(`ThreeManager: Switching theme to ${ThemeClass.name}`);
 
+		// Clean up old theme if exists
 		if (this.currentTheme) {
 			this.currentTheme.destroy(this);
 		}
 
+		// Set new theme & init
 		this.currentTheme = new ThemeClass();
 		this.currentTheme.init(this);
 
+		// make sure all registered elements are updated to use the new theme's styles
 		this.registeredElements.forEach((data) => {
 			if (data.type === 'box') {
 				this.cleanGroupChildren(data.empties.center);
@@ -218,19 +244,39 @@ export class ThreeManager {
 				this.currentTheme.buildBox(this, data);
 			}
 		});
+
 		this.requestRender();
 	}
 
+
+	/**
+	 * Sets our render mode to either "active" (continuous) or "lazy" (on-demand).
+	 *
+	 * @param {String} mode - either "active" or "lazy", "active" is requestAnimationFrame loop on
+	 */
 	setFrameMode(mode) {
 		this.frameMode = mode;
 		if (mode === 'active')
 			this.tick();
 	}
 
+
+	/**
+	 * Set the environment texture for image-based lighting in the scene.
+	 *
+	 * @param {string} url - location of new texture
+	 * @param {Number} exposure - how bright the environment texture should be
+	 */
 	setEnvironmentTexture(url, exposure = 1.0) {
-		if (!this.renderer) return;
+
+		// gtfo if  no url or renderer
+		if (!url || !this.renderer)
+			return;
+
+		// clean up old texture if exists
 		this.clearEnvironmentTexture();
 
+		// pick loader based on file extension
 		const ext = url.split('.').pop().toLowerCase();
 		let loader;
 		if (ext === 'hdr') {
@@ -239,6 +285,7 @@ export class ThreeManager {
 			loader = new THREE.TextureLoader();
 		}
 
+		// load the new texture
 		loader.load(url, (texture) => {
 			texture.mapping = THREE.EquirectangularReflectionMapping;
 			if (ext !== 'hdr') {
@@ -252,6 +299,10 @@ export class ThreeManager {
 		});
 	}
 
+
+	/**
+	 * Clean up the current environment texture to free GPU memory.
+	 */
 	clearEnvironmentTexture() {
 		if (this.envTexture) {
 			this.envTexture.dispose();
@@ -264,26 +315,53 @@ export class ThreeManager {
 	/* ==========================================================================
 	   ASSET MANAGEMENT
 	   ========================================================================== */
+
+	/**
+	 * Loads assets (models, textures) asynchronously and returns them as Three.js objects.
+	 *
+	 * @param {String[]} urls - list of assets to async load
+	 * @returns {Object3D[]} - array of loaded assets in the same order as the input URLs.
+	 */
 	async assetsReady(urls) {
-		if (!this.isOk) return [];
+
+		// gtfo if no urls
+		if (!this.isOk)
+			return [];
+
+		// Helper to load a single asset with caching and promise management
 		const loadOne = (url) => {
-			if (this.assets.has(url)) return Promise.resolve(this.assets.get(url));
-			if (this.loadingPromises.has(url)) return this.loadingPromises.get(url);
+
+			// if we already have this asset, return it immediately
+			if (this.assets.has(url))
+				return Promise.resolve(this.assets.get(url));
+
+			// if we're already loading this asset, return the existing promise
+			if (this.loadingPromises.has(url))
+				return this.loadingPromises.get(url);
+
+			// otherwise, start loading the asset
 			const promise = new Promise((resolve, reject) => {
+
+				// pick loader based on file extension
 				const ext = url.split('.').pop().toLowerCase();
 				if (ext === 'glb' || ext === 'gltf') {
+
 					new GLTFLoader().load(url, (gltf) => {
 						this.assets.set(url, gltf.scene);
 						this.loadingPromises.delete(url);
 						resolve(gltf.scene);
 					}, undefined, reject);
+
 				} else if (['jpg', 'png', 'webp'].includes(ext)) {
+
 					new THREE.TextureLoader().load(url, (tex) => {
 						this.assets.set(url, tex);
 						this.loadingPromises.delete(url);
 						resolve(tex);
 					}, undefined, reject);
+
 				} else if (ext === 'hdr') {
+
 					new RGBELoader().load(url, (tex) => {
 						this.assets.set(url, tex);
 						this.loadingPromises.delete(url);
@@ -294,7 +372,11 @@ export class ThreeManager {
 			this.loadingPromises.set(url, promise);
 			return promise;
 		};
+
+		// wait for all assets to load and return them in the same order as the input URLs
 		await Promise.all(urls.map(loadOne));
+
+		// return clones of the assets to prevent accidental mutations (especially important for textures)
 		return urls.map(url => {
 			const asset = this.assets.get(url);
 			return asset.isTexture ? asset.clone() : asset.clone(true);
@@ -305,11 +387,26 @@ export class ThreeManager {
 	/* ==========================================================================
 	   ELEMENT SYNC
 	   ========================================================================== */
+
+	/**
+	 * register a DOM element to be synced in 3D space, with a specific theme type for styling.
+	 *
+	 * @param {HTMLElement} element - the element to watch in 3d
+	 * @param {String} type - the type of sync to use (e.g., 'box')
+	 * @returns {Object} - { id, empties } where id is the unique identifier for this element and empties are the empty groups for positioning
+	 */
 	register(element, type = 'box') {
-		if (!this.isOk) return null;
+
+		// gtfo if no element or manager not ready
+		if (!this.isOk)
+			return null;
+
+		// make a new id and group for this element, and save it in our registry
 		const id = uuid();
 		const group = new THREE.Group();
 		this.scene.add(group);
+
+		// create empties for the center and corners
 		const empties = {
 			center: new THREE.Group(),
 			tl: new THREE.Group(),
@@ -317,26 +414,45 @@ export class ThreeManager {
 			bl: new THREE.Group(),
 			br: new THREE.Group(),
 		};
+
+		// add our empties used for themes to position stuff
 		group.add(empties.center);
 		group.add(empties.tl);
 		group.add(empties.tr);
 		group.add(empties.bl);
 		group.add(empties.br);
+
+		// pack up the data and save it
 		const data = { id, element, group, type, empties };
 		this.registeredElements.set(id, data);
 		if (this.resizeObserver) {
 			this.resizeObserver.observe(element);
 		}
+
+		// make sure the new element is positioned correctly in the first place
 		this.updateElementPosition(id);
 		if (type === 'box' && this.currentTheme) {
 			this.currentTheme.buildBox(this, data);
 		}
+
+		// make sure to re-render now that we have a new element
 		this.requestRender();
 		return { id, empties };
 	}
 
+
+	/**
+	 * Unregister a DOM element from syncing, removing its 3D group and cleaning up resources.
+	 *
+	 * @param {string} id - id of object to unregister
+	 */
 	unregister(id) {
-		if (!this.registeredElements.has(id)) return;
+
+		// gtfo if no id or manager not ready
+		if (!this.registeredElements.has(id))
+			return;
+
+		// grab the group and element, unobserve it, remove it from the scene, clean up resources, and delete from registry
 		const { group, element } = this.registeredElements.get(id);
 		if (this.resizeObserver && element) {
 			this.resizeObserver.unobserve(element);
@@ -344,18 +460,34 @@ export class ThreeManager {
 		this.scene.remove(group);
 		this.cleanGroupChildren(group);
 		this.registeredElements.delete(id);
+
+		// make sure to re-render now that it's gone
 		this.requestRender();
 	}
 
+
+	/**
+	 * Clean up all children of a group, disposing of geometries and materials to free GPU memory.
+	 *
+	 * @param {THREE.Object3D} group - group to clean
+	 */
 	cleanGroupChildren(group) {
+
+		// loop through all children and dispose of geometries and materials,
+		// then remove them from the group
 		while (group.children.length > 0) {
+
 			const child = group.children[0];
 			group.remove(child);
-			if (child.geometry) child.geometry.dispose();
+
+			if (child.geometry)
+				child.geometry.dispose();
+
 			if (child.material) {
 				if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
 				else child.material.dispose();
 			}
+
 			if (child.children.length) this.cleanGroupChildren(child);
 		}
 	}
@@ -365,7 +497,11 @@ export class ThreeManager {
 	   CORE LOOP & MATH
 	   ========================================================================== */
 
+	/**
+	 * Make sure our FOV is always set so that 1 unit in Three.js space equals 1 pixel on the screen at the planeZ distance, regardless of viewport size or camera distance.
+	 */
 	updateFOV() {
+
 		const dist = this.camera.position.z - this.config.planeZ;
 		const fov = 2 * Math.atan((this.height / 2) / dist) * (180 / Math.PI);
 		this.camera.fov = fov;
@@ -385,12 +521,19 @@ export class ThreeManager {
 		this.camera.updateProjectionMatrix();
 	}
 
+
+	/**
+	 * Make sure the canvas always matches the viewport size and position, including accounting for Visual Viewport offsets on mobile.
+	 */
 	updateCanvasLayout() {
+
+		// Get the viewport size and offsets. On desktop, offsets will be 0 and size will match the window. On mobile, this accounts for zoom/pan.
 		let vW = document.documentElement.clientWidth || window.innerWidth;
 		let vH = document.documentElement.clientHeight || window.innerHeight;
 		let offX = 0;
 		let offY = 0;
 
+		// If Visual Viewport API is available, use it to get the actual viewport size and offsets (important for iOS zoom/pan)
 		if (window.visualViewport) {
 			vW = window.visualViewport.width;
 			vH = window.visualViewport.height;
@@ -401,15 +544,24 @@ export class ThreeManager {
 		this.width = vW;
 		this.height = vH;
 
+		// Update the renderer size to match the viewport
 		this.renderer.setSize(vW, vH);
 
+		// Position the canvas to match the viewport, including any visual viewport offsets
 		this.canvas.style.width = `${vW}px`;
 		this.canvas.style.height = `${vH}px`;
 		this.canvas.style.transform = `translate3d(${offX}px, ${offY}px, 0)`;
 	}
 
+
+	/**
+	 * Handle when the window is resized, including updating the camera FOV and background plane scale to maintain the correct aspect ratio and 1:1 pixel mapping.
+	 */
 	onResize() {
-		if (!this.renderer) return;
+
+		// gtfo if no renderer
+		if (!this.renderer)
+			return;
 
 		this.updateCanvasLayout();
 		this.updateFOV();
@@ -418,7 +570,9 @@ export class ThreeManager {
 		const distBg = 1101;
 		const vH = 4 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
 		const vW = vH * this.camera.aspect;
+
 		if (this.bgPlane) {
+
 			this.bgPlane.scale.set(vW, vH, 1);
 			if (this.bgPlane.material.map) {
 				const tex = this.bgPlane.material.map;
@@ -435,6 +589,7 @@ export class ThreeManager {
 	 * Handle scroll events.
 	 */
 	onScroll() {
+
 		this.updateCanvasLayout();
 
 		this.scrollY = window.scrollY;
@@ -471,6 +626,12 @@ export class ThreeManager {
 	}
 
 
+	/**
+	 * Request a render on the next animation frame.
+	 *
+	 * In "lazy" mode, this is how you trigger a new render when something changes.
+	 * In "active" mode, this is ignored since we're rendering every frame anyway.
+	 */
 	requestRender() {
 		this.isDirty = true;
 	}
@@ -480,13 +641,18 @@ export class ThreeManager {
 	 * Update the 3D position of a specific registered element to match its DOM position.
 	 */
 	updateElementPosition(id) {
-		const data = this.registeredElements.get(id);
-		if (!data) return;
 
+		// get the data for the element of this id & gtfo if no data
+		const data = this.registeredElements.get(id);
+		if (!data)
+			return;
+
+		// get the corners to measure
 		const el = data.element;
 		const cTL = el.querySelector('.top-left');
 		const cBR = el.querySelector('.bottom-right');
 
+		// get the corner positions relative to the viewport
 		if (!cTL || !cBR) return;
 		const rectTL = cTL.getBoundingClientRect();
 		const rectBR = cBR.getBoundingClientRect();
@@ -528,19 +694,25 @@ export class ThreeManager {
 	 * The main render loop.
 	 */
 	tick() {
-		if (!this.isOk) return;
+
+		// gtfo if we're not ready
+		if (!this.isOk)
+			return;
+
+		// themes that are active can do stuff every frame in their onTick, like animate materials or whatever. If they do, we request a render.
 		if (this.currentTheme && this.frameMode === 'active') {
 			this.currentTheme.onTick(this, performance.now());
 			this.isDirty = true;
 		}
-		if (this.isDirty) {
+
+		// only render if something has changed, or if we're in active mode
+		if (this.isDirty || this.frameMode === 'active') {
 			this.renderer.render(this.scene, this.camera);
 			this.isDirty = false;
 		}
-		if (this.frameMode === 'active') {
-			requestAnimationFrame(this.tick.bind(this));
-		} else {
-			requestAnimationFrame(this.tick.bind(this));
-		}
+
+		// recursive loop
+		requestAnimationFrame(this.tick.bind(this));
 	}
+
 }
