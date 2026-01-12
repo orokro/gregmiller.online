@@ -10,10 +10,19 @@
 // imports
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 
 // Themes
 import { GlassTheme } from '../themes/GlassTheme';
 import { DebugTheme } from '../themes/DebugTheme';
+
+// Simple UUID generator (Works everywhere, no crypto requirement)
+function uuid() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+		return v.toString(16);
+	});
+}
 
 // the money
 export class ThreeManager {
@@ -35,12 +44,14 @@ export class ThreeManager {
 			bgZ: -500,         // The depth of the background plane
 			bgColor: 0xf0f0f0,  // Default fog/bg color (themes can override)
 			perspectiveX: 0,
-            perspectiveY: 0
+			perspectiveY: 0
 		};
 
 		// State
-		this.width = window.innerWidth;
-		this.height = window.innerHeight;
+		// FIXED: Use Layout Viewport (clientWidth) instead of Visual Viewport (innerWidth)
+		// This ensures 3D scene matches CSS pixels even when pinch-zoomed on iOS.
+		this.width = document.documentElement.clientWidth || window.innerWidth;
+		this.height = document.documentElement.clientHeight || window.innerHeight;
 		this.scrollY = window.scrollY;
 		this.scrollX = window.scrollX;
 
@@ -68,19 +79,19 @@ export class ThreeManager {
 	/**
 	 * Clean up resources and event listeners when destroying the manager.
 	 */
-    destroy() {
+	destroy() {
 
-        if (this.resizeObserver)
+		if (this.resizeObserver)
 			this.resizeObserver.disconnect();
 
-        window.removeEventListener('scroll', this.onScroll.bind(this));
+		window.removeEventListener('scroll', this.onScroll.bind(this));
 
-        // Dispose renderer
+		// Dispose renderer
 		if (this.renderer) {
 			this.renderer.dispose();
 			this.renderer = null;
 		}
-    }
+	}
 
 
 	/**
@@ -114,23 +125,40 @@ export class ThreeManager {
 		this.setupBackground();
 
 		// 6. Bind Events
-        // window.addEventListener('resize', this.onResize.bind(this)); // <-- REMOVE THIS
-        window.addEventListener('scroll', this.onScroll.bind(this));
+		// window.addEventListener('resize', this.onResize.bind(this)); // <-- REMOVE THIS
+		window.addEventListener('scroll', this.onScroll.bind(this));
 
-        // NEW: Use ResizeObserver for robust layout detection
-        this.resizeObserver = new ResizeObserver(() => {
-            this.onResize();
-        });
-        this.resizeObserver.observe(document.body);
+		// NEW: Robust ResizeObserver
+		// This handles the "AA" Zoom Out issue by watching elements directly.
+		this.resizeObserver = new ResizeObserver((entries) => {
+			let needsGlobalUpdate = false;
+
+			for (const entry of entries) {
+				if (entry.target === document.body) {
+					needsGlobalUpdate = true;
+				} else {
+					// A specific registered element resized (e.g. text scaling reflow)
+					// We can trigger a global update to be safe and ensure parallax correct
+					needsGlobalUpdate = true;
+				}
+			}
+
+			if (needsGlobalUpdate) {
+				this.onResize();
+			}
+		});
+
+		// Observe Body for global layout shifts
+		this.resizeObserver.observe(document.body);
 
 		// we gucci
 		this.isOk = true;
 
-        // 7. Load Default Theme
-        this.setTheme(GlassTheme);
+		// 7. Load Default Theme
+		this.setTheme(GlassTheme);
 
-        // 8. Start Loop
-        this.tick();
+		// 8. Start Loop
+		this.tick();
 	}
 
 
@@ -160,10 +188,9 @@ export class ThreeManager {
 		// Make our own material so we can control opacity and color tint
 		const material = new THREE.MeshPhysicalMaterial({
 			map: texture,
-			color: 0xffffff,
-			roughness: 0,
+			color: 0xf5f5f5,
+			roughness: 1,
 			metalness: 0,
-			emissive:  0x666666,
 			// transparent: true,
 			// opacity: 0.1
 		});
@@ -241,47 +268,57 @@ export class ThreeManager {
 
 
 	/**
-     * Set the scene environment texture (for reflections/lighting).
-     * @param {string} url - Path to image (jpg/hdr)
-     * @param {number} exposure - Exposure level (default 1.0)
-     */
-    setEnvironmentTexture(url, exposure = 1.0) {
+	 * Set the scene environment texture (for reflections/lighting).
+	 * @param {string} url - Path to image (jpg/hdr)
+	 * @param {number} exposure - Exposure level (default 1.0)
+	 */
+	setEnvironmentTexture(url, exposure = 1.0) {
+		if (!this.renderer) return;
 
-        if (!this.renderer)
-			return;
+		this.clearEnvironmentTexture();
 
-        // Clean up old
-        this.clearEnvironmentTexture();
+		const ext = url.split('.').pop().toLowerCase();
+		let loader;
 
-        const loader = new THREE.TextureLoader();
-        loader.load(url, (texture) => {
-            texture.mapping = THREE.EquirectangularReflectionMapping;
-            texture.colorSpace = THREE.SRGBColorSpace;
+		// Choose Loader based on extension
+		if (ext === 'hdr') {
+			loader = new RGBELoader();
+		} else {
+			loader = new THREE.TextureLoader();
+		}
 
-            this.scene.environment = texture;
-            this.envTexture = texture;
+		loader.load(url, (texture) => {
+			texture.mapping = THREE.EquirectangularReflectionMapping;
 
-            // Optional: If we wanted the background to be the image too
-            // this.scene.background = texture;
+			// RGBE Loader returns DataTexture, standard loader returns Texture
+			// Colorspace handling is handled automatically by ACESFilmic mostly,
+			// but explicitly setting it doesn't hurt.
+			if (ext !== 'hdr') {
+				texture.colorSpace = THREE.SRGBColorSpace;
+			}
 
-            this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            this.renderer.toneMappingExposure = exposure;
+			this.scene.environment = texture;
+			this.envTexture = texture;
 
-            this.requestRender();
-        });
-    }
+			// FIXED: Re-added tone mapping settings that might have been lost
+			this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			this.renderer.toneMappingExposure = exposure;
+
+			this.requestRender();
+		});
+	}
 
 
 	/**
-     * Clear the environment texture.
-     */
-    clearEnvironmentTexture() {
-        if (this.envTexture) {
-            this.envTexture.dispose();
-            this.envTexture = null;
-        }
-        this.scene.environment = null;
-    }
+	 * Clear the environment texture.
+	 */
+	clearEnvironmentTexture() {
+		if (this.envTexture) {
+			this.envTexture.dispose();
+			this.envTexture = null;
+		}
+		this.scene.environment = null;
+	}
 
 
 	/* ==========================================================================
@@ -319,6 +356,12 @@ export class ThreeManager {
 						this.loadingPromises.delete(url);
 						resolve(tex);
 					}, undefined, reject);
+				} else if (ext === 'hdr') {
+					new RGBELoader().load(url, (tex) => {
+						this.assets.set(url, tex);
+						this.loadingPromises.delete(url);
+						resolve(tex);
+					}, undefined, reject);
 				}
 			});
 
@@ -352,7 +395,7 @@ export class ThreeManager {
 		if (!this.isOk)
 			return null;
 
-		const id = crypto.randomUUID();
+		const id = uuid();
 
 		// Create the main container group
 		const group = new THREE.Group();
@@ -377,6 +420,11 @@ export class ThreeManager {
 		const data = { id, element, group, type, empties };
 		this.registeredElements.set(id, data);
 
+		// FIXED: Observe this specific element (Fixes "AA" text zoom/resize bugs)
+		if (this.resizeObserver) {
+			this.resizeObserver.observe(element);
+		}
+
 		// Initial position calculation
 		this.updateElementPosition(id);
 
@@ -400,7 +448,13 @@ export class ThreeManager {
 		if (!this.registeredElements.has(id))
 			return;
 
-		const { group } = this.registeredElements.get(id);
+		const { group, element } = this.registeredElements.get(id);
+
+		// FIXED: Stop observing this element
+		if (this.resizeObserver && element) {
+			this.resizeObserver.unobserve(element);
+		}
+
 		this.scene.remove(group);
 		this.cleanGroupChildren(group); // Helper to dispose memory
 
@@ -443,19 +497,19 @@ export class ThreeManager {
 		this.camera.aspect = this.width / this.height;
 
 		// FIX 2a: Lens Shift (Part 1)
-        // Reset view offset to recalculate it cleanly
-        this.camera.clearViewOffset();
+		// Reset view offset to recalculate it cleanly
+		this.camera.clearViewOffset();
 
-        // Apply the offset to the PROJECTION, forcing the center back to the middle
-        // Note: signs must align with onScroll addition.
-        this.camera.setViewOffset(
-            this.width,
-            this.height,
-            this.config.perspectiveX,
-            -this.config.perspectiveY, // Y axis in ViewOffset is Top-Down usually
-            this.width,
-            this.height
-        );
+		// Apply the offset to the PROJECTION, forcing the center back to the middle
+		// Note: signs must align with onScroll addition.
+		this.camera.setViewOffset(
+			this.width,
+			this.height,
+			this.config.perspectiveX,
+			-this.config.perspectiveY, // Y axis in ViewOffset is Top-Down usually
+			this.width,
+			this.height
+		);
 
 		this.camera.position.y = -this.scrollY - this.config.perspectiveY;
 		this.camera.position.x = this.scrollX - this.config.perspectiveX;
@@ -470,11 +524,15 @@ export class ThreeManager {
 	onResize() {
 
 		// Safety check if destroyed
-        if (!this.renderer)
+		if (!this.renderer)
 			return;
 
-		this.width = window.innerWidth;
-		this.height = window.innerHeight;
+		// FIXED: Prefer Layout Viewport dimensions over Visual Viewport.
+		// On iOS Pinch-Zoom, innerWidth shrinks (Visual), but clientWidth stays stable (Layout).
+		// This keeps 3D coordinates 1:1 with DOM elements even when zoomed in.
+		this.width = document.documentElement.clientWidth || window.innerWidth;
+		this.height = document.documentElement.clientHeight || window.innerHeight;
+
 		this.renderer.setSize(this.width, this.height);
 		this.updateFOV();
 
@@ -524,12 +582,12 @@ export class ThreeManager {
 		// We shift the texture offset, not the plane position (since plane is locked to camera)
 		if (this.bgPlane && this.bgPlane.material.map) {
 
-            // "1000" here must match the divisor used in tex.repeat.set() above.
-            const worldUnitScale = 1000;
+			// "1000" here must match the divisor used in tex.repeat.set() above.
+			const worldUnitScale = 1000;
 
 			// We move the texture opposite to the camera to simulate a static world.
-            // Since plane is parented to camera, it moves WITH camera.
-            // We counteract that movement 1:1.
+			// Since plane is parented to camera, it moves WITH camera.
+			// We counteract that movement 1:1.
 			this.bgPlane.material.map.offset.y = -this.scrollY / worldUnitScale;
 			this.bgPlane.material.map.offset.x = this.scrollX / worldUnitScale;
 		}
@@ -559,37 +617,37 @@ export class ThreeManager {
 			return;
 
 		// ------------------------------------------------------------
-        // CORNER SYSTEM MEASUREMENT
-        // ------------------------------------------------------------
+		// CORNER SYSTEM MEASUREMENT
+		// ------------------------------------------------------------
 
-        // Find our corner markers
-        const el = data.element;
-        const cTL = el.querySelector('.top-left');
-        const cBR = el.querySelector('.bottom-right');
+		// Find our corner markers
+		const el = data.element;
+		const cTL = el.querySelector('.top-left');
+		const cBR = el.querySelector('.bottom-right');
 
-        // If markers are missing (e.g. before Vue mount finishes), bail
-        if (!cTL || !cBR) return;
+		// If markers are missing (e.g. before Vue mount finishes), bail
+		if (!cTL || !cBR) return;
 
-        const rectTL = cTL.getBoundingClientRect();
-        const rectBR = cBR.getBoundingClientRect();
+		const rectTL = cTL.getBoundingClientRect();
+		const rectBR = cBR.getBoundingClientRect();
 
-        // Calculate precise edges
-        // TL Top is exactly Container Top
-        // TL Left is exactly Container Left
-        // BR Top is exactly Container Bottom (because it's bottom: -1px, height: 1px)
-        // BR Left is exactly Container Right (because it's right: -1px, width: 1px)
+		// Calculate precise edges
+		// TL Top is exactly Container Top
+		// TL Left is exactly Container Left
+		// BR Top is exactly Container Bottom (because it's bottom: -1px, height: 1px)
+		// BR Left is exactly Container Right (because it's right: -1px, width: 1px)
 
-        const top = rectTL.top;
-        const left = rectTL.left;
-        const bottom = rectBR.top;
-        const right = rectBR.left;
+		const top = rectTL.top;
+		const left = rectTL.left;
+		const bottom = rectBR.top;
+		const right = rectBR.left;
 
-        const width = right - left;
-        const height = bottom - top;
+		const width = right - left;
+		const height = bottom - top;
 
-        // ------------------------------------------------------------
-        // 3D POSITIONING
-        // ------------------------------------------------------------
+		// ------------------------------------------------------------
+		// 3D POSITIONING
+		// ------------------------------------------------------------
 
 
 		const group = data.group;
@@ -627,7 +685,7 @@ export class ThreeManager {
 
 		// 3. Notify Theme (for resizing content)
 		// We pass a synthetic rect to match the old API, just in case
-        const syntheticRect = { width, height, top, left };
+		const syntheticRect = { width, height, top, left };
 		if (data.type === 'box' && this.currentTheme) {
 			this.currentTheme.updateBox(this, data, syntheticRect);
 		}

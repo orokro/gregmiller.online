@@ -4,10 +4,10 @@
 
 	Renders a 9-slice glass box.
 
-	LOGIC:
-	- Uses "Null Wrappers" to isolate Rotation from Scaling.
-	- TRUSTS BLENDER ORIGINS COMPLETELY (No auto-centering).
-	- Aligns all wrappers to Z=0.
+	Updates:
+	- Uses .hdr environment map
+	- Adds Camera-anchored PointLight
+	- Overrides material for maximum "shiny" glass look
 */
 
 import * as THREE from 'three';
@@ -24,11 +24,22 @@ export class GlassTheme {
 
 		this.cornerSize = 30;
 		this.depthScale = 20;
+
+        // Light reference for cleanup
+        this.camLight = null;
 	}
 
 	async init(manager) {
-		manager.setEnvironmentTexture('/env/Basic_2K_01.jpg', 7.0);
+        // 1. Load HDR Environment (High exposure for brightness)
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
 
+        // 2. Add Camera Light (Dynamic Flash)
+        // Positioned slightly up/right to create nice specular highlights on the glass edges
+        this.camLight = new THREE.PointLight(0xffffff, 2000, 5000); // Color, Intensity, Distance
+        this.camLight.position.set(50, 50, 50);
+        manager.camera.add(this.camLight);
+
+		// 3. Load GLB
 		const [gltf] = await manager.assetsReady(['/models/glass_slice.glb']);
 
 		if (!gltf) {
@@ -36,18 +47,41 @@ export class GlassTheme {
 			return;
 		}
 
-		console.log("GlassTheme: GLB Loaded. Extracting wrappers...");
+		console.log("GlassTheme: GLB Loaded. Processing materials...");
+
+        // 4. Create the "Super Shiny" Glass Material
+        const glassMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xeefffe,
+            transmission: 1.0,  // Full transmission
+            opacity: 1.0,
+            metalness: 0.0,
+            roughness: 0.0,     // Perfectly smooth
+            ior: 1.5,           // Glass Refractive Index
+            thickness: 1.5,     // Volume
+            envMapIntensity: 3.0, // Bright reflections
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.0,
+            side: THREE.DoubleSide
+        });
 
 		Object.keys(this.assets).forEach(name => {
 			const node = gltf.getObjectByName(name);
 
 			if (node) {
-				// 1. Clone original
 				const original = node.clone(true);
 
-				// 2. Wrap in a group
-				// We DO NOT change the position of 'original'.
-				// We trust its origin relative to the other pieces is correct in Blender.
+                // MATERIAL OVERRIDE:
+                // Apply the shiny material to all meshes inside the part
+                original.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = glassMaterial;
+                        // Enable shadows if we ever turn them on
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+				// Wrap in group (Logic from previous step)
 				const wrapper = new THREE.Group();
 				wrapper.add(original);
 
@@ -67,6 +101,13 @@ export class GlassTheme {
 
 	destroy(manager) {
 		manager.clearEnvironmentTexture();
+
+        // Remove light
+        if (this.camLight) {
+            this.camLight.parent.remove(this.camLight);
+            this.camLight.dispose();
+            this.camLight = null;
+        }
 	}
 
 	onTick(manager, time) {
@@ -111,10 +152,7 @@ export class GlassTheme {
 			const obj = group.getObjectByName(name);
 			if (!obj) return;
 
-			// 1. Position: Explicitly set Z to 0 for everyone.
 			obj.position.set(x, y, 0);
-
-			// 2. Scale: Apply to the wrapper (fixes rotation distortion)
 			obj.scale.set(sX, sY, Z);
 		};
 
