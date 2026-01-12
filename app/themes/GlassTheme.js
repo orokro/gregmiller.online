@@ -33,6 +33,8 @@ export class GlassTheme {
         // 1. Load HDR Environment (High exposure for brightness)
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
 
+		manager.setFrameMode('active');
+
         // 2. Add Camera Light (Dynamic Flash)
         // Positioned slightly up/right to create nice specular highlights on the glass edges
         this.camLight = new THREE.PointLight(0xffffff, 2000, 5000); // Color, Intensity, Distance

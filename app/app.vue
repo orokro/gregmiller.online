@@ -1,9 +1,3 @@
-<!--
-	app.vue
-	-------
-
-	The root component of the app. It sets up the main layout and initializes the 3D system.
--->
 <template>
 
 	<div class="app-root">
@@ -26,7 +20,6 @@ import { useThree } from '~/composables/useThree';
 
 const canvasRef = ref(null);
 const { initThree } = useThree();
-
 onMounted(() => {
 
 	// Initialize the 3D System
@@ -57,13 +50,15 @@ body {
 }
 
 .webgl-canvas {
+	/* FIX: Use fixed positioning but allow JS to override top/left/width/height */
 	position: fixed;
 	top: 0;
 	left: 0;
-	width: 100%;
-	height: 100%;
 	z-index: -1;
 	pointer-events: none;
+	display: block;
+
+	/* Remove 100vw/vh to prevent Layout Viewport clamping on zoom-out */
 }
 
 .content-layer {
