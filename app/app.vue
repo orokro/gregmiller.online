@@ -27,12 +27,14 @@ onMounted(() => {
 </script>
 <template>
 
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&display=swap" rel="stylesheet">
+
 	<div class="app-root">
 
-		<!-- Our 3d enabled components will render to this canvas -->
 		<canvas ref="canvasRef" class="webgl-canvas"></canvas>
 
-		<!-- main DOM content -->
 		<div class="app-shell">
 
 			<AppSidebar />
@@ -50,6 +52,11 @@ onMounted(() => {
 </template>
 <style lang="scss">
 
+// variable for page border radius
+:root {
+	--border-radius: 55px;
+}
+
 /* Global Reset for Box Sizing */
 *, *::before, *::after {
 	box-sizing: border-box;
@@ -63,12 +70,18 @@ body {
 	margin: 0;
 	padding: 0;
 	overflow-x: hidden; /* Prevent horizontal scroll from 3D canvas if any */
+	font-family: "Alumni Sans Pinstripe", sans-serif;
+	background: #00ABAE;
 }
 
 .app-root {
 	position: relative;
 	width: 100%;
 	min-height: 100vh;
+	border-radius: var(--border-radius);
+	overflow: clip;
+
+
 }
 
 .webgl-canvas {
@@ -79,7 +92,11 @@ body {
 	z-index: -1;
 	pointer-events: none;
 	display: block;
+	border-radius: var(--border-radius);
+	overflow: clip;
 
+	border: 4px solid #00ABAE;
+	box-sizing: border-box;
 	/* Remove 100vw/vh to prevent Layout Viewport clamping on zoom-out */
 }
 
@@ -90,18 +107,27 @@ body {
 .app-shell {
 
 	position: relative;
-	display: flex;
 	min-height: 100vh;
-	min-width: 0; /* critical for preventing flex overflow */
 	z-index: 1; /* above canvas */
+	overflow-x: clip; /* modern overflow clamp */
 
 	.app-main {
 
 		border: 1px solid red;
 
-		flex: 1;
-		min-width: 0; /* critical for preventing flex child overflow */
+		position: relative;
+		width: 100%;
+		min-width: 0;
 		padding: 2rem 1rem;
+
+		/* hard clamp overflow sources */
+		overflow-x: hidden;
+
+		/* desktop: reserve space for the pinned sidebar */
+		@media (min-width: 900px) {
+			padding-left: calc(var(--sidebar-w) + 1rem);
+			padding-right: 2rem;
+		}
 
 		.main-inner {
 

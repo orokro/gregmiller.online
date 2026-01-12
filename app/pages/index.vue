@@ -73,7 +73,7 @@ const getPostLink = (post) => {
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 2rem;
-	font-family: sans-serif;
+	font-family: "Alumni Sans Pinstripe", sans-serif;
 }
 
 header {
