@@ -99,8 +99,9 @@ const currentThemeName = computed({
 	// main widget wrapper
 	.top-widgets {
 
-		// no pointer events
+		// no pointer events / text select
 		pointer-events: none;
+		user-select: none;
 
 		// fixed on top right, above the canvas and below the sidebar
 		position: fixed;

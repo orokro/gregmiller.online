@@ -243,7 +243,7 @@ const drawerClass = computed(() => ({
 
 			// box styling
 			width: 100%;
-			padding: 0.4rem 0.75rem;
+			padding: 0.5rem 0.75rem 0.4rem;
 
 			// border: 4px solid white;
 			border: 1px solid var(--color-primary);
@@ -256,6 +256,12 @@ const drawerClass = computed(() => ({
 			font-size: 1rem;
 			color: var(--color-secondary);
 
+			// placeholder styling
+			&::placeholder {
+				color: var(--color-secondary);
+				opacity: 0.8;
+				font-style: italic;
+			}
 
 		}// .search
 
@@ -273,20 +279,6 @@ const drawerClass = computed(() => ({
 		// allow scrolling if content exceeds viewport height
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
-
-		// links
-		a {
-			display: block; /* fixes “categories run together” */
-			text-decoration: none;
-			color: #666;
-			font-weight: 500;
-
-			background: #E1EEF5;
-		}
-
-		a.router-link-active {
-			color: #0063dc;
-		}
 
 		// category row
 		.category-row {
@@ -307,7 +299,7 @@ const drawerClass = computed(() => ({
 		/* iOS-like minimal scrollbar */
 		overflow-y: auto;
 		scrollbar-width: thin;              /* Firefox */
-		scrollbar-color: #7561AA transparent;
+		scrollbar-color: var(--color-secondary) transparent;
 
 		/* WebKit */
 		&::-webkit-scrollbar {
@@ -321,14 +313,14 @@ const drawerClass = computed(() => ({
 		}
 
 		&::-webkit-scrollbar-thumb {
-			background-color: #7561AA;
+			background-color: var(--color-secondary);
 			border-radius: 999px;
 			border: 2px solid transparent;    /* creates the gap */
 			background-clip: padding-box;
 		}
 
 		&::-webkit-scrollbar-thumb:hover {
-			background-color: #584885;
+			background-color: var(--color-secondary);
 		}
 
 		/* Explicitly hide buttons anyway */

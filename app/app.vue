@@ -6,8 +6,11 @@
 -->
 <script setup>
 
-// imports
-import { onMounted, ref } from 'vue';
+// vue
+import { onMounted, ref, watch } from 'vue';
+import { useHead } from '#app';
+
+// app imports
 import { useThree } from '~/composables/useThree';
 import { useTheming } from '~/composables/useTheming';
 
@@ -23,6 +26,13 @@ const canvasRef = ref(null);
 const { initThree } = useThree();
 const { themeCSSVars } = useTheming();
 
+watch(themeCSSVars, (vars) => {
+	useHead({
+		htmlAttrs: {
+			style: vars,
+		},
+	});
+}, { immediate: true });
 
 onMounted(() => {
 
@@ -40,10 +50,7 @@ onMounted(() => {
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&display=swap" rel="stylesheet">
 
-	<div
-		class="app-root"
-		:style="themeCSSVars"
-	>
+	<div class="app-root">
 
 		<canvas ref="canvasRef" class="webgl-canvas"></canvas>
 
@@ -84,8 +91,7 @@ html, body {
 	/* Firefox */
 
 	scrollbar-width: auto;
-	scrollbar-color: #ffffff var(--color-primary);
-
+	scrollbar-color: var(--color-scroll) var(--color-primary);
 
 	/* Chrome, Edge, and Safari */
 	&::-webkit-scrollbar {
@@ -97,9 +103,9 @@ html, body {
 	}
 
 	&::-webkit-scrollbar-thumb {
-		background-color: #ffffff;
+		background-color: var(--color-primary);
 		border-radius: 10px;
-		border: 3px solid #ffffff;
+		border: 3px solid var(--color-primary);
 	}
 }
 
