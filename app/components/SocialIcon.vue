@@ -50,11 +50,15 @@ const props = defineProps({
 	.icon-row {
 
 		// box settings
-		background: #E1EEF5;
+		background: var(--color-bg-accent-1);
 		position: relative;
 		height: 43px;
 
+		// spacing
 		margin-bottom: 2px;
+
+		// animate background color
+		transition: background 0.3s ease;
 
 		// background pattern than fades in/out & animates a bit
 		.bg-pattern {
@@ -63,8 +67,9 @@ const props = defineProps({
 			position: absolute;
 			inset: 0px 0px 0px 0px;
 
-			// bg pattern
-			background-image: url('/img/link_bg.png');
+			// bg pattern mixed
+			background-image: url('/img/link_bg_gray.png');
+			mix-blend-mode: overlay;
 
 			// animate opacity & position for a subtle moving effect
 			transition: opacity 0.3s ease, background-position-x 0.3s ease;
@@ -94,7 +99,7 @@ const props = defineProps({
 				path, circle, rect, polygon {
 
 					transition: fill 0.3s ease;
-					fill: #7561AA;
+					fill: var(--color-secondary);
 				}
 			}
 
@@ -104,8 +109,10 @@ const props = defineProps({
 		// hover effect to show the bg pattern and change icon color
 		&:hover {
 
+			background-color: var(--color-secondary);
+
 			.bg-pattern {
-				opacity: 1;
+				opacity: 0.9;
 				background-position-x: 140px;
 			}
 

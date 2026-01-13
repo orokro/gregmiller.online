@@ -2,172 +2,139 @@
 	GlassTheme.js
 	-------------
 
-	Renders a 9-slice glass box.
-
-	Updates:
-	- Uses .hdr environment map
-	- Adds Camera-anchored PointLight
-	- Overrides material for maximum "shiny" glass look
+	A simple theme that renders Red wireframes for <Container3D> elements.
+	Acts as the default theme and a reference implementation.
 */
 
 import * as THREE from 'three';
 
 export class GlassTheme {
 
+	// define this themes colors (will be applied to CSS when loaded)
+	static themeColors = {
+		primaryColor: '#00ABAE',
+		secondaryColor: '#7561AA',
+		accentColor: '#b0ec6bff',
+		bgAccent1: '#E1EEF5',
+		bgAccent2: '#EFF4F7',
+		textColor: '#333333',
+		hoverColor: '#FFFFFF',
+		scrollColor:  '#FFFFFF',
+	};
+
+
+	/**
+	 * Constructor
+	 */
 	constructor() {
-		this.assets = {
-			Center: null,
-			Top_Left: null, Top: null, Top_Right: null,
-			Left: null, Right: null,
-			Bottom_Left: null, Bottom: null, Bottom_Right: null
-		};
 
-		this.cornerSize = 30;
-		this.depthScale = 20;
-
-        // Light reference for cleanup
-        this.camLight = null;
+		// Store theme-specific state here
+		this.boxMaterial = null;
+		this.cornerGeometry = null;
 	}
 
-	async init(manager) {
-        // 1. Load HDR Environment (High exposure for brightness)
+
+	/**
+	 * Called when theme is loaded.
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 */
+	init(manager) {
+
+		// 1. Load HDR Environment (High exposure for brightness)
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
 
-		manager.setFrameMode('active');
+		// Set global background color
+		manager.scene.background = new THREE.Color(0xf0f0f0);
 
-        // 2. Add Camera Light (Dynamic Flash)
-        // Positioned slightly up/right to create nice specular highlights on the glass edges
-        this.camLight = new THREE.PointLight(0xffffff, 2000, 5000); // Color, Intensity, Distance
-        this.camLight.position.set(50, 50, 50);
-        manager.camera.add(this.camLight);
+		// Load assets if needed (graph paper)
+		// For now we just use colors
+		// if (manager.bgPlane) {
+		// 	manager.bgPlane.material.color.set(0xe0e0e0);
+		// 	manager.bgPlane.material.map = null;
+		// 	manager.bgPlane.material.needsUpdate = true;
+		// }
 
-		// 3. Load GLB
-		const [gltf] = await manager.assetsReady(['/models/glass_slice.glb']);
-
-		if (!gltf) {
-			console.error("GlassTheme: Failed to load model.");
-			return;
-		}
-
-		console.log("GlassTheme: GLB Loaded. Processing materials...");
-
-        // 4. Create the "Super Shiny" Glass Material
-        const glassMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xeefffe,
-            transmission: 1.0,  // Full transmission
-            opacity: 1.0,
-            metalness: 0.0,
-            roughness: 0.0,     // Perfectly smooth
-            ior: 1.5,           // Glass Refractive Index
-            thickness: 1.5,     // Volume
-            envMapIntensity: 3.0, // Bright reflections
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.0,
-            side: THREE.DoubleSide
-        });
-
-		Object.keys(this.assets).forEach(name => {
-			const node = gltf.getObjectByName(name);
-
-			if (node) {
-				const original = node.clone(true);
-
-                // MATERIAL OVERRIDE:
-                // Apply the shiny material to all meshes inside the part
-                original.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material = glassMaterial;
-                        // Enable shadows if we ever turn them on
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
-
-				// Wrap in group (Logic from previous step)
-				const wrapper = new THREE.Group();
-				wrapper.add(original);
-
-				this.assets[name] = wrapper;
-			}
+		// Prepare reusable materials/geometries
+		this.boxMaterial = new THREE.MeshBasicMaterial({
+			color: 0xff0000,
+			wireframe: true
 		});
 
-		manager.registeredElements.forEach((data) => {
-			if (data.type === 'box') {
-				this.buildBox(manager, data);
-				manager.updateElementPosition(data.id);
-			}
-		});
-
-		manager.requestRender();
+		this.cornerGeometry = new THREE.BoxGeometry(10, 10, 10); // 10px cubes
 	}
 
+
+	/**
+	 * Called when theme is unloaded.
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 */
 	destroy(manager) {
-		manager.clearEnvironmentTexture();
 
-        // Remove light
-        if (this.camLight) {
-            this.camLight.parent.remove(this.camLight);
-            this.camLight.dispose();
-            this.camLight = null;
-        }
+		// Clean up reusable assets
+		if (this.boxMaterial)
+			this.boxMaterial.dispose();
+
+		if (this.cornerGeometry)
+			this.cornerGeometry.dispose();
 	}
 
+
+	/**
+	 * Called per frame (only if manager.frameMode === 'active').
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {number} time - The current performance.now() timestamp.
+	 */
 	onTick(manager, time) {
+
+		// Nothing to animate in debug mode
 	}
 
+
+	/**
+	 * Called when a <Container3D> is registered or theme is switched.
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {object} data - The element data object { id, empties, group, ... }.
+	 */
 	buildBox(manager, data) {
-		if (!this.assets.Center) return;
 
-		const parent = data.empties.center;
-		while (parent.children.length > 0) {
-			parent.remove(parent.children[0]);
-		}
+		// Add a wireframe cube to the center
+		// We'll scale it in updateBox
+		const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
+		cube.name = "debug_cube";
+		data.empties.center.add(cube);
 
-		Object.keys(this.assets).forEach(key => {
-			const master = this.assets[key];
-			if (!master) return;
+		// Add markers to corners
+		const mkTL = new THREE.Mesh(this.cornerGeometry, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+		const mkBR = new THREE.Mesh(this.cornerGeometry, new THREE.MeshBasicMaterial({ color: 0x0000ff }));
 
-			const instance = master.clone(true);
-			instance.name = key;
-			parent.add(instance);
-		});
+		data.empties.tl.add(mkTL);
+		data.empties.br.add(mkBR);
 	}
 
+
+	/**
+	 * Called on Resize/Scroll/Reflow to update content dimensions.
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {object} data - The element data object.
+	 * @param {DOMRect} rect - The bounding client rect of the DOM element.
+	 */
 	updateBox(manager, data, rect) {
-		if (!this.assets.Center) return;
 
-		const group = data.empties.center;
+		// Resize the center cube to match the div size
+		const cube = data.empties.center.getObjectByName("debug_cube");
 
-		const W = rect.width;
-		const H = rect.height;
-		const C = this.cornerSize;
-		const Z = this.depthScale;
+		if (cube) {
+			const depth = 100; // Arbitrary depth for the debug box
 
-		const halfW = W / 2;
-		const halfH = H / 2;
-		const offset = C / 2;
+			// 1. Scale
+			cube.scale.set(rect.width, rect.height, depth);
 
-		const innerW = Math.max(0.01, W - (C * 2));
-		const innerH = Math.max(0.01, H - (C * 2));
-
-		const transform = (name, x, y, sX, sY) => {
-			const obj = group.getObjectByName(name);
-			if (!obj) return;
-
-			obj.position.set(x, y, 0);
-			obj.scale.set(sX, sY, Z);
-		};
-
-		transform('Top_Left',    -halfW + offset,  halfH - offset, C, C);
-		transform('Top_Right',    halfW - offset,  halfH - offset, C, C);
-		transform('Bottom_Left', -halfW + offset, -halfH + offset, C, C);
-		transform('Bottom_Right', halfW - offset, -halfH + offset, C, C);
-
-		transform('Top',    0,  halfH - offset, innerW, C);
-		transform('Bottom', 0, -halfH + offset, innerW, C);
-		transform('Left',  -halfW + offset, 0, C, innerH);
-		transform('Right',  halfW - offset, 0, C, innerH);
-
-		transform('Center', 0, 0, innerW, innerH);
+			// 2. Position Shift
+			// By default, a box is centered at (0,0,0).
+			// We want the front face to be at Z = 0.
+			// Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
+			// We need to move it back by depth/2 so it extends from 0 to -depth.
+			cube.position.z = -depth / 2;
+		}
 	}
 }

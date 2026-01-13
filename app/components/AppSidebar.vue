@@ -69,6 +69,9 @@ const drawerClass = computed(() => ({
 		<div class="sidebar-top">
 			<NuxtLink to="/" class="brand" @click="close">Greg Miller Online</NuxtLink>
 
+			<!-- for theming we'll mix-blend this image over the theme color -->
+			<div class="bg-blend-pattern"></div>
+
 			<input
 				class="search"
 				type="search"
@@ -164,10 +167,10 @@ const drawerClass = computed(() => ({
 	// box styling
 	width: var(--sidebar-w);
 	max-width: 92vw; /* mobile: near full screen */
-	background: #00ABAE;
-	border-right: 4px solid #00ABAE;
-	border-left: 4px solid #00ABAE;
-	border-bottom: 4px solid #00ABAE;
+	background: var(--color-primary);
+	border-right: 4px solid var(--color-primary);
+	border-left: 4px solid var(--color-primary);
+	border-bottom: 4px solid var(--color-primary);
 
 	// layout
 	display: flex;
@@ -201,8 +204,8 @@ const drawerClass = computed(() => ({
 
 		// box styling
 		padding: 1rem;
-		background: #00ABAE;
-		background-image: url('/img/header_bg.png');
+		background: var(--color-primary);
+
 		box-sizing: border-box;
 
 		// layout
@@ -212,6 +215,17 @@ const drawerClass = computed(() => ({
 
 		// text styling for all children
 		text-align: center;
+
+		// pattern to mix-blend over the theme color for a subtle textured effect
+		.bg-blend-pattern {
+
+			position: absolute;
+			inset: 0;
+			z-index: -1; /* behind content */
+			background-image: url('/img/header_bg_gray.png');
+			mix-blend-mode: overlay
+
+		}// .bg-blend-pattern
 
 		// logo/brand link
 		.brand {
@@ -232,14 +246,16 @@ const drawerClass = computed(() => ({
 			padding: 0.4rem 0.75rem;
 
 			// border: 4px solid white;
-			border: 1px solid #00ABAE;
+			border: 1px solid var(--color-primary);
 			border-radius: 100px;
 			box-sizing: border-box;
-			background: #EFF4F7;
+			background: var(--color-bg-accent-2);
 			box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 
 			// text styling
 			font-size: 1rem;
+			color: var(--color-secondary);
+
 
 		}// .search
 
@@ -251,7 +267,7 @@ const drawerClass = computed(() => ({
 		// box styling
 		flex: 1;
 		min-height: 0;
-		background: #EFF4F7;
+		background: var(--color-bg-accent-2);
 		border-radius: 10px;
 
 		// allow scrolling if content exceeds viewport height

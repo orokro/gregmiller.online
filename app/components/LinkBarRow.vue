@@ -61,11 +61,15 @@ function close() {
 	.link-row {
 
 		// box settings
-		background: #E1EEF5;
+		background: var(--color-bg-accent-1);
 		position: relative;
 		height: 43px;
 
+		// spacing
 		margin-bottom: 2px;
+
+		// animate background color
+		transition: background 0.3s ease;
 
 		// background pattern than fades in/out & animates a bit
 		.bg-pattern {
@@ -74,8 +78,9 @@ function close() {
 			position: absolute;
 			inset: 0px 0px 0px 0px;
 
-			// bg pattern
-			background-image: url('/img/link_bg.png');
+			// bg pattern mixed
+			background-image: url('/img/link_bg_gray.png');
+			mix-blend-mode: overlay;
 
 			// animate opacity & position for a subtle moving effect
 			transition: opacity 0.3s ease, background-position-x 0.3s ease;
@@ -102,10 +107,10 @@ function close() {
 
 			// make icon white by default
 			&:deep {
-				path {
+				path, circle, rect, polygon {
 
 					transition: fill 0.3s ease;
-					fill: #7561AA;
+					fill: var(--color-secondary);
 				}
 			}
 
@@ -126,7 +131,8 @@ function close() {
 			// font settings
 			font-size: 26px;
 			font-weight: bold;
-			color: #00ABAE;
+			color: var(--color-primary);
+			letter-spacing: 1px;
 
 			// animate color on hover
 			transition: color 0.3s ease;
@@ -136,17 +142,21 @@ function close() {
 		// hover effect to show the bg pattern and change icon color
 		&:hover {
 
+			background: var(--color-secondary);
+
 			.bg-pattern {
-				opacity: 1;
+				opacity: 0.9;
 				background-position-x: 140px;
 			}
 
-			.icon:deep path {
-				fill: white;
+			.icon:deep {
+				path, circle, rect, polygon {
+					fill: var(--color-hover);
+				}
 			}
 
 			.text {
-				color: white;
+				color: var(--color-hover);
 				font-weight: bolder;
 			}
 

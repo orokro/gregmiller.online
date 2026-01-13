@@ -10,6 +10,19 @@ import * as THREE from 'three';
 
 export class DebugTheme {
 
+	// define this themes colors (will be applied to CSS when loaded)
+	static themeColors = {
+		primaryColor: '#000000',
+		secondaryColor: '#707070ff',
+		accentColor: '#b0ec6bff',
+		bgAccent1: '#eeeeeeff',
+		bgAccent2: '#f8f8f8ff',
+		textColor: '#333333',
+		hoverColor: '#FFFFFF',
+		scrollColor:  '#FFFFFF',
+	};
+
+
 	/**
 	 * Constructor
 	 */
@@ -26,6 +39,9 @@ export class DebugTheme {
 	 * * @param {ThreeManager} manager - The ThreeManager instance.
 	 */
 	init(manager) {
+
+		// 1. Load HDR Environment (High exposure for brightness)
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
 
 		// Set global background color
 		manager.scene.background = new THREE.Color(0xf0f0f0);

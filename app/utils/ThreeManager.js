@@ -246,6 +246,7 @@ export class ThreeManager {
 		});
 
 		this.requestRender();
+		this.onResize(); // make sure everything is positioned correctly for the new theme
 	}
 
 

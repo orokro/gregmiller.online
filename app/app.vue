@@ -9,6 +9,7 @@
 // imports
 import { onMounted, ref } from 'vue';
 import { useThree } from '~/composables/useThree';
+import { useTheming } from '~/composables/useTheming';
 
 // components
 import AppSidebar from '~/components/AppSidebar.vue';
@@ -17,7 +18,11 @@ import HamburgerButton from './components/HamburgerButton.vue';
 import TopWidgets from './components/TopWidgets.vue';
 
 const canvasRef = ref(null);
+
+// composables
 const { initThree } = useThree();
+const { themeCSSVars } = useTheming();
+
 
 onMounted(() => {
 
@@ -35,7 +40,10 @@ onMounted(() => {
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&display=swap" rel="stylesheet">
 
-	<div class="app-root">
+	<div
+		class="app-root"
+		:style="themeCSSVars"
+	>
 
 		<canvas ref="canvasRef" class="webgl-canvas"></canvas>
 
@@ -76,7 +84,7 @@ html, body {
 	/* Firefox */
 
 	scrollbar-width: auto;
-	scrollbar-color: #ffffff #00abae;
+	scrollbar-color: #ffffff var(--color-primary);
 
 
 	/* Chrome, Edge, and Safari */
@@ -85,7 +93,7 @@ html, body {
 	}
 
 	&::-webkit-scrollbar-track {
-	background: #00abae;
+	background: var(--color-primary);
 	}
 
 	&::-webkit-scrollbar-thumb {
@@ -100,7 +108,7 @@ body {
 	padding: 0;
 	overflow-x: hidden; /* Prevent horizontal scroll from 3D canvas if any */
 	font-family: "Alumni Sans Pinstripe", sans-serif;
-	background: #00ABAE;
+	background: var(--color-primary);
 }
 
 .app-root {
