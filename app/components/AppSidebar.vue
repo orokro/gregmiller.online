@@ -18,6 +18,7 @@ import { useHamburger } from '../composables/useHamburger';
 
 // components
 import  LinkBarRow from './LinkBarRow.vue';
+import SearchBar from './SearchBar.vue';
 import Ico3D from './Link_Icons/Ico3D.vue';
 import IcoArt from './Link_Icons/IcoArt.vue';
 import IcoCode from './Link_Icons/IcoCode.vue';
@@ -72,11 +73,7 @@ const drawerClass = computed(() => ({
 			<!-- for theming we'll mix-blend this image over the theme color -->
 			<div class="bg-blend-pattern"></div>
 
-			<input
-				class="search"
-				type="search"
-				placeholder="Search (coming soon)"
-			/>
+			<SearchBar />
 		</div>
 
 		<nav class="sidebar-links">
@@ -238,32 +235,7 @@ const drawerClass = computed(() => ({
 
 		}// .brand
 
-		// search bar
-		.search {
 
-			// box styling
-			width: 100%;
-			padding: 0.5rem 0.75rem 0.4rem;
-
-			// border: 4px solid white;
-			border: 1px solid var(--color-primary);
-			border-radius: 100px;
-			box-sizing: border-box;
-			background: var(--color-bg-accent-2);
-			box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-
-			// text styling
-			font-size: 1rem;
-			color: var(--color-secondary);
-
-			// placeholder styling
-			&::placeholder {
-				color: var(--color-secondary);
-				opacity: 0.8;
-				font-style: italic;
-			}
-
-		}// .search
 
 	}// .sidebar-top
 
