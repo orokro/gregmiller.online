@@ -14,6 +14,7 @@ import { useThree } from '~/composables/useThree';
 import AppSidebar from '~/components/AppSidebar.vue';
 import ContentFrame from './components/ContentFrame.vue';
 import HamburgerButton from './components/HamburgerButton.vue';
+import TopWidgets from './components/TopWidgets.vue';
 
 const canvasRef = ref(null);
 const { initThree } = useThree();
@@ -51,6 +52,7 @@ onMounted(() => {
 		<ContentFrame />
 		<HamburgerButton />
 		<AppSidebar />
+		<TopWidgets />
 
 	</div>
 

@@ -1,8 +1,8 @@
 <!--
-	LinkBarRow.vue
+	SocialIcon.vue
 	--------------
 
-	A row in the side column for a link
+	One of the social media link icon buttons on the top right
 -->
 <script setup>
 
@@ -22,32 +22,21 @@ const props = defineProps({
 	url: String,
 });
 
-// Emits
-const emits = defineEmits(['close']);
-
-function close() {
-	emits('close');
-}
-
-
 </script>
 <template>
 
-	<NuxtLink :to="url" @click="close">
+	<NuxtLink :to="url" target="_blank">
 
-		<div class="link-row">
-
+		<div
+			class="icon-row"
+			:title="title"
+		>
 			<!-- animated bg pattern -->
 			<div class="bg-pattern"></div>
 
 			<!-- our custom SVG Icon component -->
 			<div class="icon">
 				<component :is="icon" v-if="icon" />
-			</div>
-
-			<!-- the actual text for the link -->
-			<div class="text">
-				{{ title }}
 			</div>
 
 		</div>
@@ -58,7 +47,7 @@ function close() {
 <style lang="scss" scoped>
 
 	// main outer wrapper for the link row
-	.link-row {
+	.icon-row {
 
 		// box settings
 		background: #E1EEF5;
@@ -89,7 +78,7 @@ function close() {
 
 			// positioned absolutely to the left of the row, with some padding
 			position: absolute;
-			left: 0.75rem;
+			left: 3px;
 			top: 50%;
 			transform: translateY(-50%);
 
@@ -102,7 +91,7 @@ function close() {
 
 			// make icon white by default
 			&:deep {
-				path {
+				path, circle, rect, polygon {
 
 					transition: fill 0.3s ease;
 					fill: #7561AA;
@@ -111,27 +100,6 @@ function close() {
 
 		}// .icon
 
-		// the text for the link
-		.text {
-
-			// border: 1px solid red;
-
-			// right of the icon, with some padding
-			position: absolute;
-			inset: 0px 0px 0px 60px;
-
-			// spacing
-			padding-top: 6px;
-
-			// font settings
-			font-size: 26px;
-			font-weight: bold;
-			color: #00ABAE;
-
-			// animate color on hover
-			transition: color 0.3s ease;
-
-		}// .text
 
 		// hover effect to show the bg pattern and change icon color
 		&:hover {
@@ -145,13 +113,8 @@ function close() {
 				fill: white;
 			}
 
-			.text {
-				color: white;
-				font-weight: bolder;
-			}
-
 		}// &:hover
 
-	}// .link-row
+	}// .icon-row
 
 </style>
