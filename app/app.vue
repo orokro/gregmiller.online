@@ -12,9 +12,12 @@ import { useThree } from '~/composables/useThree';
 
 // components
 import AppSidebar from '~/components/AppSidebar.vue';
+import ContentFrame from './components/ContentFrame.vue';
+import HamburgerButton from './components/HamburgerButton.vue';
 
 const canvasRef = ref(null);
 const { initThree } = useThree();
+
 onMounted(() => {
 
 	// Initialize the 3D System
@@ -37,8 +40,6 @@ onMounted(() => {
 
 		<div class="app-shell">
 
-			<AppSidebar />
-
 			<main class="app-main">
 				<div class="main-inner">
 					<NuxtPage />
@@ -46,6 +47,10 @@ onMounted(() => {
 			</main>
 
 		</div>
+
+		<ContentFrame />
+		<HamburgerButton />
+		<AppSidebar />
 
 	</div>
 
@@ -78,8 +83,6 @@ body {
 	position: relative;
 	width: 100%;
 	min-height: 100vh;
-	border-radius: var(--border-radius);
-	overflow: clip;
 }
 
 .webgl-canvas {
@@ -90,10 +93,8 @@ body {
 	z-index: -1;
 	pointer-events: none;
 	display: block;
-	border-radius: var(--border-radius);
 	overflow: clip;
 
-	// border: 4px solid #00ABAE;
 	box-sizing: border-box;
 	/* Remove 100vw/vh to prevent Layout Viewport clamping on zoom-out */
 }

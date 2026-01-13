@@ -3,8 +3,12 @@ export default defineNuxtConfig({
 	compatibilityDate: '2025-07-15',
 	devtools: { enabled: false },
 
-	// THIS IS CRITICAL for the app/ folder structure
-	// future: {
-	// 	compatibilityVersion: 4,
-	// },
+	app: {
+		head: {
+			meta: [
+				// This forces the status bar/browser UI to be your brand color
+				{ name: 'theme-color', content: '#00ABAE' },
+			]
+		}
+	}
 });
