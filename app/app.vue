@@ -105,6 +105,13 @@ body {
 	position: relative;
 	width: 100%;
 	min-height: 100vh;
+
+	transition: padding-left 0.3s ease	;
+	padding-left: 0px;
+
+	@media (min-width: 900px) {
+		padding-left: 260px;
+	}
 }
 
 .webgl-canvas {
