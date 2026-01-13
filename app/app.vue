@@ -69,6 +69,28 @@ onMounted(() => {
 
 html, body {
 	height: 100%;
+
+	/* ===== Scrollbar CSS ===== */
+	/* Firefox */
+
+	scrollbar-width: auto;
+	scrollbar-color: #ffffff #00abae;
+
+
+	/* Chrome, Edge, and Safari */
+	&::-webkit-scrollbar {
+		width: 16px;
+	}
+
+	&::-webkit-scrollbar-track {
+	background: #00abae;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background-color: #ffffff;
+		border-radius: 10px;
+		border: 3px solid #ffffff;
+	}
 }
 
 body {
