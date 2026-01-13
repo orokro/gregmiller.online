@@ -16,13 +16,13 @@ export class GlassThemeOld {
 
 	// define this themes colors (will be applied to CSS when loaded)
 	static themeColors = {
-		primaryColor: '#00ABAE',
-		secondaryColor: '#7561AA',
+		primaryColor: '#f77409ff',
+		secondaryColor: '#da1e27ff',
 		accentColor: '#b0ec6bff',
-		bgAccent1: '#E1EEF5',
-		bgAccent2: '#EFF4F7',
-		textColor: '#333333',
-		hoverColor: '#FFFFFF',
+		bgAccent1: '#f5f2e1ff',
+		bgAccent2: '#f6f7efff',
+		textColor: '#ffc0c3ff',
+		hoverColor: '#e3f1a5ff',
 		scrollColor:  '#FFFFFF',
 	};
 
