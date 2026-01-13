@@ -15,9 +15,11 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHamburger } from '../composables/useHamburger';
+import { useSearch } from '../composables/useSearch';
 
 // components
-import  LinkBarRow from './LinkBarRow.vue';
+import LinkBarRow from './LinkBarRow.vue';
+import LinkBarSearchResult from './LinkBarSearchResult.vue';
 import SearchBar from './SearchBar.vue';
 import Ico3D from './Link_Icons/Ico3D.vue';
 import IcoArt from './Link_Icons/IcoArt.vue';
@@ -38,6 +40,7 @@ import IcoUrbExArticles from './Link_Icons/IcoUrbExArticles.vue';
 // composables
 const { data: categories } = await useFetch('/api/categories');
 const { toggle, isOpen, close } = useHamburger();
+const { searchQuery, searchResults, resultsFound, searchActive } = useSearch();
 
 // refs
 const route = useRoute();
@@ -58,6 +61,9 @@ const drawerClass = computed(() => ({
 	'is-open': isOpen.value
 }));
 
+watch(()=>searchResults.value, (results) => {
+	console.log('Search results:', results);
+});
 </script>
 <template>
 
@@ -65,7 +71,13 @@ const drawerClass = computed(() => ({
 	<div class="overlay" :class="drawerClass" @click="close"></div>
 
 	<!-- Sidebar / Drawer -->
-	<aside class="app-sidebar" :class="drawerClass">
+	<aside
+		class="app-sidebar"
+		:class="{
+			'is-open': isOpen,
+			'search-active': searchActive
+		}"
+	>
 
 		<div class="sidebar-top">
 			<NuxtLink to="/" class="brand" @click="close">Greg Miller Online</NuxtLink>
@@ -109,6 +121,14 @@ const drawerClass = computed(() => ({
 
 		</nav>
 
+		<div class="search-results">
+			<div v-if="searchActive && !resultsFound" class="no-results">
+				No results found for: <br/> "{{ searchQuery }}"
+			</div>
+			<div v-else-if="searchActive && resultsFound" class="results-found">
+				<LinkBarSearchResult v-for="r in searchResults" :key="r.id" :result="r" @close="close" />
+			</div>
+		</div>
 	</aside>
 
 </template>
@@ -168,6 +188,9 @@ const drawerClass = computed(() => ({
 	border-right: 4px solid var(--color-primary);
 	border-left: 4px solid var(--color-primary);
 	border-bottom: 4px solid var(--color-primary);
+
+	// allow nothing to escape
+	overflow: clip;
 
 	// layout
 	display: flex;
@@ -235,8 +258,6 @@ const drawerClass = computed(() => ({
 
 		}// .brand
 
-
-
 	}// .sidebar-top
 
 	//  list of links
@@ -246,11 +267,15 @@ const drawerClass = computed(() => ({
 		flex: 1;
 		min-height: 0;
 		background: var(--color-bg-accent-2);
-		border-radius: 10px;
+		border-radius: 20px;
 
 		// allow scrolling if content exceeds viewport height
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
+
+		// slide out when search results are present
+		transform: translateX(0%);
+		transition: transform 120ms linear;
 
 		// category row
 		.category-row {
@@ -303,6 +328,55 @@ const drawerClass = computed(() => ({
 		}
 
 	}// .sidebar-links
+
+	//  list of search links
+	.search-results {
+
+		// box styling
+		position: absolute;
+		left: 110%;
+		width: 100%;
+		top: 130px;
+		bottom: 0px;
+
+		background: var(--color-bg-accent-2);
+		border-radius: 20px;
+
+		// allow scrolling if content exceeds viewport height
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+
+		// slide out when search results are present
+		transform: translateX(0%);
+		transition: transform 120ms linear;
+
+		// no results box
+		.no-results {
+
+			// box styling
+			padding: 20px;
+
+			// text styling
+			text-align: center;
+			font-size: 1.5rem;
+			font-weight: bold;
+			font-style: italic;
+			letter-spacing: 1px;
+			color: var(--color-secondary);
+
+		}// .no-results
+
+	}// .search-results
+
+	&.search-active {
+		.sidebar-links {
+			transform: translateX(-110%);
+		}
+
+		.search-results {
+			transform: translateX(-110%);
+		}
+	}
 
 }// .app-sidebar
 
