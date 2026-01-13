@@ -80,8 +80,6 @@ body {
 	min-height: 100vh;
 	border-radius: var(--border-radius);
 	overflow: clip;
-
-
 }
 
 .webgl-canvas {
@@ -95,7 +93,7 @@ body {
 	border-radius: var(--border-radius);
 	overflow: clip;
 
-	border: 4px solid #00ABAE;
+	// border: 4px solid #00ABAE;
 	box-sizing: border-box;
 	/* Remove 100vw/vh to prevent Layout Viewport clamping on zoom-out */
 }
@@ -113,7 +111,7 @@ body {
 
 	.app-main {
 
-		border: 1px solid red;
+		// border: 1px solid red;
 
 		position: relative;
 		width: 100%;
@@ -131,7 +129,7 @@ body {
 
 		.main-inner {
 
-			border: 1px solid green;
+			// border: 1px solid green;
 
 			width: 100%;
 			min-width: 0;
