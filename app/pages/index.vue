@@ -9,13 +9,6 @@
 // imports
 const { data, error } = await useFetch('/api/posts');
 
-// Log the results for debugging
-if (error.value) {
-    console.error('API Error:', error.value);
-} else {
-    console.log('API Data:', data.value);
-}
-
 const getPostLink = (post) => {
     const d = new Date(post.date);
     const year = d.getFullYear();

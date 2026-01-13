@@ -61,9 +61,6 @@ const drawerClass = computed(() => ({
 	'is-open': isOpen.value
 }));
 
-watch(()=>searchResults.value, (results) => {
-	console.log('Search results:', results);
-});
 </script>
 <template>
 
@@ -97,10 +94,10 @@ watch(()=>searchResults.value, (results) => {
 
 			<!-- stuff I make category -->
 			<div class="category-row">Stuff I Make</div>
-			<LinkBarRow title="3D" @close="close" url="category/3D-modeling" :icon="Ico3D" />
-			<LinkBarRow title="Art" @close="close" url="category/art" :icon="IcoArt" />
-			<LinkBarRow title="Code" @close="close" url="category/code-projects" :icon="IcoCode" />
-			<LinkBarRow title="Other Cool Junk" @close="close" url="category/other-projects" :icon="IcoOtherStuffs" />
+			<LinkBarRow title="3D" @close="close" url="/category/3d-modeling" :icon="Ico3D" />
+			<LinkBarRow title="Art" @close="close" url="/category/art" :icon="IcoArt" />
+			<LinkBarRow title="Code" @close="close" url="/category/code-projects" :icon="IcoCode" />
+			<LinkBarRow title="Other Cool Junk" @close="close" url="/category/other-projects" :icon="IcoOtherStuffs" />
 
 			<!-- I explore category -->
 			<div class="category-row">I Explore</div>
@@ -116,8 +113,8 @@ watch(()=>searchResults.value, (results) => {
 
 			<!-- other category -->
 			<div class="category-row">Other</div>
-			<LinkBarRow title="Tech Reviews" @close="close" url="/technology-reviews" :icon="IcoTech" />
-			<LinkBarRow title="Other Articles" @close="close" url="/other-articles" :icon="IcoOther" />
+			<LinkBarRow title="Tech Reviews" @close="close" url="/category/technology-reviews" :icon="IcoTech" />
+			<LinkBarRow title="Other Articles" @close="close" url="/category/uncategorized" :icon="IcoOther" />
 
 		</nav>
 

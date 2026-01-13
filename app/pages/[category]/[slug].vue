@@ -1,6 +1,6 @@
 <!--
 	[category]/[slug].vue
-	-----------------------
+	---------------------
 
 	This page displays a list of posts for a given category
 	The category is determined by the URL slug.
@@ -10,8 +10,34 @@
 const route = useRoute();
 const categorySlug = route.params.slug;
 
+// Handle legacy category slugs that don't match the current category names
+const legacySlugMap = {
+	"video": "Video",
+	"favorite-musicians": "Favorite Musicians",
+	"geocaching": "Geocaching",
+	"uncategorized": "Uncategorized",
+	"my-beats": "My Music",
+	"3d-modeling": "3D Modeling",
+	"code-projects": "Code Projects",
+	"other-projects": "Other Projects",
+	"art": "Art",
+	"websites": "Websites",
+	"music-articles": "Music Articles",
+	"urban-ex-articles": "Urban Ex Articles",
+	"urban-dx": "Urban Ex",
+	"code-projects": "Code Projects",
+	"graffiti-yards": "Graffiti Yards",
+	"technology-reviews": "Technology Reviews",
+}
+
+// get the slug and correct it if it's a legacy slug
+let slug = categorySlug;
+if (legacySlugMap[categorySlug]) {
+	slug = legacySlugMap[categorySlug];
+}
+
 const { data: posts } = await useFetch('/api/posts', {
-	query: { category: categorySlug }
+	query: { category: slug }
 });
 
 </script>
