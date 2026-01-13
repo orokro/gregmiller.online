@@ -90,7 +90,7 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 			right: 0px;
 
 			// box settings
-			height: 50px;
+			height: 60px;
 			width: 120px;
 			background: #00ABAE;
 
@@ -124,15 +124,25 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 				font-size: 1.2em;
 				font-weight: bolder;
 
+				// move label down a bit
+				label {
+
+					position: relative;
+					left: 6px;
+					top: 2px;
+
+				}// label
+
 				// the actual select box
 				select {
 
 					// move it up a bit
 					position: relative;
-					top: -1px;
+					top: 1px;
 
 					// box styling
 					width: 100%;
+					height: 30px;
 					padding: 0.1rem 0.25rem;
 
 					// text styling
@@ -140,7 +150,7 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 
 					// border: 4px solid white;
 					border: 1px solid #00ABAE;
-					border-radius: 100px;
+					border-radius: 10px;
 					box-sizing: border-box;
 					background: #EFF4F7;
 					box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -156,7 +166,7 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 
 			// fixed on top
 			position: absolute;
-			top: 50px;
+			top: 58px;
 			right: 0px;
 
 			// box settings
@@ -172,7 +182,7 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 
 				// fixed to the left of the main row
 				position: absolute;
-				top: -4px;
+				top: -2px;
 				left: -36px;
 				width: 40px;
 				height: 40px;

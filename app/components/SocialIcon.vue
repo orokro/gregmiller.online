@@ -78,7 +78,7 @@ const props = defineProps({
 
 			// positioned absolutely to the left of the row, with some padding
 			position: absolute;
-			left: 3px;
+			left: 2px;
 			top: 50%;
 			transform: translateY(-50%);
 
@@ -109,8 +109,11 @@ const props = defineProps({
 				background-position-x: 140px;
 			}
 
-			.icon:deep path {
-				fill: white;
+			.icon:deep {
+
+				path, circle, rect, polygon {
+					fill: white;
+				}
 			}
 
 		}// &:hover
