@@ -8,6 +8,7 @@
 
 // vue
 import { ref } from 'vue';
+import { useHamburger } from '../composables/useHamburger';
 
 // components
 import SocialIcon from './SocialIcon.vue';
@@ -19,10 +20,13 @@ import IcoLinkedIn from './Social_Icons/IcoLinkedIn.vue';
 import IcoX from './Social_Icons/IcoX.vue';
 import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 
+// composables
+const { isOpen } = useHamburger();
+
 </script>
 <template>
 
-	<div class="top-widgets">
+	<div class="top-widgets" :class="{ 'is-open': isOpen }">
 
 		<!-- horizontal box holds the theme selector & curve style element -->
 		<div class="theme-selector">
@@ -75,14 +79,34 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 	// main widget wrapper
 	.top-widgets {
 
+		// no pointer events
+		pointer-events: none;
+
 		// fixed on top right, above the canvas and below the sidebar
 		position: fixed;
 		top: 0px;
 		right: 0px;
 		z-index: 45;
 
+		// box settings
+		width: 155px;
+		height: 400px;
+		transform: translateX(100%);
+
+		// animate in/out
+		transition: transform 0.3s ease;
+		&.is-open {
+			transform: translateX(0%);
+		}
+		@media (min-width: 900px) {
+			transform: translateX(0%);
+		}
+
 		// theme selector box
 		.theme-selector {
+
+			// allow pointer events for the widgets inside
+			pointer-events: initial;
 
 			// fixed on top
 			position: absolute;
@@ -163,6 +187,9 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 
 		// vertical stack of social media icons
 		.social-icons {
+
+			// allow pointer events for the widgets inside
+			pointer-events: initial;
 
 			// fixed on top
 			position: absolute;
