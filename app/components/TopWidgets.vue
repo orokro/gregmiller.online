@@ -233,7 +233,7 @@ const currentThemeName = computed({
 				// fixed to the left of the main row
 				position: absolute;
 				top: -2px;
-				left: -36px;
+				left: -37px;
 				width: 40px;
 				height: 40px;
 
@@ -253,7 +253,7 @@ const currentThemeName = computed({
 
 				// position at the bottom right
 				bottom: -28px;
-				right: 0px;
+				right: 2px;
 
 				// smaller size looks better
 				width: 30px;

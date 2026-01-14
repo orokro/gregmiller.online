@@ -61,6 +61,13 @@ const drawerClass = computed(() => ({
 	'is-open': isOpen.value
 }));
 
+const sideBarWidth = computed(() => {
+	if (searchActive.value) {
+		return '400px';
+	}
+	return '260px';
+});
+
 </script>
 <template>
 
@@ -74,6 +81,7 @@ const drawerClass = computed(() => ({
 			'is-open': isOpen,
 			'search-active': searchActive
 		}"
+		:style="{ width: sideBarWidth }"
 	>
 
 		<div class="sidebar-top">
@@ -132,8 +140,7 @@ const drawerClass = computed(() => ({
 <style lang="scss" scoped>
 
 :root {
-	--sidebar-w: 280px;
-	--shell-bp: 900px;
+	--sidebar-w: v-bind(sideBarWidth);
 }
 
 /* OVERLAY (mobile/narrow only) */
@@ -197,7 +204,7 @@ const drawerClass = computed(() => ({
 	// for mobile / narrow, we animate the sidebar in from the left as a drawer,
 	// using transform for GPU-accelerated animation
 	transform: translate3d(-100%, 0, 0);
-	transition: transform 220ms ease;
+	transition: transform 220ms ease, width 220ms ease;
 
 	// open state
 	&.is-open {
@@ -272,7 +279,7 @@ const drawerClass = computed(() => ({
 
 		// slide out when search results are present
 		transform: translateX(0%);
-		transition: transform 120ms linear;
+		transition: transform 220ms linear;
 
 		// category row
 		.category-row {
@@ -314,7 +321,7 @@ const drawerClass = computed(() => ({
 
 		// slide out when search results are present
 		transform: translateX(0%);
-		transition: transform 120ms linear;
+		transition: transform 220ms linear;
 
 		// no results box
 		.no-results {

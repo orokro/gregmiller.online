@@ -11,9 +11,24 @@
 -->
 <script setup>
 
-// composables
+// vue
+import { computed } from 'vue';
+
+// app imports
 import { useHamburger } from '../composables/useHamburger';
+import { useSearch } from '../composables/useSearch';
+
+// composables
 const { isOpen } = useHamburger();
+const { searchActive } = useSearch();
+
+// change sidebar width based on search state
+const sideBarWidth = computed(() => {
+	if (searchActive.value) {
+		return '396px';
+	}
+	return '256px';
+});
 
 </script>
 <template>
@@ -21,6 +36,7 @@ const { isOpen } = useHamburger();
 	<div
 		class="main-frame-clip-boundary"
 		:class="{ 'is-open': isOpen }"
+		:style="{ '--sidebar-w': sideBarWidth }"
 	>
 		<div
 			class="main-frame"
@@ -65,10 +81,10 @@ const { isOpen } = useHamburger();
 
 			transition: left 220ms ease;
 			@media (min-width: 900px) {
-				left: 257px;
+				left: var(--sidebar-w);
 			}
 			&.is-open {
-				left: 257px;
+				left: var(--sidebar-w);
 			}
 
 			// the corner decorations, which are just background images in divs

@@ -130,7 +130,7 @@ const { toggle } = useHamburger();
 
 			// position at the bottom right
 			bottom: -3px;
-			left: -33px;
+			left: -32px;
 
 			// smaller size looks better
 			width: 30px;
