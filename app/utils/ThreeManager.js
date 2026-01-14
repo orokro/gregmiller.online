@@ -246,10 +246,12 @@ export class ThreeManager {
 				this.cleanGroupChildren(data.empties.tr);
 				this.cleanGroupChildren(data.empties.bl);
 				this.cleanGroupChildren(data.empties.br);
-				this.registeredElements.forEach((data) => {
-					this.buildRegisteredElement(data);
-				});
+
 			}
+		});
+
+		this.registeredElements.forEach((data) => {
+			this.buildRegisteredElement(data);
 		});
 
 		this.requestRender();
@@ -480,7 +482,7 @@ export class ThreeManager {
 		// CustomContainer3D cleanup hook (optional)
 		if (data.type === 'customBox' && data.options && typeof data.options.cleanFn === 'function') {
 			try {
-				data.options.cleanFn(data.empties.center, this);
+				data.options.cleanFn(this._getCustomRoot(data), this);
 			} catch (e) {
 				console.warn('CustomContainer3D cleanFn error:', e);
 			}
@@ -559,30 +561,70 @@ export class ThreeManager {
 
 
 	/**
+	 * Gets root objects to be used in custom builds, which can be useful for themes that want to provide some default structure for custom boxes.
+	 */
+	_getCustomRoot(data) {
+		return {
+			group: data.group,
+			empties: data.empties,
+		};
+	}
+
+	/**
 	 * Builds a registered element by calling the appropriate theme build function based on the element type.
 	 *
-	 * @param {Object} data - the data about registereed object
+	 * @param {Object} data - the data about registered object
 	 */
 	buildRegisteredElement(data) {
 
-		if (!data || !this.currentTheme)
+		if (!data)
 			return;
 
-		// Container3D: always theme buildBox
+		// If this is a CustomContainer3D and it supplied a cleanup hook,
+		// let it dispose custom resources BEFORE we wipe the empties.
+		if (data.type === 'customBox' && data.options && typeof data.options.cleanFn === 'function') {
+			try {
+				data.options.cleanFn({
+					group: data.group,
+					empties: data.empties,
+				}, this);
+			} catch (e) {
+				console.warn('CustomContainer3D cleanFn error:', e);
+			}
+		}
+
+		// Always clear any existing geometry so rebuilds don't stack
+		this.cleanGroupChildren(data.empties.center);
+		this.cleanGroupChildren(data.empties.tl);
+		this.cleanGroupChildren(data.empties.tr);
+		this.cleanGroupChildren(data.empties.bl);
+		this.cleanGroupChildren(data.empties.br);
+
+		// Regular Container3D always uses theme buildBox
 		if (data.type === 'box') {
-			if (typeof this.currentTheme.buildBox === 'function') {
+			if (this.currentTheme && typeof this.currentTheme.buildBox === 'function') {
 				this.currentTheme.buildBox(this, data);
 			}
 			return;
 		}
 
-		// ContainerCustom3D:
+		// Custom ContainerCustom3D: theme default is optional, instance overrides possible
 		if (data.type === 'customBox') {
 
-			const customRoot = data.empties.center;
-			const defaultBuild = this._getDefaultCustomBuild(data);
+			// theme default build (no-op if theme doesn't implement it)
+			const defaultBuild = () => {
+				if (this.currentTheme && typeof this.currentTheme.buildCustomBox === 'function') {
+					this.currentTheme.buildCustomBox(this, data);
+				}
+			};
 
-			// if custom build provided, it *replaces* theme build unless it calls defaultBuild()
+			// Provide full access to group + empties so custom components can pick corners, etc.
+			const customRoot = {
+				group: data.group,
+				empties: data.empties,
+			};
+
+			// If a custom buildFn exists, it replaces default theming unless it calls defaultBuild()
 			if (data.options && typeof data.options.buildFn === 'function') {
 				data.options.buildFn(defaultBuild, customRoot, this);
 			} else {
@@ -614,7 +656,7 @@ export class ThreeManager {
 		// ContainerCustom3D:
 		if (data.type === 'customBox') {
 
-			const customRoot = data.empties.center;
+			const customRoot = this._getCustomRoot(data);
 			const defaultUpdate = this._getDefaultCustomUpdate(data, rect);
 
 			if (data.options && typeof data.options.updateFn === 'function') {

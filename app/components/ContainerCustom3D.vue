@@ -161,7 +161,9 @@ onUnmounted(() => {
 	.measure-wrapper {
 
 		width: 100%;
-		position: relative;
+		height: 100%;
+		min-width: 0;
+		box-sizing: border-box;
 
 		// reset stacking context for corners, so they are always behind content but above the canvas
 		position: relative;

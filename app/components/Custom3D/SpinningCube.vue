@@ -12,40 +12,39 @@
 import * as THREE from 'three';
 import ContainerCustom3D from '../ContainerCustom3D.vue';
 
-// Keep references so we can update/clean correctly
 let cube = null;
 let cubeGeo = null;
 let cubeMat = null;
 
 function build(defaultBuild, customRoot, threeManager) {
 
-	// Run the theme's default CustomContainer styling (if any)
+	// Run theme default (if any)
 	defaultBuild();
 
-	// Add our custom spinning cube
+	// Add cube to the CENTER empty by default
+	const center = customRoot.empties.center;
+
 	cubeGeo = new THREE.BoxGeometry(60, 60, 60);
 	cubeMat = new THREE.MeshNormalMaterial();
 	cube = new THREE.Mesh(cubeGeo, cubeMat);
 	cube.name = 'spinning_cube';
 
-	// Sit it slightly behind the box face
-	cube.position.z = 0;
-	console.log('customRoot:', customRoot);
-	customRoot.add(cube);
+	// Centered automatically because center empty is at (0,0,0)
+	cube.position.set(0, 0, 0);
 
-	// Make sure it renders
+	center.add(cube);
+
 	threeManager.requestRender();
 }
 
 function update(defaultUpdate, customRoot, threeManager) {
 
-	// Keep the default custom-box geometry in sync too
 	defaultUpdate();
 
-	// Spin our cube
-	if (!cube) {
-		cube = customRoot.getObjectByName('spinning_cube');
-	}
+	const center = customRoot.empties.center;
+
+	if (!cube)
+		cube = center.getObjectByName('spinning_cube');
 
 	if (cube) {
 		cube.rotation.y += 0.12;
@@ -57,11 +56,11 @@ function update(defaultUpdate, customRoot, threeManager) {
 
 function destroy(customRoot, threeManager) {
 
-	// Remove + dispose custom resources
-	const obj = customRoot.getObjectByName('spinning_cube');
-	if (obj) {
-		customRoot.remove(obj);
-	}
+	const center = customRoot.empties.center;
+
+	const obj = center.getObjectByName('spinning_cube');
+	if (obj)
+		center.remove(obj);
 
 	if (cubeGeo) {
 		cubeGeo.dispose();
@@ -86,9 +85,7 @@ function destroy(customRoot, threeManager) {
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
-	>
-		<slot />
-	</ContainerCustom3D>
+	/>
 
 </template>
 <style lang="scss" scoped>
