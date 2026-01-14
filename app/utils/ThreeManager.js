@@ -65,8 +65,13 @@ export class ThreeManager {
 		this.envTexture = null;
 
 		// Loop Control
-		this.isOk = false;       // WebGL Capability
+		this.isOk = false;
 		this.isDirty = true;
+
+		// NEW: burst render state
+		this.renderFramesLeft = 0;
+		this._rafId = null;
+		this.tick = this.tick.bind(this);
 
 		// For lazy rendering
 		this.frameMode = 'lazy'; // 'lazy' or 'active' (60fps)
@@ -241,7 +246,9 @@ export class ThreeManager {
 				this.cleanGroupChildren(data.empties.tr);
 				this.cleanGroupChildren(data.empties.bl);
 				this.cleanGroupChildren(data.empties.br);
-				this.currentTheme.buildBox(this, data);
+				this.registeredElements.forEach((data) => {
+					this.buildRegisteredElement(data);
+				});
 			}
 		});
 
@@ -257,8 +264,19 @@ export class ThreeManager {
 	 */
 	setFrameMode(mode) {
 		this.frameMode = mode;
-		if (mode === 'active')
-			this.tick();
+
+		// If switching to active, ensure loop is running
+		if (this.frameMode === 'active') {
+			this._ensureTicking();
+			return;
+		}
+
+		// If switching to lazy, we only keep running if we have burst frames left
+		// If none left, do nothing and the loop will naturally stop
+		// If some left, ensure ticking continues for the burst
+		if (this.renderFramesLeft > 0) {
+			this._ensureTicking();
+		}
 	}
 
 
@@ -394,9 +412,10 @@ export class ThreeManager {
 	 *
 	 * @param {HTMLElement} element - the element to watch in 3d
 	 * @param {String} type - the type of sync to use (e.g., 'box')
+	 * @param {Object} options - additional options for registration, passed to the theme's build functions
 	 * @returns {Object} - { id, empties } where id is the unique identifier for this element and empties are the empty groups for positioning
 	 */
-	register(element, type = 'box') {
+	register(element, type = 'box', options = {}) {
 
 		// gtfo if no element or manager not ready
 		if (!this.isOk)
@@ -424,7 +443,7 @@ export class ThreeManager {
 		group.add(empties.br);
 
 		// pack up the data and save it
-		const data = { id, element, group, type, empties };
+		const data = { id, element, group, type, empties, options };
 		this.registeredElements.set(id, data);
 		if (this.resizeObserver) {
 			this.resizeObserver.observe(element);
@@ -432,9 +451,7 @@ export class ThreeManager {
 
 		// make sure the new element is positioned correctly in the first place
 		this.updateElementPosition(id);
-		if (type === 'box' && this.currentTheme) {
-			this.currentTheme.buildBox(this, data);
-		}
+		this.buildRegisteredElement(data);
 
 		// make sure to re-render now that we have a new element
 		this.requestRender();
@@ -454,10 +471,21 @@ export class ThreeManager {
 			return;
 
 		// grab the group and element, unobserve it, remove it from the scene, clean up resources, and delete from registry
-		const { group, element } = this.registeredElements.get(id);
+		const data = this.registeredElements.get(id);
+		const { group, element } = data;
 		if (this.resizeObserver && element) {
 			this.resizeObserver.unobserve(element);
 		}
+
+		// CustomContainer3D cleanup hook (optional)
+		if (data.type === 'customBox' && data.options && typeof data.options.cleanFn === 'function') {
+			try {
+				data.options.cleanFn(data.empties.center, this);
+			} catch (e) {
+				console.warn('CustomContainer3D cleanFn error:', e);
+			}
+		}
+
 		this.scene.remove(group);
 		this.cleanGroupChildren(group);
 		this.registeredElements.delete(id);
@@ -489,7 +517,111 @@ export class ThreeManager {
 				else child.material.dispose();
 			}
 
-			if (child.children.length) this.cleanGroupChildren(child);
+			if (child.children.length)
+				this.cleanGroupChildren(child);
+		}
+	}
+
+
+	/* ==========================================================================
+	   CUSTOM CONTAINERS
+	   ========================================================================== */
+
+	/**
+	 * Get a function that builds a custom box for this item
+	 * @param {Object} data - data about registered object
+	 * @returns
+	 */
+	_getDefaultCustomBuild(data) {
+
+		return () => {
+			if (this.currentTheme && typeof this.currentTheme.buildCustomBox === 'function') {
+				this.currentTheme.buildCustomBox(this, data);
+			}
+		};
+	}
+
+
+	/**
+	 * Gets the a wrapped update function for a custom box that calls the theme's updateCustomBox if it exists.
+	 *
+	 * @param {Object} data - data about registered object
+	 * @param {Object} rect - the bounding rect of the element
+	 * @return {Function} - the wrapped update function
+	 */
+	_getDefaultCustomUpdate(data, rect) {
+		return () => {
+			if (this.currentTheme && typeof this.currentTheme.updateCustomBox === 'function') {
+				this.currentTheme.updateCustomBox(this, data, rect);
+			}
+		};
+	}
+
+
+	/**
+	 * Builds a registered element by calling the appropriate theme build function based on the element type.
+	 *
+	 * @param {Object} data - the data about registereed object
+	 */
+	buildRegisteredElement(data) {
+
+		if (!data || !this.currentTheme)
+			return;
+
+		// Container3D: always theme buildBox
+		if (data.type === 'box') {
+			if (typeof this.currentTheme.buildBox === 'function') {
+				this.currentTheme.buildBox(this, data);
+			}
+			return;
+		}
+
+		// ContainerCustom3D:
+		if (data.type === 'customBox') {
+
+			const customRoot = data.empties.center;
+			const defaultBuild = this._getDefaultCustomBuild(data);
+
+			// if custom build provided, it *replaces* theme build unless it calls defaultBuild()
+			if (data.options && typeof data.options.buildFn === 'function') {
+				data.options.buildFn(defaultBuild, customRoot, this);
+			} else {
+				defaultBuild();
+			}
+		}
+	}
+
+
+	/**
+	 * Updates a registered element by calling the appropriate theme update function based on the element type.
+	 *
+	 * @param {string} id - the id of the registered object to update
+	 * @param {Object} rect - the bounding rect of the element
+	 */
+	updateRegisteredElement(data, rect) {
+
+		if (!data || !this.currentTheme)
+			return;
+
+		// Container3D: always theme updateBox
+		if (data.type === 'box') {
+			if (typeof this.currentTheme.updateBox === 'function') {
+				this.currentTheme.updateBox(this, data, rect);
+			}
+			return;
+		}
+
+		// ContainerCustom3D:
+		if (data.type === 'customBox') {
+
+			const customRoot = data.empties.center;
+			const defaultUpdate = this._getDefaultCustomUpdate(data, rect);
+
+			if (data.options && typeof data.options.updateFn === 'function') {
+				data.options.updateFn(defaultUpdate, customRoot, this);
+			} else {
+				defaultUpdate();
+			}
 		}
 	}
 
@@ -635,6 +767,8 @@ export class ThreeManager {
 	 */
 	requestRender() {
 		this.isDirty = true;
+		this.renderFramesLeft = 60;
+		this._ensureTicking();
 	}
 
 
@@ -684,36 +818,73 @@ export class ThreeManager {
 		empties.bl.position.set(-halfW, -halfH, 0);
 		empties.br.position.set(halfW, -halfH, 0);
 
-		const syntheticRect = { width, height, top: rectTL.top, left: rectTL.left };
-		if (data.type === 'box' && this.currentTheme) {
-			this.currentTheme.updateBox(this, data, syntheticRect);
-		}
+		const rect = { width, height, top, left };
+		this.updateRegisteredElement(data, rect);
+	}
+
+
+	/**
+	 * Render loop management: ensures that the tick function is being called on the next animation frame.
+	 * In "lazy" mode, this is called whenever we need to render a new frame due to changes.
+	 * In "active" mode, this is called once to kick off the continuous rendering loop.
+	 */
+	_ensureTicking() {
+		if (this._rafId != null)
+			return;
+		this._rafId = requestAnimationFrame(this.tick);
 	}
 
 
 	/**
 	 * The main render loop.
+	 * - Active mode: always renders and keeps looping.
+	 * - Lazy mode: renders for N frames after requestRender(), then stops.
 	 */
 	tick() {
+
+		// clear the scheduled id (we're in the callback now)
+		this._rafId = null;
 
 		// gtfo if we're not ready
 		if (!this.isOk)
 			return;
 
-		// themes that are active can do stuff every frame in their onTick, like animate materials or whatever. If they do, we request a render.
-		if (this.currentTheme && this.frameMode === 'active') {
+		const isActive = (this.frameMode === 'active');
+
+		// Theme tick: only run while we are actively ticking
+		// (Active mode always ticks; Lazy mode ticks during a burst window)
+		if (this.currentTheme && typeof this.currentTheme.onTick === 'function') {
 			this.currentTheme.onTick(this, performance.now());
-			this.isDirty = true;
+
+			// IMPORTANT:
+			// Do NOT force dirty here. If the theme actually animates,
+			// it should call manager.requestRender() itself.
 		}
 
-		// only render if something has changed, or if we're in active mode
-		if (this.isDirty || this.frameMode === 'active') {
+		// Decide whether to render this frame
+		const shouldRender = isActive || this.isDirty || this.renderFramesLeft > 0;
+
+		if (shouldRender) {
+
 			this.renderer.render(this.scene, this.camera);
+
+			// reset dirty after a render
 			this.isDirty = false;
+
+			// decrement burst counter only in lazy mode
+			if (!isActive && this.renderFramesLeft > 0) {
+				this.renderFramesLeft--;
+			}
+			console.log('render');
+			// console.log('Rendered frame. Active mode:', isActive, 'Frames left in burst:', this.renderFramesLeft);
 		}
 
-		// recursive loop
-		requestAnimationFrame(this.tick.bind(this));
+		// Decide whether to keep looping
+		const shouldContinue = isActive || this.renderFramesLeft > 0;
+
+		if (shouldContinue) {
+			this._rafId = requestAnimationFrame(this.tick);
+		}
 	}
 
 }

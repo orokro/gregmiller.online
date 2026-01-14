@@ -18,7 +18,7 @@ export class DebugTheme {
 		bgAccent1: '#eeeeeeff',
 		bgAccent2: '#f8f8f8ff',
 		textColor: '#333333',
-		hoverColor: '#FFFFFF',
+		hoverColor: '#ffffff',
 		scrollColor:  '#FFFFFF',
 	};
 
@@ -31,6 +31,9 @@ export class DebugTheme {
 		// Store theme-specific state here
 		this.boxMaterial = null;
 		this.cornerGeometry = null;
+		this.customLineMaterial = null;
+		this.customEdgesGeometry = null;
+		this.customDepth = 40;
 	}
 
 
@@ -40,19 +43,13 @@ export class DebugTheme {
 	 */
 	init(manager) {
 
+		manager.setFrameMode('lazy');
+
 		// 1. Load HDR Environment (High exposure for brightness)
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
 
 		// Set global background color
-		manager.scene.background = new THREE.Color(0xf0f0f0);
-
-		// Load assets if needed (graph paper)
-		// For now we just use colors
-		// if (manager.bgPlane) {
-		// 	manager.bgPlane.material.color.set(0xe0e0e0);
-		// 	manager.bgPlane.material.map = null;
-		// 	manager.bgPlane.material.needsUpdate = true;
-		// }
+		manager.scene.background = new THREE.Color(0x000000);
 
 		// Prepare reusable materials/geometries
 		this.boxMaterial = new THREE.MeshBasicMaterial({
@@ -61,6 +58,12 @@ export class DebugTheme {
 		});
 
 		this.cornerGeometry = new THREE.BoxGeometry(10, 10, 10); // 10px cubes
+
+		// CustomContainer3D (different styling so we can visually confirm the pipeline)
+		this.customLineMaterial = new THREE.LineBasicMaterial({
+			color: 0x00ffff
+		});
+		this.customEdgesGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 	}
 
 
@@ -76,6 +79,12 @@ export class DebugTheme {
 
 		if (this.cornerGeometry)
 			this.cornerGeometry.dispose();
+
+		if (this.customLineMaterial)
+			this.customLineMaterial.dispose();
+
+		if (this.customEdgesGeometry)
+			this.customEdgesGeometry.dispose();
 	}
 
 
@@ -121,20 +130,57 @@ export class DebugTheme {
 	updateBox(manager, data, rect) {
 
 		// Resize the center cube to match the div size
-        const cube = data.empties.center.getObjectByName("debug_cube");
+		const cube = data.empties.center.getObjectByName("debug_cube");
 
-        if (cube) {
-            const depth = 100; // Arbitrary depth for the debug box
+		if (cube) {
+			const depth = 100; // Arbitrary depth for the debug box
 
-            // 1. Scale
-            cube.scale.set(rect.width, rect.height, depth);
+			// 1. Scale
+			cube.scale.set(rect.width, rect.height, depth);
 
-            // 2. Position Shift
-            // By default, a box is centered at (0,0,0).
-            // We want the front face to be at Z = 0.
-            // Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
-            // We need to move it back by depth/2 so it extends from 0 to -depth.
-            cube.position.z = -depth / 2;
-        }
+			// 2. Position Shift
+			// By default, a box is centered at (0,0,0).
+			// We want the front face to be at Z = 0.
+			// Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
+			// We need to move it back by depth/2 so it extends from 0 to -depth.
+			cube.position.z = -depth / 2;
+		}
+	}
+
+
+	/**
+	 * Called when a <ContainerCustom3D> is registered or theme is switched.
+	 * This is OPTIONAL for themes to implement.
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {object} data - The element data object { id, empties, group, ... }.
+	 */
+	buildCustomBox(manager, data) {
+
+		// A simple cyan wireframe outline (no corner cubes)
+		const lines = new THREE.LineSegments(this.customEdgesGeometry, this.customLineMaterial);
+		lines.name = "debug_custom_outline";
+		data.empties.center.add(lines);
+	}
+
+
+	/**
+	 * Called on Resize/Scroll/Reflow to update CustomContainer dimensions.
+	 * This is OPTIONAL for themes to implement.
+	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {object} data - The element data object.
+	 * @param {DOMRect} rect - The bounding client rect of the DOM element.
+	 */
+	updateCustomBox(manager, data, rect) {
+
+		const lines = data.empties.center.getObjectByName("debug_custom_outline");
+
+		if (lines) {
+
+			// Keep it thinner than the normal debug box so it's visually distinct
+			const depth = this.customDepth;
+
+			lines.scale.set(rect.width, rect.height, depth);
+			lines.position.z = -depth / 2;
+		}
 	}
 }

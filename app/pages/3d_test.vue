@@ -7,7 +7,8 @@
 
 // imports
 import Container3D from '~/components/Container3D.vue';
-
+import ContainerCustom3D from '../components/ContainerCustom3D.vue';
+import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 
 </script>
 <template>
@@ -52,6 +53,15 @@ import Container3D from '~/components/Container3D.vue';
 			</Container3D>
 
 		</section>
+
+		<ContainerCustom3D>
+			<div class="box-content">
+				Custom container
+			</div>
+		</ContainerCustom3D>
+
+		<SpinningCube />
+		<SpinningCube />
 
 		<section class="spacer">
 			<p>Scroll down...</p>

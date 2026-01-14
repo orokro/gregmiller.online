@@ -1,15 +1,32 @@
 <!--
-	Container3D.vue
-	---------------
+	ContainerCustom3D.vue
+	--------------------
 
-	This will be used as a wrapper for any page sections that want to use 3D content.
-	It handles the registration and cleanup of ThreeManager resources, and also provides a fallback UI if WebGL isn't available.
+	A 3D-enabled container that behaves like <Container3D>, but allows per-instance custom ThreeJS logic.
+
+	How it works:
+	- Registers with ThreeManager as type 'customBox'
+	- Themes may optionally implement:
+		- buildCustomBox(manager, data)
+		- updateCustomBox(manager, data, rect)
+	- This component may optionally provide per-instance overrides via props:
+		:buildFn, :updateFn, :clean
+		If buildFn/updateFn are provided, ThreeManager will call them and pass:
+		(defaultBuild/defaultUpdate, customRoot, threeManager)
+		where defaultBuild/defaultUpdate run the theme's default CustomBox styling (or no-op if theme doesn't implement it).
 -->
 <script setup>
 
 // Imports
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useThree } from '~/composables/useThree';
+
+// Props
+const props = defineProps({
+	buildFn: { type: Function, default: null },
+	updateFn: { type: Function, default: null },
+	clean: { type: Function, default: null },
+});
 
 // State
 const el = ref(null);
@@ -38,7 +55,11 @@ onMounted(async () => {
 	// 3. Register
 	if (mgr.isOk && el.value) {
 
-		const result = mgr.register(el.value, 'box');
+		const result = mgr.register(el.value, 'customBox', {
+			buildFn: props.buildFn,
+			updateFn: props.updateFn,
+			cleanFn: props.clean,
+		});
 
 		if (result) {
 			registeredId.value = result.id;
@@ -49,6 +70,33 @@ onMounted(async () => {
 		isFallback.value = true;
 	}
 
+});
+
+// If user swaps build/update hooks at runtime, update the registered element options
+watch(() => props.buildFn, (fn) => {
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!data) return;
+	data.options.buildFn = fn;
+	threeManagerInstance.buildRegisteredElement(data);
+	threeManagerInstance.updateElementPosition(registeredId.value);
+	threeManagerInstance.requestRender();
+});
+
+watch(() => props.updateFn, (fn) => {
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!data) return;
+	data.options.updateFn = fn;
+	threeManagerInstance.updateElementPosition(registeredId.value);
+	threeManagerInstance.requestRender();
+});
+
+watch(() => props.clean, (fn) => {
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!data) return;
+	data.options.cleanFn = fn;
 });
 
 onUnmounted(() => {
@@ -64,7 +112,7 @@ onUnmounted(() => {
 <template>
 
 	<!-- main wrapper that the user can style from outside classes / style blocks -->
-	<div ref="el" class="container-3d" :class="{ 'no-3d': isFallback }">
+	<div ref="el" class="container-custom-3d" :class="{ 'no-3d': isFallback }">
 
 		<!-- special wrapper to reset stacking context for our corners-->
 		<div class="measure-wrapper">
@@ -75,7 +123,7 @@ onUnmounted(() => {
 			<div class="corner bottom-left"></div>
 			<div class="corner bottom-right"></div>
 
-			<!-- pass thru whatever this container is supposed to contain -->
+			<!-- optional children -->
 			<div class="content">
 				<slot />
 			</div>
@@ -86,7 +134,7 @@ onUnmounted(() => {
 </template>
 <style lang="scss" scoped>
 
-.container-3d {
+.container-custom-3d {
 
 	position: relative;
 	display: block;
@@ -99,7 +147,6 @@ onUnmounted(() => {
 		border: 1px solid #ddd;
 	}
 
-
 	.content {
 		width: 100%;
 		min-width: 0;
@@ -107,7 +154,7 @@ onUnmounted(() => {
 	}
 
 	/* MEASUREMENT SYSTEM
-  	   ------------------
+	   ------------------
 	   Internal markers to get exact corner coordinates, bypassing potential
 	   box-sizing/border quirks of the parent container.
 	*/
@@ -152,6 +199,6 @@ onUnmounted(() => {
 
 	}// .measure-wrapper
 
-}// .container-3d
+}// .container-custom-3d
 
 </style>
