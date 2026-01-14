@@ -2,8 +2,20 @@
 	GlassTheme.js
 	-------------
 
-	A simple theme that renders Red wireframes for <Container3D> elements.
-	Acts as the default theme and a reference implementation.
+	Glass slice theme:
+	- Loads /models/glass_slice_2.glb which contains 9 named pieces:
+	  Top_Left, Top, Top_Right, Left, Center, Right, Bottom_Left, Bottom, Bottom_Right
+
+	Scaling rules:
+	- Never scale/move on Z (depth). Everything lives flat on the empties plane.
+	- Corner pieces never scale.
+	- Top/Bottom scale X only (width between their corners).
+	- Left/Right scale Y only (height between their corners).
+	- Center scales X/Y only (between all four corners).
+
+	Works for both:
+	- Container3D via buildBox/updateBox
+	- ContainerCustom3D via buildCustomBox/updateCustomBox (optional in the system, but this theme provides them)
 */
 
 import * as THREE from 'three';
@@ -14,127 +26,337 @@ export class GlassTheme {
 	static themeColors = {
 		primaryColor: '#00ABAE',
 		secondaryColor: '#7561AA',
-		accentColor: '#b0ec6bff',
-		bgAccent1: '#E1EEF5',
-		bgAccent2: '#EFF4F7',
-		textColor: '#333333',
-		hoverColor: '#FFFFFF',
-		scrollColor:  '#FFFFFF',
+		accentColor: '#b0ec6b',
+		bgAccent1: '#f8f8f8',
+		bgAccent2: '#e6e6e6',
+		colorScroll: '#ffffff',
 	};
 
-
-	/**
-	 * Constructor
-	 */
 	constructor() {
 
-		// Store theme-specific state here
-		this.boxMaterial = null;
-		this.cornerGeometry = null;
+		// load state
+		this.isReady = false;
+		this.sliceTemplates = {};
+		this.sliceSizes = {};
+
+		// lighting
+		this.camLight = null;
+
+		// materials
+		this.glassMaterial = new THREE.MeshPhysicalMaterial({
+			color: 0xAAEFEF,
+			transmission: 0.5,  // Full transmission
+			opacity: 1.0,
+			metalness: 0.1,
+			roughness: 0.0,     // Perfectly smooth
+			ior: 1.5,           // Glass Refractive Index
+			thickness: 1.5,     // Volume
+			envMapIntensity: 3.0, // Bright reflections
+			clearcoat: 1.0,
+			clearcoatRoughness: 0.0,
+			// side: THREE.DoubleSide,
+			transparent: true,
+		});
+
+		// internal
+		this._loadPromise = null;
 	}
 
-
 	/**
-	 * Called when theme is loaded.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * Called by ThreeManager when the theme becomes active.
+	 * NOTE: ThreeManager does not await this, so we load async internally and rebuild when ready.
 	 */
 	init(manager) {
 
 		// 1. Load HDR Environment (High exposure for brightness)
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
 
-		// Set global background color
-		manager.scene.background = new THREE.Color(0xf0f0f0);
+		// 2. Add Camera Light (Dynamic Flash)
+		this.camLight = new THREE.PointLight(0xffffff, 50000, 5000); // Color, Intensity, Distance
+		this.camLight.position.set(50, 50, 50);
+		manager.camera.add(this.camLight);
 
-		// Load assets if needed (graph paper)
-		// For now we just use colors
-		// if (manager.bgPlane) {
-		// 	manager.bgPlane.material.color.set(0xe0e0e0);
-		// 	manager.bgPlane.material.map = null;
-		// 	manager.bgPlane.material.needsUpdate = true;
-		// }
-
-		// Prepare reusable materials/geometries
-		this.boxMaterial = new THREE.MeshBasicMaterial({
-			color: 0xff0000,
-			wireframe: true
-		});
-
-		this.cornerGeometry = new THREE.BoxGeometry(10, 10, 10); // 10px cubes
+		// 3. Load GLB (async)
+		this._loadPromise = this._loadModel(manager);
 	}
 
-
 	/**
-	 * Called when theme is unloaded.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * Cleanup when theme is unloaded.
 	 */
 	destroy(manager) {
 
-		// Clean up reusable assets
-		if (this.boxMaterial)
-			this.boxMaterial.dispose();
+		// remove camera light
+		if (this.camLight) {
+			manager.camera.remove(this.camLight);
+			this.camLight = null;
+		}
 
-		if (this.cornerGeometry)
-			this.cornerGeometry.dispose();
+		// clear refs
+		this.isReady = false;
+		this.sliceTemplates = {};
+		this.sliceSizes = {};
 	}
 
+	async _loadModel(manager) {
 
-	/**
-	 * Called per frame (only if manager.frameMode === 'active').
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {number} time - The current performance.now() timestamp.
-	 */
-	onTick(manager, time) {
+		const [gltfScene] = await manager.assetsReady(['/models/glass_slice_2.glb']);
 
-		// Nothing to animate in debug mode
+		if (!gltfScene) {
+			console.error("GlassTheme: Failed to load model.");
+			return;
+		}
+
+		// grab the 9 pieces by name
+		const names = [
+			'Top_Left', 'Top', 'Top_Right',
+			'Left', 'Center', 'Right',
+			'Bottom_Left', 'Bottom', 'Bottom_Right'
+		];
+
+		names.forEach((name) => {
+
+			const obj = gltfScene.getObjectByName(name);
+
+			if (!obj) {
+				console.warn(`GlassTheme: Missing object in GLB: ${name}`);
+				return;
+			}
+
+			// store a template (we clone this per element)
+			this.sliceTemplates[name] = obj;
+
+			// store its base size (used to compute scale ratios later)
+			const box = new THREE.Box3().setFromObject(obj);
+			const size = new THREE.Vector3();
+			box.getSize(size);
+
+			// avoid divide-by-zero in case any axis is 0
+			if (size.x === 0) size.x = 1;
+			if (size.y === 0) size.y = 1;
+			if (size.z === 0) size.z = 1;
+
+			this.sliceSizes[name] = size;
+		});
+
+		this.isReady = true;
+
+		// model is ready now: rebuild everything with this theme
+		manager.registeredElements.forEach((data) => {
+			manager.buildRegisteredElement(data);
+		});
+
+		// and force a position update
+		manager.onResize();
+		manager.requestRender();
 	}
 
-
 	/**
-	 * Called when a <Container3D> is registered or theme is switched.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {object} data - The element data object { id, empties, group, ... }.
+	 * Container3D default build.
 	 */
 	buildBox(manager, data) {
 
-		// Add a wireframe cube to the center
-		// We'll scale it in updateBox
-		const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
-		cube.name = "debug_cube";
-		data.empties.center.add(cube);
+		if (!this.isReady)
+			return;
 
-		// Add markers to corners
-		const mkTL = new THREE.Mesh(this.cornerGeometry, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-		const mkBR = new THREE.Mesh(this.cornerGeometry, new THREE.MeshBasicMaterial({ color: 0x0000ff }));
-
-		data.empties.tl.add(mkTL);
-		data.empties.br.add(mkBR);
+		this._buildGlassSlices(manager, data);
 	}
 
-
 	/**
-	 * Called on Resize/Scroll/Reflow to update content dimensions.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {object} data - The element data object.
-	 * @param {DOMRect} rect - The bounding client rect of the DOM element.
+	 * Container3D default update.
 	 */
 	updateBox(manager, data, rect) {
 
-		// Resize the center cube to match the div size
-		const cube = data.empties.center.getObjectByName("debug_cube");
+		if (!this.isReady)
+			return;
 
-		if (cube) {
-			const depth = 100; // Arbitrary depth for the debug box
+		this._updateGlassSlices(manager, data, rect);
+	}
 
-			// 1. Scale
-			cube.scale.set(rect.width, rect.height, depth);
+	/**
+	 * ContainerCustom3D default build.
+	 * (ThreeManager will call this unless a component supplied buildFn, or if buildFn calls defaultBuild())
+	 */
+	buildCustomBox(manager, data) {
 
-			// 2. Position Shift
-			// By default, a box is centered at (0,0,0).
-			// We want the front face to be at Z = 0.
-			// Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
-			// We need to move it back by depth/2 so it extends from 0 to -depth.
-			cube.position.z = -depth / 2;
+		if (!this.isReady)
+			return;
+
+		this._buildGlassSlices(manager, data);
+	}
+
+	/**
+	 * ContainerCustom3D default update.
+	 */
+	updateCustomBox(manager, data, rect) {
+
+		if (!this.isReady)
+			return;
+
+		this._updateGlassSlices(manager, data, rect);
+	}
+
+	_buildGlassSlices(manager, data) {
+
+		// ensure per-element storage
+		if (!data.themeData)
+			data.themeData = {};
+
+		// if theme is rebuilding, manager should already have cleaned children,
+		// but this guards hot-rebuilds and accidental double-builds.
+		if (data.themeData.glassParts) {
+			Object.values(data.themeData.glassParts).forEach((obj) => {
+				if (obj && obj.parent)
+					obj.parent.remove(obj);
+			});
 		}
+
+		const parts = {};
+
+		const cloneSlice = (name) => {
+
+			const template = this.sliceTemplates[name];
+			if (!template)
+				return null;
+
+			// deep clone so meshes/materials are safe per element
+			const clone = template.clone(true);
+
+			clone.traverse((o) => {
+				if (o.isMesh) {
+					o.material = this.glassMaterial;
+					o.castShadow = false;
+					o.receiveShadow = true;
+				}
+			});
+
+			// never let three decide to auto-scale Z later
+			clone.scale.z = 1;
+
+			data.group.add(clone);
+			return clone;
+		};
+
+		parts.Top_Left = cloneSlice('Top_Left');
+		parts.Top = cloneSlice('Top');
+		parts.Top_Right = cloneSlice('Top_Right');
+
+		parts.Left = cloneSlice('Left');
+		parts.Center = cloneSlice('Center');
+		parts.Right = cloneSlice('Right');
+
+		parts.Bottom_Left = cloneSlice('Bottom_Left');
+		parts.Bottom = cloneSlice('Bottom');
+		parts.Bottom_Right = cloneSlice('Bottom_Right');
+
+		data.themeData.glassParts = parts;
+
+		// immediately position/scale once (update will refine on resize/scroll)
+		this._updateGlassSlices(manager, data);
+	}
+
+	_updateGlassSlices(manager, data, rect = null) {
+
+		if (!data.themeData || !data.themeData.glassParts)
+			return;
+
+		const parts = data.themeData.glassParts;
+
+		// corner/center positions in the SAME local space as data.group (empties are children of group)
+		const tl = data.empties.tl.position.clone();
+		const tr = data.empties.tr.position.clone();
+		const bl = data.empties.bl.position.clone();
+		const br = data.empties.br.position.clone();
+		const c = data.empties.center.position.clone();
+
+		// measures
+		const topWidth = tl.distanceTo(tr);
+		const bottomWidth = bl.distanceTo(br);
+		const leftHeight = tl.distanceTo(bl);
+		const rightHeight = tr.distanceTo(br);
+
+		// midpoints
+		const topMid = tl.clone().add(tr).multiplyScalar(0.5);
+		const bottomMid = bl.clone().add(br).multiplyScalar(0.5);
+		const leftMid = tl.clone().add(bl).multiplyScalar(0.5);
+		const rightMid = tr.clone().add(br).multiplyScalar(0.5);
+
+		// helper: scale only on X/Y, never Z
+		const scaleXY = (obj, sx, sy) => {
+			if (!obj)
+				return;
+			obj.scale.set(sx, 1, sy);
+		};
+
+		// helper: set pos flat (never move on Z)
+		const setPosFlat = (obj, v) => {
+			if (!obj)
+				return;
+			obj.position.set(v.x, v.y, 0);
+		};
+
+		// corners: never scale, just snap to corners
+		if (parts.Top_Left) {
+			parts.Top_Left.scale.set(1, 1, 1);
+			setPosFlat(parts.Top_Left, tl);
+		}
+		if (parts.Top_Right) {
+			parts.Top_Right.scale.set(1, 1, 1);
+			setPosFlat(parts.Top_Right, tr);
+		}
+		if (parts.Bottom_Left) {
+			parts.Bottom_Left.scale.set(1, 1, 1);
+			setPosFlat(parts.Bottom_Left, bl);
+		}
+		if (parts.Bottom_Right) {
+			parts.Bottom_Right.scale.set(1, 1, 1);
+			setPosFlat(parts.Bottom_Right, br);
+		}
+
+		// top: position at top midpoint, scale X only
+		if (parts.Top) {
+			const base = this.sliceSizes.Top;
+			const sx = topWidth / base.x;
+			scaleXY(parts.Top, sx, 1);
+			setPosFlat(parts.Top, topMid);
+		}
+
+		// bottom: position at bottom midpoint, scale X only
+		if (parts.Bottom) {
+			const base = this.sliceSizes.Bottom;
+			const sx = bottomWidth / base.x;
+			scaleXY(parts.Bottom, sx, 1);
+			setPosFlat(parts.Bottom, bottomMid);
+		}
+
+		// left: position at left midpoint, scale Y only
+		if (parts.Left) {
+			const base = this.sliceSizes.Left;
+			const sy = leftHeight / base.y;
+			scaleXY(parts.Left, 1, sy);
+			setPosFlat(parts.Left, leftMid);
+		}
+
+		// right: position at right midpoint, scale Y only
+		if (parts.Right) {
+			const base = this.sliceSizes.Right;
+			const sy = rightHeight / base.y;
+			scaleXY(parts.Right, 1, sy);
+			setPosFlat(parts.Right, rightMid);
+		}
+
+		// center: position at center empty, scale X/Y only
+		if (parts.Center) {
+			const base = this.sliceSizes.Center;
+
+			// center width/height should match the full corner-to-corner spans
+			const sx = topWidth / base.x;
+			const sy = leftHeight / base.y;
+
+			scaleXY(parts.Center, sx, sy);
+			setPosFlat(parts.Center, c);
+		}
+
+		// ask for a render (lazy themes rely on this)
+		manager.requestRender();
 	}
 }

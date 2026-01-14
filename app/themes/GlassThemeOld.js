@@ -44,13 +44,13 @@ export class GlassThemeOld {
 
 	async init(manager) {
         // 1. Load HDR Environment (High exposure for brightness)
-		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 10.0);
 
 		manager.setFrameMode('active');
 
         // 2. Add Camera Light (Dynamic Flash)
         // Positioned slightly up/right to create nice specular highlights on the glass edges
-        this.camLight = new THREE.PointLight(0xffffff, 2000, 5000); // Color, Intensity, Distance
+        this.camLight = new THREE.PointLight(0xffffff, 100000, 5000); // Color, Intensity, Distance
         this.camLight.position.set(50, 50, 50);
         manager.camera.add(this.camLight);
 
@@ -72,7 +72,7 @@ export class GlassThemeOld {
             metalness: 0.0,
             roughness: 0.0,     // Perfectly smooth
             ior: 1.5,           // Glass Refractive Index
-            thickness: 1.5,     // Volume
+            thickness: 5.5,     // Volume
             envMapIntensity: 3.0, // Bright reflections
             clearcoat: 1.0,
             clearcoatRoughness: 0.0,

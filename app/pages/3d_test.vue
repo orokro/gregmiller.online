@@ -60,7 +60,10 @@ import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 			</div>
 		</ContainerCustom3D>
 
+		<br/><br/><br/>
 		<SpinningCube />
+
+		<br/><br/><br/>
 		<SpinningCube />
 
 		<section class="spacer">
