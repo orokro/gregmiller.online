@@ -10,19 +10,20 @@
 	- Never scale/move on Z (depth). Everything lives flat on the empties plane.
 	- Corner pieces never scale.
 	- Top/Bottom scale X only (width between their corners).
-	- Left/Right scale Y only (height between their corners).
-	- Center scales X/Y only (between all four corners).
+	- Left/Right scale "height" only (your export uses Z for height here).
+	- Center scales X/"height" only (between all four corners).
 
-	Works for both:
-	- Container3D via buildBox/updateBox
-	- ContainerCustom3D via buildCustomBox/updateCustomBox (optional in the system, but this theme provides them)
+	Map + UV rules:
+	- We keep a good glass MeshPhysicalMaterial
+	- We COPY maps (normal/roughness/etc) from the GLB materials onto the glass material
+	- We scale UVs per piece by CLONING each mesh geometry and modifying its uv attribute
+	  (this avoids shared texture repeat/offset issues that can make everything disappear)
 */
 
 import * as THREE from 'three';
 
 export class GlassTheme {
 
-	// define this themes colors (will be applied to CSS when loaded)
 	static themeColors = {
 		primaryColor: '#00ABAE',
 		secondaryColor: '#7561AA',
@@ -34,67 +35,71 @@ export class GlassTheme {
 
 	constructor() {
 
-		// load state
 		this.isReady = false;
 		this.sliceTemplates = {};
 		this.sliceSizes = {};
 
-		// lighting
 		this.camLight = null;
 
-		// materials
+		// One shared glass material (stable).
+		// We'll "donate" maps from the GLB material(s) onto this once we load.
 		this.glassMaterial = new THREE.MeshPhysicalMaterial({
-			color: 0xAAEFEF,
-			transmission: 0.5,  // Full transmission
-			opacity: 1.0,
-			metalness: 0.1,
-			roughness: 0.0,     // Perfectly smooth
-			ior: 1.5,           // Glass Refractive Index
-			thickness: 1.5,     // Volume
-			envMapIntensity: 3.0, // Bright reflections
-			clearcoat: 1.0,
-			clearcoatRoughness: 0.0,
-			// side: THREE.DoubleSide,
+			color: 0xffffff,
+
+			transmission: 1.0,
 			transparent: true,
+			opacity: 1.0,
+
+			ior: 1.45,
+			thickness: 0.6,
+
+			roughness: 0.05,
+			metalness: 0.0,
+
+			clearcoat: 1.0,
+			clearcoatRoughness: 0.02,
+
+			envMapIntensity: 2.5,
+
+			attenuationColor: new THREE.Color(0xe6ffff),
+			attenuationDistance: 0.8,
+
+			side: THREE.DoubleSide
 		});
 
 		// internal
 		this._loadPromise = null;
+
+		// once we copy maps from GLB -> glassMaterial, don't do it again
+		this._didCopyMaps = false;
 	}
 
-	/**
-	 * Called by ThreeManager when the theme becomes active.
-	 * NOTE: ThreeManager does not await this, so we load async internally and rebuild when ready.
-	 */
 	init(manager) {
 
-		// 1. Load HDR Environment (High exposure for brightness)
-		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 2.0);
 
-		// 2. Add Camera Light (Dynamic Flash)
-		this.camLight = new THREE.PointLight(0xffffff, 50000, 5000); // Color, Intensity, Distance
+		manager.renderer.physicallyCorrectLights = true;
+		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		manager.renderer.toneMappingExposure = 1.0;
+
+		this.camLight = new THREE.PointLight(0xffffff, 50000, 5000);
 		this.camLight.position.set(50, 50, 50);
 		manager.camera.add(this.camLight);
 
-		// 3. Load GLB (async)
 		this._loadPromise = this._loadModel(manager);
 	}
 
-	/**
-	 * Cleanup when theme is unloaded.
-	 */
 	destroy(manager) {
 
-		// remove camera light
 		if (this.camLight) {
 			manager.camera.remove(this.camLight);
 			this.camLight = null;
 		}
 
-		// clear refs
 		this.isReady = false;
 		this.sliceTemplates = {};
 		this.sliceSizes = {};
+		this._didCopyMaps = false;
 	}
 
 	async _loadModel(manager) {
@@ -106,7 +111,6 @@ export class GlassTheme {
 			return;
 		}
 
-		// grab the 9 pieces by name
 		const names = [
 			'Top_Left', 'Top', 'Top_Right',
 			'Left', 'Center', 'Right',
@@ -122,15 +126,12 @@ export class GlassTheme {
 				return;
 			}
 
-			// store a template (we clone this per element)
 			this.sliceTemplates[name] = obj;
 
-			// store its base size (used to compute scale ratios later)
 			const box = new THREE.Box3().setFromObject(obj);
 			const size = new THREE.Vector3();
 			box.getSize(size);
 
-			// avoid divide-by-zero in case any axis is 0
 			if (size.x === 0) size.x = 1;
 			if (size.y === 0) size.y = 1;
 			if (size.z === 0) size.z = 1;
@@ -138,71 +139,111 @@ export class GlassTheme {
 			this.sliceSizes[name] = size;
 		});
 
+		// Copy maps from the GLB material(s) onto our glass material (once).
+		// We pick the first mesh material we find.
+		if (!this._didCopyMaps) {
+			const donor = this._findFirstMeshMaterial(gltfScene);
+			if (donor)
+				this._copyMapsOntoGlassMaterial(donor);
+			this._didCopyMaps = true;
+		}
+
 		this.isReady = true;
 
-		// model is ready now: rebuild everything with this theme
 		manager.registeredElements.forEach((data) => {
 			manager.buildRegisteredElement(data);
 		});
 
-		// and force a position update
 		manager.onResize();
 		manager.requestRender();
 	}
 
-	/**
-	 * Container3D default build.
-	 */
-	buildBox(manager, data) {
+	_findFirstMeshMaterial(root) {
 
-		if (!this.isReady)
+		let found = null;
+
+		root.traverse((o) => {
+			if (found)
+				return;
+			if (!o.isMesh)
+				return;
+
+			const m = Array.isArray(o.material) ? o.material[0] : o.material;
+			if (m)
+				found = m;
+		});
+
+		return found;
+	}
+
+	_copyMapsOntoGlassMaterial(sourceMaterial) {
+
+		if (!sourceMaterial)
 			return;
 
+		// IMPORTANT: we are NOT changing texture repeat/offset here.
+		// We'll scale UVs by modifying cloned geometries per piece.
+
+		const keys = [
+			'map',
+			'normalMap',
+			'roughnessMap',
+			'metalnessMap',
+			'aoMap',
+			'alphaMap',
+			'emissiveMap',
+			'thicknessMap',
+			'transmissionMap',
+			'clearcoatMap',
+			'clearcoatNormalMap',
+			'clearcoatRoughnessMap',
+		];
+
+		keys.forEach((k) => {
+			if (sourceMaterial[k])
+				this.glassMaterial[k] = sourceMaterial[k];
+		});
+
+		// enable wrapping so UV scaling tiles correctly
+		keys.forEach((k) => {
+
+			const tex = this.glassMaterial[k];
+			if (!tex)
+				return;
+
+			tex.wrapS = THREE.RepeatWrapping;
+			tex.wrapT = THREE.RepeatWrapping;
+			tex.needsUpdate = true;
+		});
+
+		this.glassMaterial.needsUpdate = true;
+	}
+
+	buildBox(manager, data) {
+		if (!this.isReady) return;
 		this._buildGlassSlices(manager, data);
 	}
 
-	/**
-	 * Container3D default update.
-	 */
 	updateBox(manager, data, rect) {
-
-		if (!this.isReady)
-			return;
-
+		if (!this.isReady) return;
 		this._updateGlassSlices(manager, data, rect);
 	}
 
-	/**
-	 * ContainerCustom3D default build.
-	 * (ThreeManager will call this unless a component supplied buildFn, or if buildFn calls defaultBuild())
-	 */
 	buildCustomBox(manager, data) {
-
-		if (!this.isReady)
-			return;
-
+		if (!this.isReady) return;
 		this._buildGlassSlices(manager, data);
 	}
 
-	/**
-	 * ContainerCustom3D default update.
-	 */
 	updateCustomBox(manager, data, rect) {
-
-		if (!this.isReady)
-			return;
-
+		if (!this.isReady) return;
 		this._updateGlassSlices(manager, data, rect);
 	}
 
 	_buildGlassSlices(manager, data) {
 
-		// ensure per-element storage
 		if (!data.themeData)
 			data.themeData = {};
 
-		// if theme is rebuilding, manager should already have cleaned children,
-		// but this guards hot-rebuilds and accidental double-builds.
 		if (data.themeData.glassParts) {
 			Object.values(data.themeData.glassParts).forEach((obj) => {
 				if (obj && obj.parent)
@@ -218,12 +259,26 @@ export class GlassTheme {
 			if (!template)
 				return null;
 
-			// deep clone so meshes/materials are safe per element
 			const clone = template.clone(true);
 
 			clone.traverse((o) => {
 				if (o.isMesh) {
+
+					// Use our shared glass material
 					o.material = this.glassMaterial;
+
+					// IMPORTANT for UV scaling:
+					// clone geometry per mesh so uv edits don't affect other instances
+					if (o.geometry) {
+						o.geometry = o.geometry.clone();
+
+						// store original UVs so we can re-apply scaling each update without accumulating
+						const uv = o.geometry.attributes.uv;
+						if (uv && !o.geometry.userData.__baseUV) {
+							o.geometry.userData.__baseUV = new Float32Array(uv.array);
+						}
+					}
+
 					o.castShadow = false;
 					o.receiveShadow = true;
 				}
@@ -250,8 +305,40 @@ export class GlassTheme {
 
 		data.themeData.glassParts = parts;
 
-		// immediately position/scale once (update will refine on resize/scroll)
 		this._updateGlassSlices(manager, data);
+	}
+
+	// Scale UVs around 0.5, 0.5 by modifying geometry UVs (per-cloned geometry).
+	_scalePieceUV(piece, repeatX, repeatY) {
+
+		if (!piece)
+			return;
+
+		piece.traverse((o) => {
+
+			if (!o.isMesh || !o.geometry)
+				return;
+
+			const uv = o.geometry.attributes.uv;
+			const baseUV = o.geometry.userData.__baseUV;
+
+			if (!uv || !baseUV)
+				return;
+
+			// scale around center: (u-0.5)*repeat + 0.5
+			const arr = uv.array;
+
+			for (let i = 0; i < arr.length; i += 2) {
+
+				const u0 = baseUV[i];
+				const v0 = baseUV[i + 1];
+
+				arr[i] = (u0 - 0.5) * repeatX + 0.5;
+				arr[i + 1] = (v0 - 0.5) * repeatY + 0.5;
+			}
+
+			uv.needsUpdate = true;
+		});
 	}
 
 	_updateGlassSlices(manager, data, rect = null) {
@@ -261,102 +348,103 @@ export class GlassTheme {
 
 		const parts = data.themeData.glassParts;
 
-		// corner/center positions in the SAME local space as data.group (empties are children of group)
 		const tl = data.empties.tl.position.clone();
 		const tr = data.empties.tr.position.clone();
 		const bl = data.empties.bl.position.clone();
 		const br = data.empties.br.position.clone();
 		const c = data.empties.center.position.clone();
 
-		// measures
 		const topWidth = tl.distanceTo(tr);
 		const bottomWidth = bl.distanceTo(br);
 		const leftHeight = tl.distanceTo(bl);
 		const rightHeight = tr.distanceTo(br);
 
-		// midpoints
 		const topMid = tl.clone().add(tr).multiplyScalar(0.5);
 		const bottomMid = bl.clone().add(br).multiplyScalar(0.5);
 		const leftMid = tl.clone().add(bl).multiplyScalar(0.5);
 		const rightMid = tr.clone().add(br).multiplyScalar(0.5);
 
-		// helper: scale only on X/Y, never Z
+		// your axis fix: height is on Z in your exported slices
 		const scaleXY = (obj, sx, sy) => {
 			if (!obj)
 				return;
 			obj.scale.set(sx, 1, sy);
 		};
 
-		// helper: set pos flat (never move on Z)
 		const setPosFlat = (obj, v) => {
 			if (!obj)
 				return;
 			obj.position.set(v.x, v.y, 0);
 		};
 
-		// corners: never scale, just snap to corners
+		// corners (no scaling, no UV scaling)
 		if (parts.Top_Left) {
 			parts.Top_Left.scale.set(1, 1, 1);
 			setPosFlat(parts.Top_Left, tl);
+			this._scalePieceUV(parts.Top_Left, 1, 1);
 		}
 		if (parts.Top_Right) {
 			parts.Top_Right.scale.set(1, 1, 1);
 			setPosFlat(parts.Top_Right, tr);
+			this._scalePieceUV(parts.Top_Right, 1, 1);
 		}
 		if (parts.Bottom_Left) {
 			parts.Bottom_Left.scale.set(1, 1, 1);
 			setPosFlat(parts.Bottom_Left, bl);
+			this._scalePieceUV(parts.Bottom_Left, 1, 1);
 		}
 		if (parts.Bottom_Right) {
 			parts.Bottom_Right.scale.set(1, 1, 1);
 			setPosFlat(parts.Bottom_Right, br);
+			this._scalePieceUV(parts.Bottom_Right, 1, 1);
 		}
 
-		// top: position at top midpoint, scale X only
+		// top: scale width only
 		if (parts.Top) {
 			const base = this.sliceSizes.Top;
 			const sx = topWidth / base.x;
 			scaleXY(parts.Top, sx, 1);
 			setPosFlat(parts.Top, topMid);
+			this._scalePieceUV(parts.Top, sx, 1);
 		}
 
-		// bottom: position at bottom midpoint, scale X only
+		// bottom: scale width only
 		if (parts.Bottom) {
 			const base = this.sliceSizes.Bottom;
 			const sx = bottomWidth / base.x;
 			scaleXY(parts.Bottom, sx, 1);
 			setPosFlat(parts.Bottom, bottomMid);
+			this._scalePieceUV(parts.Bottom, sx, 1);
 		}
 
-		// left: position at left midpoint, scale Y only
+		// left: scale height only (IMPORTANT: base.z because we scale on Z)
 		if (parts.Left) {
 			const base = this.sliceSizes.Left;
-			const sy = leftHeight / base.y;
+			const sy = leftHeight / base.z;
 			scaleXY(parts.Left, 1, sy);
 			setPosFlat(parts.Left, leftMid);
+			this._scalePieceUV(parts.Left, 1, sy);
 		}
 
-		// right: position at right midpoint, scale Y only
+		// right: scale height only (IMPORTANT: base.z because we scale on Z)
 		if (parts.Right) {
 			const base = this.sliceSizes.Right;
-			const sy = rightHeight / base.y;
+			const sy = rightHeight / base.z;
 			scaleXY(parts.Right, 1, sy);
 			setPosFlat(parts.Right, rightMid);
+			this._scalePieceUV(parts.Right, 1, sy);
 		}
 
-		// center: position at center empty, scale X/Y only
+		// center: scale width + height
 		if (parts.Center) {
 			const base = this.sliceSizes.Center;
-
-			// center width/height should match the full corner-to-corner spans
 			const sx = topWidth / base.x;
-			const sy = leftHeight / base.y;
-
+			const sy = leftHeight / base.z;
 			scaleXY(parts.Center, sx, sy);
 			setPosFlat(parts.Center, c);
+			this._scalePieceUV(parts.Center, sx, sy);
 		}
 
-		// ask for a render (lazy themes rely on this)
 		manager.requestRender();
 	}
 }

@@ -106,7 +106,8 @@ import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 
 .box-content {
 	box-sizing: border-box;
-	/* background: rgba(255, 255, 255, 0.2); */
+	background: rgba(255, 255, 255, 0.5);
+	mix-blend-mode: overlay;
 	padding: 2rem;
 	border-radius: 8px;
 	/* box-shadow: 0 4px 10px rgba(0,0,0,0.1); */
