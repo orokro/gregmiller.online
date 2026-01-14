@@ -15,10 +15,7 @@ import { useThree } from '~/composables/useThree';
 import { useTheming } from '~/composables/useTheming';
 
 // components
-import AppSidebar from '~/components/AppSidebar.vue';
-import ContentFrame from './components/ContentFrame.vue';
-import HamburgerButton from './components/HamburgerButton.vue';
-import TopWidgets from './components/TopWidgets.vue';
+import UILayer from './components/UILayer.vue';
 
 const canvasRef = ref(null);
 
@@ -52,8 +49,10 @@ onMounted(() => {
 
 	<div class="app-root">
 
+		<!-- three graphics rendered below everything else -->
 		<canvas ref="canvasRef" class="webgl-canvas"></canvas>
 
+		<!-- main content area -->
 		<div class="app-shell">
 
 			<main class="app-main">
@@ -64,10 +63,8 @@ onMounted(() => {
 
 		</div>
 
-		<ContentFrame />
-		<HamburgerButton />
-		<AppSidebar />
-		<TopWidgets />
+		<!-- main UI layer -->
+		<UILayer />
 
 	</div>
 
