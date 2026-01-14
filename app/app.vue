@@ -16,6 +16,7 @@ import { useTheming } from '~/composables/useTheming';
 
 // components
 import UILayer from './components/UILayer.vue';
+import DebugConsole from './components/DebugConsole.vue';
 
 const canvasRef = ref(null);
 
@@ -65,6 +66,9 @@ onMounted(() => {
 
 		<!-- main UI layer -->
 		<UILayer />
+
+		<!-- Debug console for developer commands and logs -->
+		<DebugConsole />
 
 	</div>
 
