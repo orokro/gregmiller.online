@@ -241,12 +241,7 @@ export class ThreeManager {
 		// make sure all registered elements are updated to use the new theme's styles
 		this.registeredElements.forEach((data) => {
 			if (data.type === 'box') {
-				this.cleanGroupChildren(data.empties.center);
-				this.cleanGroupChildren(data.empties.tl);
-				this.cleanGroupChildren(data.empties.tr);
-				this.cleanGroupChildren(data.empties.bl);
-				this.cleanGroupChildren(data.empties.br);
-
+				this.cleanGroupNonEmptyChildren(data.group, data.empties);
 			}
 		});
 
@@ -489,7 +484,7 @@ export class ThreeManager {
 		}
 
 		this.scene.remove(group);
-		this.cleanGroupChildren(group);
+		this.cleanGroupNonEmptyChildren(data.group, data.empties);
 		this.registeredElements.delete(id);
 
 		// make sure to re-render now that it's gone
@@ -498,30 +493,52 @@ export class ThreeManager {
 
 
 	/**
-	 * Clean up all children of a group, disposing of geometries and materials to free GPU memory.
+	 * Clean all children of a group except the 5 empties groups.
+	 * This prevents themes from leaking geometry added directly to data.group (like GlassTheme).
 	 *
-	 * @param {THREE.Object3D} group - group to clean
+	 * @param {THREE.Group} group
+	 * @param {Object} empties
 	 */
-	cleanGroupChildren(group) {
+	cleanGroupNonEmptyChildren(group, empties) {
 
-		// loop through all children and dispose of geometries and materials,
-		// then remove them from the group
-		while (group.children.length > 0) {
+		if (!group)
+			return;
 
-			const child = group.children[0];
+		// if empties aren't ready, fall back to doing nothing (don't nuke the group)
+		if (!empties || !empties.center || !empties.tl || !empties.tr || !empties.bl || !empties.br)
+			return;
+
+		const keep = new Set([
+			empties.center,
+			empties.tl,
+			empties.tr,
+			empties.bl,
+			empties.br,
+		]);
+
+		// copy because we'll mutate group.children
+		const children = [...group.children];
+
+		children.forEach((child) => {
+
+			if (keep.has(child))
+				return;
+
 			group.remove(child);
 
+			// dispose mesh resources
 			if (child.geometry)
 				child.geometry.dispose();
 
 			if (child.material) {
-				if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+				if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
 				else child.material.dispose();
 			}
 
-			if (child.children.length)
+			// dispose nested children
+			if (child.children && child.children.length)
 				this.cleanGroupChildren(child);
-		}
+		});
 	}
 
 
@@ -608,11 +625,7 @@ export class ThreeManager {
 		}
 
 		// Always clear any existing geometry so rebuilds don't stack
-		this.cleanGroupChildren(data.empties.center);
-		this.cleanGroupChildren(data.empties.tl);
-		this.cleanGroupChildren(data.empties.tr);
-		this.cleanGroupChildren(data.empties.bl);
-		this.cleanGroupChildren(data.empties.br);
+		this.cleanGroupNonEmptyChildren(data.group, data.empties);
 
 		// Regular Container3D always uses theme buildBox
 		if (data.type === 'box') {

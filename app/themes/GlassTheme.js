@@ -40,6 +40,10 @@ export class GlassTheme {
 		this.sliceSizes = {};
 
 		this.camLight = null;
+		this.rimLightL = null;
+		this.rimLightR = null;
+		this.fillLight = null;
+		this.backLight = null;
 
 		// One shared glass material (stable).
 		// We'll "donate" maps from the GLB material(s) onto this once we load.
@@ -86,6 +90,24 @@ export class GlassTheme {
 		this.camLight.position.set(50, 50, 50);
 		manager.camera.add(this.camLight);
 
+		this.rimLightL = new THREE.PointLight(0xffffff, 18000, 4000);
+		this.rimLightL.position.set(-180, 10, 0);
+		manager.scene.add(this.rimLightL);
+
+		this.rimLightR = new THREE.PointLight(0xffffff, 18000, 4000);
+		this.rimLightR.position.set(180, 10, 0);
+		manager.scene.add(this.rimLightR);
+
+		// Low/front fill to keep faces readable (since camera is elevated)
+		this.fillLight = new THREE.PointLight(0xffffff, 12000, 6000);
+		this.fillLight.position.set(0, -120, 60);
+		manager.scene.add(this.fillLight);
+
+		// Back rim to separate edges from background
+		this.backLight = new THREE.PointLight(0xffffff, 14000, 6000);
+		this.backLight.position.set(0, 140, -80);
+		manager.scene.add(this.backLight);
+
 		this._loadPromise = this._loadModel(manager);
 	}
 
@@ -94,6 +116,23 @@ export class GlassTheme {
 		if (this.camLight) {
 			manager.camera.remove(this.camLight);
 			this.camLight = null;
+		}
+
+		if (this.rimLightL) {
+			manager.scene.remove(this.rimLightL);
+			this.rimLightL = null;
+		}
+		if (this.rimLightR) {
+			manager.scene.remove(this.rimLightR);
+			this.rimLightR = null;
+		}
+		if (this.fillLight) {
+			manager.scene.remove(this.fillLight);
+			this.fillLight = null;
+		}
+		if (this.backLight) {
+			manager.scene.remove(this.backLight);
+			this.backLight = null;
 		}
 
 		this.isReady = false;
