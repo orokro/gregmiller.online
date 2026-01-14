@@ -13,6 +13,7 @@ import { useHead } from '#app';
 // app imports
 import { useThree } from '~/composables/useThree';
 import { useTheming } from '~/composables/useTheming';
+import { useDeviceContext } from './composables/useDeviceContext';
 
 // components
 import UILayer from './components/UILayer.vue';
@@ -23,6 +24,7 @@ const canvasRef = ref(null);
 // composables
 const { initThree } = useThree();
 const { themeCSSVars } = useTheming();
+const { has3DCapability } = useDeviceContext();
 
 watch(themeCSSVars, (vars) => {
 	useHead({
@@ -35,7 +37,7 @@ watch(themeCSSVars, (vars) => {
 onMounted(() => {
 
 	// Initialize the 3D System
-	if (canvasRef.value) {
+	if (canvasRef.value	&& has3DCapability.value) {
 		initThree(canvasRef.value);
 	}
 
@@ -51,7 +53,7 @@ onMounted(() => {
 	<div class="app-root">
 
 		<!-- three graphics rendered below everything else -->
-		<canvas ref="canvasRef" class="webgl-canvas"></canvas>
+		<canvas v-show="has3DCapability" ref="canvasRef" class="webgl-canvas"></canvas>
 
 		<!-- main content area -->
 		<div class="app-shell">

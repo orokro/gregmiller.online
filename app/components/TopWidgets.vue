@@ -12,6 +12,7 @@ import { ref, computed } from 'vue';
 // app imports
 import { useHamburger } from '../composables/useHamburger';
 import { useTheming } from '../composables/useTheming';
+import { useDeviceContext } from '../composables/useDeviceContext';
 
 // components
 import SocialIcon from './SocialIcon.vue';
@@ -26,6 +27,7 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 // composables
 const { isOpen } = useHamburger();
 const { currentTheme, themes, setTheme } = useTheming();
+const { has3DCapability } = useDeviceContext();
 
 const currentThemeName = computed({
 	get() {
@@ -38,7 +40,13 @@ const currentThemeName = computed({
 </script>
 <template>
 
-	<div class="top-widgets" :class="{ 'is-open': isOpen }">
+	<div
+		class="top-widgets"
+		:class="{
+			'is-open': isOpen,
+			'no-3d': !has3DCapability
+		}"
+	>
 
 		<!-- horizontal box holds the theme selector & curve style element -->
 		<div class="theme-selector">
@@ -81,10 +89,10 @@ const currentThemeName = computed({
 			<div class="icon-list">
 
 				<SocialIcon title="GitHub" url="https://github.com/orokro" :icon="IcoGithub" />
-				<SocialIcon title="Flickr" url="https://www.flickr.com/photos/101073308@N06/" :icon="IcoFlickr" />
-				<SocialIcon title="Instagram" url="https://www.instagram.com/hypurban" :icon="IcoInstagram" />
 				<SocialIcon title="LinkedIn" url="https://www.linkedin.com/in/greg-miller-91207558/" :icon="IcoLinkedIn" />
 				<SocialIcon title="X" url="https://x.com/RlySrsBiz" :icon="IcoX" />
+				<SocialIcon title="Flickr" url="https://www.flickr.com/photos/101073308@N06/" :icon="IcoFlickr" />
+				<SocialIcon title="Instagram" url="https://www.instagram.com/hypurban" :icon="IcoInstagram" />
 				<SocialIcon title="YouTube" url="https://www.youtube.com/@orokro_stuff/videos" :icon="IcoYouTube" />
 				<SocialIcon title="Facebook" url="https://www.facebook.com/StuffGregBuilds" :icon="IcoFacebook" />
 			</div>
@@ -112,15 +120,30 @@ const currentThemeName = computed({
 		// box settings
 		width: 155px;
 		height: 400px;
-		transform: translateX(100%);
+		transform: translate(100%, 0%);
 
 		// animate in/out
 		transition: transform 0.3s ease;
 		&.is-open {
-			transform: translateX(0%);
+			transform: translate(0%, 0%);
 		}
 		@media (min-width: 900px) {
-			transform: translateX(0%);
+			transform: translate(0%, 0%);
+		}
+
+		&.no-3d {
+			transform: translate(100%, -60px);
+
+			&.is-open {
+				transform: translate(0%, -60px);
+			}
+			@media (min-width: 900px) {
+				transform: translate(0%, -60px);
+			}
+
+			.social-icons {
+				padding-top: 10px;
+			}
 		}
 
 		// theme selector box
