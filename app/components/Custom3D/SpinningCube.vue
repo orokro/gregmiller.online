@@ -77,6 +77,16 @@ function destroy(customRoot, threeManager) {
 	threeManager.requestRender();
 }
 
+function tick(root, LockManager, time){
+	if (!cube)
+		cube = center.getObjectByName('spinning_cube');
+
+	if (cube) {
+		cube.rotation.y += 0.12;
+		cube.rotation.x += 0.06;
+	}
+}
+
 </script>
 <template>
 
@@ -85,6 +95,7 @@ function destroy(customRoot, threeManager) {
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
+		:tickFn="tick"
 	/>
 
 </template>
@@ -97,7 +108,8 @@ function destroy(customRoot, threeManager) {
 		width: 320px;
 		height: 320px;
 
-		border: 1px solid red;
+		// for debug
+		// border: 1px solid red;
 
 	}// .spinning-cube-container
 

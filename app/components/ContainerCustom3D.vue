@@ -26,6 +26,7 @@ const props = defineProps({
 	buildFn: { type: Function, default: null },
 	updateFn: { type: Function, default: null },
 	clean: { type: Function, default: null },
+	tickFn: { type: Function, default: null },
 });
 
 // State
@@ -59,6 +60,7 @@ onMounted(async () => {
 			buildFn: props.buildFn,
 			updateFn: props.updateFn,
 			cleanFn: props.clean,
+			tickFn: props.tickFn,
 		});
 
 		if (result) {
@@ -97,6 +99,13 @@ watch(() => props.clean, (fn) => {
 	const data = threeManagerInstance.registeredElements.get(registeredId.value);
 	if (!data) return;
 	data.options.cleanFn = fn;
+});
+
+watch(() => props.tickFn, (fn) => {
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!data) return;
+	data.options.tickFn = fn;
 });
 
 onUnmounted(() => {

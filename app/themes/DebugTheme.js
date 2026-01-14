@@ -90,7 +90,7 @@ export class DebugTheme {
 
 	/**
 	 * Called per frame (only if manager.frameMode === 'active').
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {ThreeManager} manager - The ThreeManager instance.
 	 * @param {number} time - The current performance.now() timestamp.
 	 */
 	onTick(manager, time) {

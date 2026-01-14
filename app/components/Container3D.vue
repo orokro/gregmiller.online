@@ -11,6 +11,12 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useThree } from '~/composables/useThree';
 
+// Props
+const props = defineProps({
+	tickFn: { type: Function, default: null },
+});
+
+
 // State
 const el = ref(null);
 const isFallback = ref(false);
@@ -38,7 +44,9 @@ onMounted(async () => {
 	// 3. Register
 	if (mgr.isOk && el.value) {
 
-		const result = mgr.register(el.value, 'box');
+		const result = mgr.register(el.value, 'box', {
+			tickFn: props.tickFn,
+		});
 
 		if (result) {
 			registeredId.value = result.id;

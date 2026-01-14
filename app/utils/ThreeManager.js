@@ -570,6 +570,20 @@ export class ThreeManager {
 		};
 	}
 
+
+	/*
+	 * Similar to _getCustomRoot but for regular boxes, which only have the empties as the theme-accessible root objects.
+	 *
+	 * @param {Object} data - data about registered object
+	 */
+	_getElementRoot(data) {
+		return {
+			group: data.group,
+			empties: data.empties,
+		};
+	}
+
+
 	/**
 	 * Builds a registered element by calling the appropriate theme build function based on the element type.
 	 *
@@ -877,6 +891,31 @@ export class ThreeManager {
 	}
 
 
+
+	/**
+	 * Calls the tick function for each registered element that has a tickFn defined in its options.
+	 *
+	 * @param {Number} time - the current time, passed from the main tick loop
+	 */
+	_tickElements(time) {
+
+		this.registeredElements.forEach((data) => {
+
+			if (!data || !data.options)
+				return;
+
+			if (typeof data.options.tickFn !== 'function')
+				return;
+
+			try {
+				data.options.tickFn(this._getElementRoot(data), this, time);
+			} catch (e) {
+				console.warn('Element tickFn error:', e);
+			}
+		});
+	}
+
+
 	/**
 	 * The main render loop.
 	 * - Active mode: always renders and keeps looping.
@@ -908,6 +947,12 @@ export class ThreeManager {
 
 		if (shouldRender) {
 
+			const time = performance.now();
+
+			// theme tick stays as-is (you already call it above)
+			// but per-element tick should only run when we actually render a frame
+			this._tickElements(time);
+
 			this.renderer.render(this.scene, this.camera);
 
 			// reset dirty after a render
@@ -917,7 +962,9 @@ export class ThreeManager {
 			if (!isActive && this.renderFramesLeft > 0) {
 				this.renderFramesLeft--;
 			}
-			console.log('render');
+
+			// for debug
+			// console.log('render');
 			// console.log('Rendered frame. Active mode:', isActive, 'Frames left in burst:', this.renderFramesLeft);
 		}
 
