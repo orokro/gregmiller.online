@@ -9,6 +9,7 @@
 import Container3D from '~/components/Container3D.vue';
 import ContainerCustom3D from '../components/ContainerCustom3D.vue';
 import SpinningCube from '../components/Custom3D/SpinningCube.vue';
+import BackgroundImage3D from '../components/BackgroundImage3D.vue';
 
 </script>
 <template>
@@ -23,7 +24,7 @@ import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 			</p>
 		</section>
 
-		<section class="test-section">
+		<section class="test-section relative">
 			<Container3D>
 				<div class="box-content">
 					<h2>Center Box</h2>
@@ -36,6 +37,9 @@ import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 
 				</div>
 			</Container3D>
+
+			<BackgroundImage3D class="pencil_bg_img" src="/img/bg_doodles/pencil.png" width="380" height="440" />
+
 		</section>
 
 		<section class="test-section columns">
@@ -83,6 +87,16 @@ import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 
 </template>
 <style scoped>
+
+.relative {
+	position: relative;
+}
+
+.pencil_bg_img {
+
+	position: absolute;
+	left: -100px;
+}
 
 .test-page {
 	padding: 4rem 2rem;

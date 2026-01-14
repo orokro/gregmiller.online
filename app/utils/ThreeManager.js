@@ -213,6 +213,8 @@ export class ThreeManager {
 	}
 
 
+
+
 	/* ==========================================================================
 	   THEME SYSTEM
 	   ========================================================================== */
@@ -328,6 +330,8 @@ export class ThreeManager {
 	}
 
 
+
+
 	/* ==========================================================================
 	   ASSET MANAGEMENT
 	   ========================================================================== */
@@ -400,6 +404,164 @@ export class ThreeManager {
 	}
 
 
+
+
+	/* ==========================================================================
+	   BACKGROUND IMAGE MANAGEMENT
+	   ========================================================================== */
+
+	/**
+	 * Clean up the 3D background image for an element, removing it from the scene and disposing of its resources.
+	 * @param {Object} data - the registered element's data object
+	 */
+	_disposeBackgroundImage3D(data) {
+
+		if (!data || !data._bgImage3D)
+			return;
+
+		const { mesh, material, geometry, texture } = data._bgImage3D;
+
+		if (mesh && mesh.parent)
+			mesh.parent.remove(mesh);
+
+		if (geometry)
+			geometry.dispose();
+
+		if (material)
+			material.dispose();
+
+		if (texture) {
+
+			// If this is an ImageBitmap texture, close it
+			if (texture.image && typeof texture.image.close === 'function') {
+				try { texture.image.close(); } catch (e) {}
+			}
+
+			// For HTMLImageElement, release reference
+			if (texture.image && texture.image instanceof HTMLImageElement) {
+				try { texture.image.src = ''; } catch (e) {}
+			}
+
+			texture.dispose();
+		}
+
+		data._bgImage3D = null;
+	}
+
+
+	/**
+	 * Clean up and rebuild the background image for an element, used when the theme changes or the element's options change.
+	 *
+	 * @param {Object} data - the registered element's data object
+	 */
+	_buildBackgroundImage3D(data) {
+
+		if (!data || !data.options || !data.options.src)
+			return;
+
+		const src = data.options.src;
+		const mode = (data.options.mode || 'multiply').toLowerCase();
+		const opacity = Number.isFinite(data.options.opacity) ? data.options.opacity : 1.0;
+
+		// geometry is unit plane; we scale it in updateElementPosition
+		const geometry = new THREE.PlaneGeometry(1, 1);
+
+		// “decal-ish” shaded material that still receives shadowing
+		const material = new THREE.MeshStandardMaterial({
+			color: 0xffffff,
+			roughness: 1,
+			metalness: 0,
+			transparent: true,
+			opacity,
+			depthWrite: false,
+			premultipliedAlpha: true,
+		});
+
+		// Blend mode (best-effort)
+		if (mode === 'multiply') {
+			material.blending = THREE.MultiplyBlending;
+
+		} else if (mode === 'overlay') {
+			// Three doesn’t have true “overlay”; use normal blending as safest fallback
+			material.blending = THREE.NormalBlending;
+
+		} else {
+			material.blending = THREE.NormalBlending;
+		}
+
+		// Debug flags
+		// Avoid z-fighting / depth rejection caused by bgPlane depth
+		// material.depthTest = false;
+		// material.depthWrite = false;
+
+		// build the new image plane mesh
+		const mesh = new THREE.Mesh(geometry, material);
+		mesh.castShadow = false;
+		mesh.receiveShadow = true;
+
+		// Make it render after the bg plane
+		// mesh.renderOrder = 10;
+		// mesh.frustumCulled = false; // ensure it renders even if camera is inside the plane
+
+		// make a new debug cube
+		// const cube = new THREE.Mesh(new THREE.BoxGeometry(100, 100, 100), new THREE.MeshBasicMaterial({
+		// 	color: 0xff0000,
+		// 	wireframe: true
+		// }));
+		// data.group.add(cube);
+
+		// Put it inside the group
+		data.group.add(mesh);
+
+		const targetZ = this.bgPlane.position.z + 0.025; // -1101 + 0.25 = -1100.75 (closer)
+		data.group.position.z = targetZ;
+
+		// Load the texture (and guard against unregister-before-load)
+		const aliveId = data.id;
+		const loader = new THREE.TextureLoader();
+
+		loader.load(src, (tex) => {
+
+			// If it got unregistered while loading, dispose immediately
+			if (!this.registeredElements.has(aliveId)) {
+				try {
+					if (tex.image && typeof tex.image.close === 'function') tex.image.close();
+				} catch (e) {}
+				tex.dispose();
+				return;
+			}
+
+			tex.colorSpace = THREE.SRGBColorSpace;
+			// tex.flipY = false;
+
+			material.map = tex;
+			material.needsUpdate = true;
+
+			// Save refs for cleanup
+			if (data._bgImage3D)
+				data._bgImage3D.texture = tex;
+
+			// ensure the quad is scaled correctly now that everything exists
+			this.updateElementPosition(aliveId);
+
+			this.requestRender();
+		});
+
+		// store for cleanup + later sizing
+		data._bgImage3D = {
+			mesh,
+			material,
+			geometry,
+			texture: null,
+		};
+
+		// make sure we render at least once
+		this.requestRender();
+	}
+
+
+
+
 	/* ==========================================================================
 	   ELEMENT SYNC
 	   ========================================================================== */
@@ -420,6 +582,32 @@ export class ThreeManager {
 
 		// make a new id and group for this element, and save it in our registry
 		const id = uuid();
+
+		// Special: background image decals live in camera space near the bgPlane
+		if (type === 'backgroundImage3D') {
+
+			const group = new THREE.Group();
+
+			// Attach to camera so it stays in “screen space” like the bgPlane :contentReference[oaicite:4]{index=4}
+			this.camera.add(group);
+
+			// no empties needed
+			const empties = null;
+
+			const data = { id, element, group, type, empties, options };
+			this.registeredElements.set(id, data);
+
+			if (this.resizeObserver) {
+				this.resizeObserver.observe(element);
+			}
+
+			this.buildRegisteredElement(data);
+			this.updateElementPosition(id);
+			this.requestRender();
+
+			return { id, empties };
+		}
+
 		const group = new THREE.Group();
 		this.scene.add(group);
 
@@ -483,6 +671,21 @@ export class ThreeManager {
 			}
 		}
 
+		// background image types
+		if (data.type === 'backgroundImage3D') {
+
+			this._disposeBackgroundImage3D(data);
+
+			// remove from camera (or whatever parent it has)
+			if (group && group.parent) {
+				group.parent.remove(group);
+			}
+
+			this.registeredElements.delete(id);
+			this.requestRender();
+			return;
+		}
+
 		this.scene.remove(group);
 		this.cleanGroupNonEmptyChildren(data.group, data.empties);
 		this.registeredElements.delete(id);
@@ -540,6 +743,8 @@ export class ThreeManager {
 				this.cleanGroupChildren(child);
 		});
 	}
+
+
 
 
 	/* ==========================================================================
@@ -610,6 +815,16 @@ export class ThreeManager {
 
 		if (!data)
 			return;
+
+		// BackgroundImage3D (does not use theme or empties)
+		if (data.type === 'backgroundImage3D') {
+
+			// rebuild safely
+			this._disposeBackgroundImage3D(data);
+			this._buildBackgroundImage3D(data);
+
+			return;
+		}
 
 		// If this is a CustomContainer3D and it supplied a cleanup hook,
 		// let it dispose custom resources BEFORE we wipe the empties.
@@ -693,6 +908,8 @@ export class ThreeManager {
 			}
 		}
 	}
+
+
 
 
 	/* ==========================================================================
@@ -850,6 +1067,54 @@ export class ThreeManager {
 		const data = this.registeredElements.get(id);
 		if (!data)
 			return;
+
+		// BackgroundImage3D doesn't have corners or theme-based positioning, so we handle it separately here.
+		if (data.type === 'backgroundImage3D') {
+
+			if (!this.bgPlane)
+				return;
+
+			// 1) Center anchor from DOM
+			const rect = data.element.getBoundingClientRect();
+
+			const cx = rect.left + rect.width / 2;
+			const cy = rect.top + rect.height / 2;
+
+			// 2) Get target depth (camera local), just above bg plane
+			const targetZ = this.bgPlane.position.z + 0.25; // closer to camera than bg
+			const dist = Math.abs(targetZ);
+
+			// 3) Screen center -> NDC
+			const ndcX = (cx / this.width) * 2 - 1;
+			const ndcY = -((cy / this.height) * 2 - 1);
+
+			// 4) Frustum size at that depth
+			const fovRad = this.camera.fov * Math.PI / 180;
+			const planeH = 2 * Math.tan(fovRad / 2) * dist;
+			const planeW = planeH * this.camera.aspect;
+
+			// 5) Place group at projected point (camera-local)
+			const x = ndcX * (planeW / 2);
+			const y = ndcY * (planeH / 2);
+			data.group.position.set(x, y, targetZ);
+
+			// 6) Scale the unit quad to match desired DOM px size at that depth
+			// Use props if provided; fall back to rect to be forgiving.
+			const pxW = Number.isFinite(Number(data.options.width)) ? Number(data.options.width) : rect.width;
+			const pxH = Number.isFinite(Number(data.options.height)) ? Number(data.options.height) : rect.height;
+
+			if (!Number.isFinite(pxW) || !Number.isFinite(pxH) || pxW <= 0 || pxH <= 0)
+				return;
+
+			const wWorld = (pxW / this.width) * planeW;
+			const hWorld = (pxH / this.height) * planeH;
+
+			if (data._bgImage3D && data._bgImage3D.mesh) {
+				data._bgImage3D.mesh.scale.set(wWorld, hWorld, 1);
+			}
+
+			return;
+		}
 
 		// get the corners to measure
 		const el = data.element;
