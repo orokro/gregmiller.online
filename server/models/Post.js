@@ -1,12 +1,9 @@
 /*
 	Post.js
 	-------
-
-	This file defines the Mongoose model for our blog posts. It specifies the schema for the "posts" collection in MongoDB, including fields like title, slug, content, date, flickrSetId, and legacyId.
+	This file defines the Mongoose model for our blog posts.
 */
 
-// imports
-// If using nuxt-mongoose module, BUT standard mongoose is fine too:
 import mongoose from 'mongoose';
 
 // Define the schema for a blog post
@@ -25,4 +22,24 @@ const schema = new mongoose.Schema({
 	}]
 });
 
-export const Post = mongoose.model('Post', schema, 'posts');
+// Text index for real search
+schema.index(
+	{
+		title: 'text',
+		content: 'text',
+		tags: 'text',
+		categories: 'text',
+	},
+	{
+		weights: {
+			title: 10,
+			tags: 5,
+			categories: 3,
+			content: 1,
+		},
+		name: 'PostTextIndex',
+	}
+);
+
+// Prevent model overwrite in dev/hmr
+export const Post = mongoose.models.Post || mongoose.model('Post', schema, 'posts');

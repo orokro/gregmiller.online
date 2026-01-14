@@ -4,19 +4,14 @@
 	Composable for managing site search.
 
 	- searchQuery (ref): bound to the search input
-	- searchResults (shallowRef): array of matched results
+	- searchResults (shallowRef): array of matched posts from the API
 	- searchActive (ref boolean): true when query is not ''
 	- resultsFound (ref boolean): true when searchResults is not empty
-
-	Implementation notes:
-	- Debounced search to avoid spamming requests
-	- Uses /api/posts as the data source and filters client-side
 */
 
-// vue
 import { ref, shallowRef, watch } from 'vue';
 
-// shared state (singleton) like useHamburger.js
+// shared state (singleton)
 const searchQuery = ref('');
 const searchResults = shallowRef([]);
 const searchActive = ref(false);
@@ -26,69 +21,16 @@ const resultsFound = ref(false);
 let debounceTimer = null;
 let activeRequestId = 0;
 
-
-/**
- * Normalizes the query string by trimming whitespace.
- *
- * @param {String} q - the raw query string
- * @return {String} the normalized query string
- */
 function normalizeQuery(q) {
 	return String(q || '').trim();
 }
 
-
-/**
- * Tokenizes the query string into an array of terms.
- *
- * @param {String} q - query
- * @returns {String} - cleaned / tokenized query
- */
-function tokenize(q) {
-
-	const cleaned = normalizeQuery(q).toLowerCase();
-	if (!cleaned)
-		return [];
-
-	return cleaned.split(/\s+/g).filter(Boolean);
-}
-
-
-/**
- * Flattens a post object into a single string for searching.
- *
- * @param {object} post - the post object to stringify
- * @return {string} a flattened string of the post's searchable content
- */
-function stringifyPost(post) {
-
-	// defensively flatten likely searchable fields
-	const parts = [
-		post?.title,
-		post?.slug,
-		post?.content,
-		Array.isArray(post?.tags) ? post.tags.join(' ') : post?.tags,
-		Array.isArray(post?.categories) ? post.categories.join(' ') : post?.categories,
-	];
-	return parts
-		.filter(Boolean)
-		.map(v => String(v).toLowerCase())
-		.join(' ');
-}
-
-
-/**
- * Performs the search query and updates results.
- *
- * @param {String} q - query string
- */
 async function runSearch(q) {
 
 	const requestId = ++activeRequestId;
 
 	const query = normalizeQuery(q);
 
-	// update booleans immediately
 	searchActive.value = query !== '';
 
 	// clear on empty
@@ -100,33 +42,23 @@ async function runSearch(q) {
 
 	try {
 
-		// pull posts and filter locally
-		const posts = await $fetch('/api/posts');
-
-		// if a newer request started, ignore this result
-		if (requestId !== activeRequestId) return;
-
-		const terms = tokenize(query);
-
-		// if somehow empty after trim/tokenize, treat as cleared
-		if (!terms.length) {
-			searchResults.value = [];
-			resultsFound.value = false;
-			return;
-		}
-
-		const filtered = (Array.isArray(posts) ? posts : []).filter((post) => {
-			const haystack = stringifyPost(post);
-			// require ALL terms to match somewhere
-			return terms.every(t => haystack.includes(t));
+		const results = await $fetch('/api/search', {
+			query: {
+				q: query,
+				limit: 25,
+			},
 		});
 
-		searchResults.value = filtered;
-		resultsFound.value = filtered.length > 0;
+		// ignore stale responses
+		if (requestId !== activeRequestId) return;
+
+		const arr = Array.isArray(results) ? results : [];
+
+		searchResults.value = arr;
+		resultsFound.value = arr.length > 0;
 
 	} catch (e) {
 
-		// if a newer request started, ignore this result
 		if (requestId !== activeRequestId) return;
 
 		console.error('Search failed:', e);
@@ -134,7 +66,6 @@ async function runSearch(q) {
 		resultsFound.value = false;
 	}
 }
-
 
 // debounce query changes
 watch(searchQuery, (q) => {
@@ -149,7 +80,6 @@ watch(searchQuery, (q) => {
 	}, 200);
 
 }, { immediate: true });
-
 
 export function useSearch() {
 	return {

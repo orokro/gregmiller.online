@@ -292,37 +292,6 @@ const drawerClass = computed(() => ({
 
 		/* iOS-like minimal scrollbar */
 		overflow-y: auto;
-		scrollbar-width: thin;              /* Firefox */
-		scrollbar-color: var(--color-secondary) transparent;
-
-		/* WebKit */
-		&::-webkit-scrollbar {
-			width: 6px;
-			margin-top: 4px;
-		}
-
-		&::-webkit-scrollbar-track {
-			background: transparent;
-			margin-top: 4px;
-		}
-
-		&::-webkit-scrollbar-thumb {
-			background-color: var(--color-secondary);
-			border-radius: 999px;
-			border: 2px solid transparent;    /* creates the gap */
-			background-clip: padding-box;
-		}
-
-		&::-webkit-scrollbar-thumb:hover {
-			background-color: var(--color-secondary);
-		}
-
-		/* Explicitly hide buttons anyway */
-		&::-webkit-scrollbar-button {
-			display: none;
-			width: 0;
-			height: 0;
-		}
 
 	}// .sidebar-links
 
