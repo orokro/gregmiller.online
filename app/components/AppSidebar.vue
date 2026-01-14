@@ -61,6 +61,7 @@ const drawerClass = computed(() => ({
 	'is-open': isOpen.value
 }));
 
+// change sidebar width based on search state
 const sideBarWidth = computed(() => {
 	if (searchActive.value) {
 		return '400px';
@@ -246,7 +247,7 @@ const sideBarWidth = computed(() => {
 			position: absolute;
 			inset: 0;
 			z-index: -1; /* behind content */
-			background-image: url('/img/header_bg_gray.png');
+			background-image: url('/img/header_bg.png');
 			mix-blend-mode: overlay
 
 		}// .bg-blend-pattern
