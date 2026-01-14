@@ -1074,47 +1074,74 @@ export class ThreeManager {
 			if (!this.bgPlane)
 				return;
 
-			// 1) Center anchor from DOM
+			// 1) DOM anchor (center)
 			const rect = data.element.getBoundingClientRect();
+			const cx = rect.left + rect.width * 0.5;
+			const cy = rect.top + rect.height * 0.5;
 
-			const cx = rect.left + rect.width / 2;
-			const cy = rect.top + rect.height / 2;
+			if (!Number.isFinite(cx) || !Number.isFinite(cy))
+				return;
 
-			// 2) Get target depth (camera local), just above bg plane
-			const targetZ = this.bgPlane.position.z + 0.25; // closer to camera than bg
-			const dist = Math.abs(targetZ);
-
-			// 3) Screen center -> NDC
+			// 2) Screen -> NDC
 			const ndcX = (cx / this.width) * 2 - 1;
 			const ndcY = -((cy / this.height) * 2 - 1);
 
-			// 4) Frustum size at that depth
+			// 3) Project to a plane at the desired depth (camera-local)
+			const targetZ = this.bgPlane.position.z + 0.25; // slightly closer than bg
+			const dist = Math.abs(targetZ);
+
 			const fovRad = this.camera.fov * Math.PI / 180;
-			const planeH = 2 * Math.tan(fovRad / 2) * dist;
+			const planeH = 2 * Math.tan(fovRad * 0.5) * dist;
 			const planeW = planeH * this.camera.aspect;
 
-			// 5) Place group at projected point (camera-local)
-			const x = ndcX * (planeW / 2);
-			const y = ndcY * (planeH / 2);
+			const foo = 0.571;
+			let x = ndcX * (planeW * foo);
+			let y = ndcY * (planeH * foo);
+
+			// 4) Background "reference frame" correction
+			// Your bg grid "moves" via texture offset. If we don't apply the same offset
+			// in world space, decals will appear to slide over the grid.
+			const map = this.bgPlane.material && this.bgPlane.material.map ? this.bgPlane.material.map : null;
+
+			if (map && map.offset) {
+
+				// In your bg setup you typically set repeat = vW/256, vH/256
+				// which means: 1.0 UV offset == 256 world units on the bg plane.
+				// Use that same constant here (keep in sync with your bg repeat logic).
+				const UNITS_PER_UV = 256;
+
+				// NOTE: Signs depend on how you perceive the offset direction.
+				// This pairing is the one that usually makes decals "stick" to the texture.
+				x += map.offset.x * UNITS_PER_UV;
+				y += map.offset.y * UNITS_PER_UV;
+			}
+
 			data.group.position.set(x, y, targetZ);
 
-			// 6) Scale the unit quad to match desired DOM px size at that depth
-			// Use props if provided; fall back to rect to be forgiving.
-			const pxW = Number.isFinite(Number(data.options.width)) ? Number(data.options.width) : rect.width;
-			const pxH = Number.isFinite(Number(data.options.height)) ? Number(data.options.height) : rect.height;
-
-			if (!Number.isFinite(pxW) || !Number.isFinite(pxH) || pxW <= 0 || pxH <= 0)
-				return;
-
-			const wWorld = (pxW / this.width) * planeW;
-			const hWorld = (pxH / this.height) * planeH;
-
+			// 5) Scale from DOM px -> world units at this depth
 			if (data._bgImage3D && data._bgImage3D.mesh) {
+
+				const pxW = Number.isFinite(+data.options.width)
+					? +data.options.width
+					: rect.width;
+
+				const pxH = Number.isFinite(+data.options.height)
+					? +data.options.height
+					: rect.height;
+
+				if (!Number.isFinite(pxW) || !Number.isFinite(pxH) || pxW <= 0 || pxH <= 0)
+					return;
+
+				const wWorld = (pxW / this.width) * planeW;
+				const hWorld = (pxH / this.height) * planeH;
+
 				data._bgImage3D.mesh.scale.set(wWorld, hWorld, 1);
 			}
 
 			return;
 		}
+
+
 
 		// get the corners to measure
 		const el = data.element;

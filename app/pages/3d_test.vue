@@ -95,7 +95,8 @@ import BackgroundImage3D from '../components/BackgroundImage3D.vue';
 .pencil_bg_img {
 
 	position: absolute;
-	left: -100px;
+	left: -150px;
+	top: 150px;
 }
 
 .test-page {
