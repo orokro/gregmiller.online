@@ -170,71 +170,58 @@ onBeforeUnmount(() => {
 </template>
 <style lang="scss" scoped>
 
-.static-page {
 
-	padding: 4rem;
-	text-align: center;
-	font-family: sans-serif;
 
-	// list of social media icons
-	.icon-list {
+// list of social media icons
+.icon-list {
 
-		// flex row
-		display: flex;
-		flex-wrap: wrap;
-		gap: 20px;
-		justify-content: center;
+	// flex row
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	justify-content: center;
 
-		&:deep {
+	&:deep {
 
-			// since I'm re-using the SocialIcon component,
-			// I'll just adjust a couple of the inner styles manually here
-			.icon-row {
-				width: 75px;
-				height: 75px;
+		// since I'm re-using the SocialIcon component,
+		// I'll just adjust a couple of the inner styles manually here
+		.icon-row {
+			width: 75px;
+			height: 75px;
 
-				.icon {
-					left: 9px;
-					width: 80px;
-					height: 80px;
-				}
-			}// :deep .icon-row
-
+			.icon {
+				left: 9px;
+				width: 80px;
+				height: 80px;
+			}
 		}// :deep .icon-row
 
-	}// .icon-list
+	}// :deep .icon-row
 
-	h1 {
-		padding-top: 15px;
-		margin-bottom: 15px;
+}// .icon-list
 
-		color: var(--color-secondary);
-		span {
-			display: inline-block;
-			padding: 0em 1em;
-			background: rgba(255, 255, 255, 0.8);
-			border-radius: 40px;
+h1 {
+	padding-top: 15px;
+	margin-bottom: 15px;
 
-			// inset border
-			// box-shadow: inset 0 0 0 1px #ddd;
-		}// span
-
-	}// h1
-
-	h3 {
-		margin-bottom: 2rem;
-		color: var(--color-secondary);
-
-	}// h3
-
-	.white-box {
+	color: var(--color-secondary);
+	span {
+		display: inline-block;
+		padding: 0em 1em;
 		background: rgba(255, 255, 255, 0.8);
-		border-radius: 3px;
-		padding: 2rem;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+		border-radius: 40px;
 
-	}// .white-box
+		// inset border
+		// box-shadow: inset 0 0 0 1px #ddd;
+	}// span
 
-}// .static-page
+}// h1
+
+h3 {
+	margin-bottom: 2rem;
+	color: var(--color-secondary);
+
+}// h3
+
 
 </style>

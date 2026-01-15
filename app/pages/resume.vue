@@ -380,36 +380,6 @@ import SkillIcon from '../components/SkillIcon.vue';
 </template>
 <style lang="scss" scoped>
 
-.static-page {
-
-	padding: 4rem;
-	text-align: center;
-	font-family: sans-serif;
-
-	// for debug
-	// border: 1px solid red;
-
-	h1 {
-		padding-top: 15px;
-		margin-bottom: 15px;
-
-		color: var(--color-secondary);
-		span {
-			display: inline-block;
-			padding: 0em 1em;
-			background: rgba(255, 255, 255, 0.8);
-			border-radius: 40px;
-
-			// inset border
-			// box-shadow: inset 0 0 0 1px #ddd;
-		}
-	}
-
-	h3 {
-		margin-bottom: 2rem;
-		color: var(--color-secondary);
-	}
-
 	.white-box {
 		background: rgba(255, 255, 255, 0.8);
 		border-radius: 3px;
@@ -433,7 +403,5 @@ import SkillIcon from '../components/SkillIcon.vue';
 		display: grid;
 		place-items: center;
 	}
-
-}// .static-page
 
 </style>

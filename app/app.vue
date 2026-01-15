@@ -227,4 +227,46 @@ body {
 	overflow: visible; /* not hidden on y */
 }
 
+
+// reusable per-page styling
+.static-page {
+
+	padding: 4rem;
+	text-align: center;
+	font-family: sans-serif;
+
+	// for debug
+	// border: 1px solid red;
+
+	h1 {
+		padding-top: 15px;
+		margin-bottom: 15px;
+
+		color: var(--color-secondary);
+		span {
+			display: inline-block;
+			padding: 0em 1em;
+			background: rgba(255, 255, 255, 0.8);
+			border-radius: 40px;
+
+			// inset border
+			// box-shadow: inset 0 0 0 1px #ddd;
+		}
+	}
+
+	h3 {
+		margin-bottom: 2rem;
+		color: var(--color-secondary);
+	}
+
+	.white-box {
+		background: rgba(255, 255, 255, 0.8);
+		border-radius: 3px;
+		padding: 2rem;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+	}// .white-box
+
+}// .static-page
+
 </style>
