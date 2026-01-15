@@ -271,11 +271,20 @@ body {
 		&.text {
 			text-align: left !important;
 			color: var(--color-text);
-
+			font-size: 16px;
 			font-family: "Quicksand", sans-serif;
   			font-optical-sizing: auto;
 		}
 	}// .white-box
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
+		gap: 1rem 1rem;
+		padding-right: 0px;
+		justify-content: center;
+	}
+
 
 }// .static-page
 

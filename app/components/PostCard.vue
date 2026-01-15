@@ -90,9 +90,9 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 
 				<div class="body">
 					<header class="header">
-						<NuxtLink class="title" :to="href">
+						<div class="title">
 							{{ post.title }}
-						</NuxtLink>
+						</div>
 
 						<div v-if="(showDate && prettyDate) || (showCategories && categories.length)" class="meta">
 							<span v-if="showDate && prettyDate" class="date">{{ prettyDate }}</span>
@@ -114,9 +114,9 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 						<span v-if="tags.length > 8" class="tag more">+{{ tags.length - 8 }}</span>
 					</div>
 
-					<NuxtLink class="readMore" :to="href">
+					<div class="readMore">
 						Continue reading →
-					</NuxtLink>
+					</div>
 				</div>
 
 			</article>
@@ -146,12 +146,14 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 .postCard {
 
 	// box styles
-    width: 390px;
+    // 1. Allow the card to be fluid so the Grid controls the size
+    width: 100%;
+
     border-radius: 6px;
     background: rgba(255, 255, 255, 1);
 
 	// layout
-	 display: grid;
+	display: grid;
     grid-template-columns: 150px 1fr;
     gap: 14px;
     padding: 6px;
@@ -232,15 +234,15 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 				overflow: hidden;
 
 				// text styles
-                font-size: 20px;
+                font-size: 26px;
                 line-height: 1.15;
                 color: var(--color-secondary);
                 font-weight: 700;
                 white-space: nowrap;
-
                 text-overflow: ellipsis;
 				text-align: left;
-
+				font-family: "Alumni Sans Pinstripe", sans-serif;
+				letter-spacing: 1px;;
             }// meta info row (date, categories)
 
 			// meta info row (date, categories)
@@ -303,6 +305,8 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
             font-size: 13px;
             line-height: 1.35;
             text-align: left;
+			font-family: "Quicksand", sans-serif;
+  			font-optical-sizing: auto;
 
         }// .excerpt
 
@@ -343,6 +347,8 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 			// text styles
             color: var(--color-secondary);
             font-size: 13px;
+			font-family: "Quicksand", sans-serif;
+  			font-optical-sizing: auto;
 
         }// .readMore
 
@@ -350,16 +356,4 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 
 }// .postCard
 
-/* Responsive */
-@media (max-width: 520px) {
-    .postCard {
-        grid-template-columns: 1fr;
-    }
-
-    .postCard img,
-    .postCard .thumbPlaceholder {
-        width: 100%;
-        height: 180px;
-    }
-}
 </style>

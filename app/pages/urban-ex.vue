@@ -22,8 +22,6 @@ const { data, pending, error } = await useFetch('/api/posts/by-category', {
 	},
 });
 
-console.log(data.value.posts[0]);
-
 </script>
 <template>
 
@@ -33,7 +31,7 @@ console.log(data.value.posts[0]);
 			<h1><span>Urban Ex</span></h1>
 			<div class="white-box text">
 
-				<i>Via wikipedia: "Urban exploration is the exploration of man-made structures, usually abandoned ruins or not usually seen components of the man-made environment."</i>
+				<i>Via <a href="https://en.wikipedia.org/wiki/Urban_exploration" target="_blank">wikipedia</a>: "Urban exploration is the exploration of man-made structures, usually abandoned ruins or not usually seen components of the man-made environment."</i>
 				<br/><br/>
 				For many years I made it a point to check out and document as many abandoned/off-limit places as possible. It's been quite a hobby, ranging from abandoned hospitals and prisons, to underground tunnels, storm drains, black mold, and rat infested houses in the middle of the woods.
 				<br/><br/>
@@ -46,9 +44,9 @@ console.log(data.value.posts[0]);
 
 		<Spacer3D/>
 
-		<Container3D>
+		<Container3D style="min-width: 400px;">
 			<h1><span>Urban Ex Posts</span></h1>
-			<div class="white-box">
+			<div class="white-box" style="min-width: 390px;">
 
 				<div v-if="data && data.posts && data.posts.length" class="grid">
 
@@ -76,13 +74,5 @@ console.log(data.value.posts[0]);
 	padding: 2rem 1rem;;
 
 }// .white-box
-
-.grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 1rem 2rem;
-	padding-right: 20px;
-}
-
 
 </style>
