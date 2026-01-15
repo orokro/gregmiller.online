@@ -10,7 +10,7 @@
 import { computed } from 'vue';
 
 // components
-import PostView from '../../../app/components/PostView.vue';
+import PostView from '../../app/components/PostView.vue';
 
 // nuxt
 const route = useRoute();

@@ -39,7 +39,7 @@ import CategoryGrid from '../../app/components/CategoryGrid.vue';
 
 .white-box {
 
-	padding: 2rem 1rem;;
+	padding: 2rem 1rem;
 
 }// .white-box
 

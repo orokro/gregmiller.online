@@ -25,16 +25,40 @@ const props = defineProps({
 	// category name to fetch posts for
 	category: {
 		type: String,
-		required: true,
+		required: false,
 	},
 
+	// tag if being used for tags
+	tag: {
+		type: String,
+		required: false,
+	},
+
+	// optional limit
+	limit: {
+		type: Number,
+		default: -1
+	},
 });
 
-// get our posts for this category
-const { data, pending, error } = await useFetch('/api/posts/by-category', {
-	query: {
-		category: props.category,
-	},
+// build query
+const query = {};
+if (props.category) {
+	query.category = props.category;
+}
+if (props.tag) {
+	query.tag = props.tag;
+}
+if (props.limit>0) {
+	query.limit = props.limit;
+}
+
+// fetch path
+const fetchPath = props.category ? '/api/posts/by-category' : '/api/posts/by-tag';
+
+// fetch posts for category/tag
+const { data, pending, error } = await useFetch(fetchPath, {
+	query: query,
 });
 
 </script>

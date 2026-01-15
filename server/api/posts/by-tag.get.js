@@ -8,6 +8,15 @@
 import { Post } from '../../models/Post';
 import { connectDb } from '../../utils/db';
 
+function makeExcerpt(html, maxLen = 180) {
+	if (!html) return '';
+	return html
+		.replace(/<[^>]*>/g, '')	// strip tags
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, maxLen) + '…';
+}
+
 export default defineEventHandler(async (event) => {
 
 	await connectDb();
@@ -40,6 +49,8 @@ export default defineEventHandler(async (event) => {
 		legacyId: 1,
 		categories: 1,
 		tags: 1,
+		content: 1,
+		featuredImage: 1,
 
 		thumbnail: 1,
 		thumb: 1,
@@ -52,6 +63,11 @@ export default defineEventHandler(async (event) => {
 		.sort({ date: -1 })
 		.limit(limit)
 		.lean();
+
+	for (const p of posts) {
+		p.excerpt = makeExcerpt(p.content);
+		delete p.content;
+	}
 
 	return {
 		tag,
