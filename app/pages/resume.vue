@@ -393,6 +393,7 @@ import SkillIcon from '../components/SkillIcon.vue';
 		padding-top: 15px;
 		margin-bottom: 15px;
 
+		color: var(--color-secondary);
 		span {
 			display: inline-block;
 			padding: 0em 1em;
@@ -406,6 +407,7 @@ import SkillIcon from '../components/SkillIcon.vue';
 
 	h3 {
 		margin-bottom: 2rem;
+		color: var(--color-secondary);
 	}
 
 	.white-box {
