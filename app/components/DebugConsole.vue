@@ -95,6 +95,7 @@ const findKeyInsensitive = (obj, wantedKey) => {
 };
 
 const commands = computed(() => ({
+
 	mobile: (...args) => {
 		if (args.length < 1) {
 			log(describeMobileStatus());
@@ -163,6 +164,7 @@ const commands = computed(() => ({
 		const keys = Object.keys(debugVars.value || {});
 		log(`Debug vars: ${keys.length ? keys.join(', ') : '(none)'}`);
 	},
+
 }));
 
 const runCommand = (rawLine) => {

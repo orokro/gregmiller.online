@@ -22,7 +22,7 @@
 	// a simple horizontal spacer that can grow or shrink as needed
 	.spacer-3d {
 		width: 100%;
-		height: 30px;
+		height: 100px;
 
 		// animate when theme changes
 		transition: height 0.3s ease;

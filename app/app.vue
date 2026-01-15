@@ -89,7 +89,9 @@ onMounted(() => {
 }
 
 html, body {
-	height: 100%;
+	height: auto;
+	min-height: 100%;
+	overflow-y: auto;
 
 	/* ===== Scrollbar CSS ===== */
 	/* Firefox */
@@ -215,5 +217,14 @@ body {
 	}// .app-main
 
 }// .app-shell
+
+.app-shell {
+	// min-height: 100vh;
+	overflow: hidden; /* not clip */
+}
+
+.app-shell .app-main {
+	overflow: visible; /* not hidden on y */
+}
 
 </style>
