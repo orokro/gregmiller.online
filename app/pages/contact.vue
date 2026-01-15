@@ -147,13 +147,14 @@ onBeforeUnmount(() => {
 
 		<Spacer3D/>
 
-		<Container3D>
+		<Container3D style="min-width: 330px;">
+
 			<h1><span>Message Me</span></h1>
 			<div class="white-box">
 				<h3>Fill out the Google Form below, I usually reply same day, unless I'm asleep:</h3>
 				<iframe
 					src="https://docs.google.com/forms/d/e/1FAIpQLScl5Lx-XE2I5RhySzULXCHk0zCcYd-vaLzFBsFDcyW_urrJDQ/viewform?embedded=true"
-					width="626"
+					width="100%"
 					height="900"
 					frameborder="0"
 					marginheight="0"
