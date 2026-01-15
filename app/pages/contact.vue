@@ -24,23 +24,69 @@ import IcoX from '../components/Social_Icons/IcoX.vue';
 import IcoYouTube from '../components/Social_Icons/IcoYouTube.vue';
 
 
-// inject the Tawk.to live chat script when this page is mounted
-onMounted(() => {
-	const src = 'https://embed.tawk.to/696897a9726a11197a5f8a3a/1jf090s2n'
+// our tawk.to script
+const src = 'https://embed.tawk.to/696897a9726a11197a5f8a3a/1jf090s2n'
 
-	// Prevent duplicates (HMR / navigation)
-	if (document.querySelector(`script[src="${src}"]`)) return
 
-	window.Tawk_API = window.Tawk_API || {}
-	window.Tawk_LoadStart = new Date()
+/**
+ * Dynamically injects the Tawk.to script into the page if it hasn't been loaded already.
+ * This allows us to load the live chat widget only on the contact page, rather than site-wide.
+ */
+function ensureTawkLoaded() {
+
+	if (document.querySelector(`script[src="${src}"]`))
+		return;
+
+	window.Tawk_API = window.Tawk_API || {};
+	window.Tawk_LoadStart = new Date();
 
 	const s1 = document.createElement('script')
-	s1.async = true
-	s1.src = src
-	s1.charset = 'UTF-8'
-	s1.setAttribute('crossorigin', '*')
+	s1.async = true;
+	s1.src = src;
+	s1.charset = 'UTF-8';
+	s1.setAttribute('crossorigin', '*');
 
-	document.head.appendChild(s1)
+	document.head.appendChild(s1);
+}
+
+
+/**
+ * Shows the Tawk widget if it's loaded, otherwise does nothing.
+ */
+function showTawk() {
+	if (window.Tawk_API?.showWidget)
+		window.Tawk_API.showWidget();
+}
+
+
+/**
+ * Hides the Tawk widget if it's loaded, otherwise does nothing.
+ */
+function hideTawk() {
+	if (window.Tawk_API?.hideWidget)
+		window.Tawk_API.hideWidget();
+}
+
+
+// make sure the widget is loaded and shown when this page is visited
+onMounted(() => {
+
+	ensureTawkLoaded();
+
+	// If it's already loaded, show immediately
+	showTawk();
+
+	// If it isn't loaded yet, show when it finishes loading
+	window.Tawk_API = window.Tawk_API || {};
+	window.Tawk_API.onLoad = () => {
+		showTawk();
+	};
+});
+
+
+// hide widget when user navigates away from (SPA) page
+onBeforeUnmount(() => {
+	hideTawk();
 });
 
 </script>
@@ -129,10 +175,7 @@ onMounted(() => {
 	text-align: center;
 	font-family: sans-serif;
 
-	// for debug
-	// border: 1px solid red;
-
-
+	// list of social media icons
 	.icon-list {
 
 		// flex row
@@ -142,6 +185,9 @@ onMounted(() => {
 		justify-content: center;
 
 		&:deep {
+
+			// since I'm re-using the SocialIcon component,
+			// I'll just adjust a couple of the inner styles manually here
 			.icon-row {
 				width: 75px;
 				height: 75px;
@@ -151,9 +197,11 @@ onMounted(() => {
 					width: 80px;
 					height: 80px;
 				}
-			}
-		}
-	}
+			}// :deep .icon-row
+
+		}// :deep .icon-row
+
+	}// .icon-list
 
 	h1 {
 		padding-top: 15px;
@@ -168,13 +216,15 @@ onMounted(() => {
 
 			// inset border
 			// box-shadow: inset 0 0 0 1px #ddd;
-		}
-	}
+		}// span
+
+	}// h1
 
 	h3 {
 		margin-bottom: 2rem;
 		color: var(--color-secondary);
-	}
+
+	}// h3
 
 	.white-box {
 		background: rgba(255, 255, 255, 0.8);
@@ -183,22 +233,6 @@ onMounted(() => {
 		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
 	}// .white-box
-
-	.flex-grid {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 30px;
-		align-content: flex-start;
-		overflow: visible;
-	}
-
-	.flex-grid > * {
-		/* force consistent cell size */
-		flex: 0 0 100px;   /* fixed column width */
-		height: 100px;     /* fixed row height */
-		display: grid;
-		place-items: center;
-	}
 
 }// .static-page
 
