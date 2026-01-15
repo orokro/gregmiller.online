@@ -1,8 +1,8 @@
 <!--
-	music.vue
-	---------
+	music-articles.vue
+	------------------
 
-	Shows a list of my favorite musicians.
+	Some various music-related articles that I wrote over the years. Some of these are pretty old and may be a bit cringe, but I thought it would be fun to share them anyway. Maybe one day I'll write some new ones that aren't as cringe, who knows!
 -->
 <script setup>
 
@@ -19,19 +19,7 @@ import CategoryGrid from '../components/CategoryGrid.vue';
 
 	<div class="static-page">
 
-		<Container3D>
-			<h1><span>Music</span></h1>
-			<div class="white-box text">
-
-				While I work I often listen to music.
-				<br/><br/>
-				Below are some of my favorite artists!
-			</div>
-		</Container3D>
-
-		<Spacer3D/>
-
-		<CategoryGrid category="Favorite Musicians" title="Artists"/>
+		<CategoryGrid category="Music Articles" title="Music Articles"/>
 	</div>
 </template>
 <style lang="scss" scoped>

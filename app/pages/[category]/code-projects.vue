@@ -2,7 +2,7 @@
 	code-projects.vue
 	-------
 
-	The Code Projects page. This is a placeholder while I migrate content from the old site.
+	The Code Projects page.
 -->
 <script setup>
 
@@ -12,22 +12,7 @@ import { ref } from 'vue';
 // components
 import Container3D from '../../components/Container3D.vue';
 import Spacer3D from '../../components/Spacer3D.vue';
-import PostCard from '../../components/PostCard.vue';
-
-// get our code projects posts
-const category = 'Code Projects';
-const { data, pending, error } = await useFetch('/api/posts/by-category', {
-	query: {
-		category,
-	},
-});
-
-const { data: websitesData, pending: websitesPending, error: websitesError } = await useFetch('/api/posts/by-category', {
-	query: {
-		category: 'Websites',
-	},
-});
-
+import CategoryGrid from '../../app/components/CategoryGrid.vue';
 
 </script>
 <template>
@@ -49,27 +34,7 @@ const { data: websitesData, pending: websitesPending, error: websitesError } = a
 
 		<Spacer3D/>
 
-		<Container3D style="min-width: 400px;">
-			<h1><span>Code Projects</span></h1>
-			<div class="white-box" style="min-width: 390px;">
-
-				<div v-if="data && data.posts && data.posts.length" class="grid">
-
-					<div v-for="post in data.posts" :key="post._id" class="item">
-						<PostCard
-							:post="post"
-							:thumb-url="post.featuredImage"
-							:excerpt="post.excerpt"
-						/>
-					</div>
-
-				</div>
-				<div v-else>
-					<p>No posts found in this category.</p>
-				</div>
-
-			</div>
-		</Container3D>
+		<CategoryGrid category="Code Projects" title="Code Projects" />
 
 		<Spacer3D/>
 
@@ -84,27 +49,7 @@ const { data: websitesData, pending: websitesPending, error: websitesError } = a
 
 		<Spacer3D/>
 
-		<Container3D style="min-width: 400px;">
-			<h1><span>Ancient Website Projects</span></h1>
-			<div class="white-box" style="min-width: 390px;">
-
-				<div v-if="websitesData && websitesData.posts && websitesData.posts.length" class="grid">
-
-					<div v-for="post in websitesData.posts" :key="post._id" class="item">
-						<PostCard
-							:post="post"
-							:thumb-url="post.featuredImage"
-							:excerpt="post.excerpt"
-						/>
-					</div>
-
-				</div>
-				<div v-else>
-					<p>No posts found in this category.</p>
-				</div>
-
-			</div>
-		</Container3D>
+		<CategoryGrid category="Websites" title="Websites" />
 
 	</div>
 </template>

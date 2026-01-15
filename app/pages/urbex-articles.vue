@@ -2,7 +2,7 @@
 	urbex-articles.vue
 	------------------
 
-	The Urban Ex page. This is a placeholder while I migrate content from the old site.
+	The Urban Ex page.
 -->
 <script setup>
 
@@ -12,7 +12,7 @@ import { ref } from 'vue';
 // components
 import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
-import PostCard from '../components/PostCard.vue';
+import CategoryGrid from '../components/CategoryGrid.vue';
 
 // get our urban-ex posts
 const category = 'Urban Ex Articles';
@@ -37,27 +37,8 @@ const { data, pending, error } = await useFetch('/api/posts/by-category', {
 
 		<Spacer3D/>
 
-		<Container3D style="min-width: 400px;">
-			<h1><span>Urbex Articles Posts</span></h1>
-			<div class="white-box" style="min-width: 390px;">
+		<CategoryGrid title="Urbex Articles" category="Urban Ex Articles" />
 
-				<div v-if="data && data.posts && data.posts.length" class="grid">
-
-					<div v-for="post in data.posts" :key="post._id" class="item">
-						<PostCard
-							:post="post"
-							:thumb-url="post.featuredImage"
-							:excerpt="post.excerpt"
-						/>
-					</div>
-
-				</div>
-				<div v-else>
-					<p>No posts found in this category.</p>
-				</div>
-
-			</div>
-		</Container3D>
 	</div>
 </template>
 <style lang="scss" scoped>

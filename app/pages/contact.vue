@@ -2,7 +2,7 @@
 	contact.vue
 	-----------
 
-	The contact page. This is a placeholder while I migrate content from the old site.
+	The contact page.
 -->
 <script setup>
 
@@ -12,8 +12,6 @@ import { ref } from 'vue';
 // components
 import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
-import Resume from '../components/Resume.vue';
-import SkillIcon from '../components/SkillIcon.vue';
 import SocialIcon from '../components/SocialIcon.vue';
 import IcoFacebook from '../components/Social_Icons/IcoFacebook.vue';
 import IcoFlickr from '../components/Social_Icons/IcoFlickr.vue';

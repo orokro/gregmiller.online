@@ -2,7 +2,7 @@
 	resume.vue
 	----------
 
-	The resume page. This is a placeholder while I migrate content from the old site.
+	The resume page.
 -->
 <script setup>
 

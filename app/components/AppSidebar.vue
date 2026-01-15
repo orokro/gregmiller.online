@@ -116,8 +116,8 @@ const sideBarWidth = computed(() => {
 
 			<!-- music category -->
 			<div class="category-row">Music</div>
-			<LinkBarRow title="Musicians" @close="close" url="/musicians" :icon="IcoMusicians" />
-			<LinkBarRow title="My beats" @close="close" url="/music" :icon="IcoMusic" />
+			<LinkBarRow title="Musicians" @close="close" url="/music" :icon="IcoMusicians" />
+			<LinkBarRow title="My beats" @close="close" url="/my-beats" :icon="IcoMusic" />
 			<LinkBarRow title="Music Articles" @close="close" url="/music-articles" :icon="IcoMusicArticles" />
 
 			<!-- other category -->
