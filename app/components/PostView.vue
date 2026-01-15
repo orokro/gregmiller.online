@@ -27,6 +27,34 @@ if (error.value) {
 	throw createError({ statusCode: 404, statusMessage: 'Post not found' });
 }
 
+
+// --- NEW CODE: Formatter Function ---
+const processedContent = computed(() => {
+
+    // 1. Safety check: return empty string if content hasn't loaded
+    if (!post.value || !post.value.content) return '';
+
+    let content = post.value.content;
+
+    // 2. Normalize line endings (handle Windows \r\n vs Unix \n)
+    content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    // 3. Convert double newlines to paragraph breaks
+    // This looks for 2 or more newlines and turns them into </p><p>
+    content = content.replace(/\n\n+/g, '</p><p>');
+
+    // 4. Convert remaining single newlines to <br> tags
+    content = content.replace(/\n/g, '<br />');
+
+    // 5. Wrap the whole thing in <p> tags if it doesn't start with one
+    // (This ensures the first and last paragraphs are valid)
+    if (!content.trim().startsWith('<p>')) {
+        content = '<p>' + content + '</p>';
+    }
+
+    return content;
+});
+
 </script>
 <template>
 
@@ -60,7 +88,7 @@ if (error.value) {
 
 			</div>
 
-			<div class="post-content" v-html="post.content"></div>
+			<div class="post-content" v-html="processedContent"></div>
 		</div>
 	</Container3D>
 
