@@ -25,7 +25,7 @@ const secondaryColor = '#7561AA';
 const accentColor = '#b0ec6bff';
 const bgAccent1 = '#E1EEF5';
 const bgAccent2 = '#EFF4F7';
-const textColor = '#333333';
+const textColor = '#3a414bff';
 const hoverColor = '#FFFFFF';
 const scrollColor =  '#FFFFFF';
 

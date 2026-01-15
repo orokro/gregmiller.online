@@ -50,6 +50,7 @@ onMounted(() => {
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
 
 	<div class="app-root">
 
@@ -241,7 +242,9 @@ body {
 	h1 {
 		padding-top: 15px;
 		margin-bottom: 15px;
-
+		font-family: "Alumni Sans Pinstripe", sans-serif;
+		font-weight: bolder;
+		letter-spacing: 1px;
 		color: var(--color-secondary);
 		span {
 			display: inline-block;
@@ -265,6 +268,13 @@ body {
 		padding: 2rem;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
+		&.text {
+			text-align: left !important;
+			color: var(--color-text);
+
+			font-family: "Quicksand", sans-serif;
+  			font-optical-sizing: auto;
+		}
 	}// .white-box
 
 }// .static-page
