@@ -288,4 +288,16 @@ body {
 
 }// .static-page
 
+#sdiano5ljst1768543988493.widget-visible {
+
+	transform: translate(11px, -50px) !important;
+
+	// position: relative !important;
+	// top: -100px !important;
+
+	/* desktop: reserve space for the pinned sidebar */
+	@media (min-width: 900px) {
+
+	}
+}
 </style>

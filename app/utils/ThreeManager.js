@@ -946,6 +946,35 @@ export class ThreeManager {
 	 */
 	updateCanvasLayout() {
 
+		let vW = document.documentElement.clientWidth || window.innerWidth;
+		let vH = document.documentElement.clientHeight || window.innerHeight;
+		let offX = 0;
+		let offY = 0;
+
+		if (window.visualViewport) {
+			vW = window.visualViewport.width;
+			vH = window.visualViewport.height;
+			offX = window.visualViewport.offsetLeft;
+			offY = window.visualViewport.offsetTop;
+		}
+
+		// Only call setSize when size changed
+		const sizeChanged = (vW !== this.width) || (vH !== this.height);
+		this.width = vW;
+		this.height = vH;
+
+		if (sizeChanged) {
+			this.renderer.setSize(vW, vH, false);
+			this.canvas.style.width = `${vW}px`;
+			this.canvas.style.height = `${vH}px`;
+		}
+
+		// Transform can change on scroll/pan
+		this.canvas.style.transform = `translate3d(${offX}px, ${offY}px, 0)`;
+	}
+
+	updateCanvasLayout_old() {
+
 		// Get the viewport size and offsets. On desktop, offsets will be 0 and size will match the window. On mobile, this accounts for zoom/pan.
 		let vW = document.documentElement.clientWidth || window.innerWidth;
 		let vH = document.documentElement.clientHeight || window.innerHeight;
