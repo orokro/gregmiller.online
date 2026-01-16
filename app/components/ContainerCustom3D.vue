@@ -120,7 +120,6 @@ onUnmounted(() => {
 </script>
 <template>
 
-	<!-- main wrapper that the user can style from outside classes / style blocks -->
 	<div ref="el" class="container-custom-3d" :class="{ 'no-3d': isFallback }">
 
 		<!-- special wrapper to reset stacking context for our corners-->

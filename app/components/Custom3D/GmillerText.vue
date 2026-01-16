@@ -16,6 +16,8 @@ import ContainerCustom3D from '../ContainerCustom3D.vue';
 // We'll "donate" maps from the GLB material(s) onto this once we load.
 let glassMaterial = null;
 
+const el = ref(null);
+
 async function loadModel(manager) {
 
 	const [gltfScene] = await manager.assetsReady(['/models/text/GMILLER.glb']);
@@ -36,7 +38,6 @@ async function build(defaultBuild, customRoot, threeManager) {
 	// defaultBuild();
 
 	model = await loadModel(threeManager);
-	console.log("Loaded model:", model.children[0]);
 
 	if(!model) {
 		console.error("Failed to load model.");
@@ -44,8 +45,8 @@ async function build(defaultBuild, customRoot, threeManager) {
 	}
 
 	glassMaterial = new THREE.MeshPhysicalMaterial({
-		color: 0xffffff,
-
+		// color: 0xffffff,
+		color: 0x99AAFF,
 		transmission: 1.0,
 		transparent: true,
 		opacity: 1.0,
@@ -61,7 +62,8 @@ async function build(defaultBuild, customRoot, threeManager) {
 
 		envMapIntensity: 2.5,
 
-		attenuationColor: new THREE.Color(0xe6ffff),
+		// attenuationColor: new THREE.Color(0xe6ffff),
+		// attenuationColor: new THREE.Color(0x99AAFF),
 		attenuationDistance: 0.8,
 
 		side: THREE.DoubleSide
@@ -73,31 +75,26 @@ async function build(defaultBuild, customRoot, threeManager) {
 	model.rotation.x = 90 * (Math.PI / 180);
 	model.material = glassMaterial;
 
-
-	// const cubeGeo = new THREE.BoxGeometry(60, 60, 60);
-	// const cubeMat = new THREE.MeshNormalMaterial();
-	// const cube = new THREE.Mesh(cubeGeo, cubeMat);
-	// cube.name = 'spinning_cube';
-	// center.add(cube);
-
-	console.log("Adding model to scene:", model);
-
-
 	// Add cube to the CENTER empty by default
 	const center = customRoot.empties.center;
-
-
-
 	center.add(model);
-
-
 
 	threeManager.requestRender();
 }
 
 function update(defaultUpdate, customRoot, threeManager) {
 
+	if(!el.value) return;
 
+
+	// measure el width in pixels by getting client rect of the container element
+	const rect =  el.value?.$el.getBoundingClientRect();
+	const width = rect.width;
+
+	const scale = 200 * (width / 800);
+	if (model) {
+		model.scale.set(scale, scale, scale);
+	}
 }
 
 function destroy(customRoot, threeManager) {
@@ -126,6 +123,7 @@ function tick(root, LockManager, time){
 <template>
 
 	<ContainerCustom3D
+		ref="el"
 		class="spinning-cube-container"
 		:buildFn="build"
 		:updateFn="update"
@@ -140,9 +138,10 @@ function tick(root, LockManager, time){
 	.spinning-cube-container {
 
 		// make it a bit bigger than the default so our cube fits better
-		width: 650px;
+		// width: 650px;
 		height: 250px;
 
+		// transform: scale(0.5);
 		// for debug
 		// border: 1px solid red;
 
