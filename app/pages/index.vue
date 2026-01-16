@@ -9,6 +9,9 @@
 // imports
 const { data, error } = await useFetch('/api/posts');
 
+// components
+import GmillerText from '../components/Custom3D/GmillerText.vue';
+
 const getPostLink = (post) => {
     const d = new Date(post.date);
     const year = d.getFullYear();
@@ -20,6 +23,10 @@ const getPostLink = (post) => {
 <template>
 
 	<div class="container">
+
+		<div align="center">
+			<GmillerText />
+		</div>
 
 		<div v-if="error" class="error">
 			<p>Error loading posts: {{ error }}</p>

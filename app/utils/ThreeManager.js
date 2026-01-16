@@ -43,7 +43,7 @@ export class ThreeManager {
 			planeZ: 0,         // The plane where 1 unit = 1 pixel
 			bgZ: -500,         // The depth of the background plane
 			bgColor: 0xf0f0f0,  // Default fog/bg color (themes can override)
-			perspectiveX: 0,
+			perspectiveX: -100,
 			perspectiveY: 0
 		};
 
