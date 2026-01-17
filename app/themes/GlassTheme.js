@@ -154,6 +154,13 @@ export class GlassTheme {
 		manager.renderer.shadowMap.enabled = true;
 		manager.renderer.shadowMap.type = THREE.PCFShadowMap;
 
+        console.log("GlassTheme: Shadows enabled.", {
+            light: this.camLight,
+            shadow: this.camLight.shadow,
+            mapSize: this.camLight.shadow.mapSize,
+            camera: this.camLight.shadow.camera
+        });
+
 		this._loadPromise = this._loadModel(manager);
 	}
 

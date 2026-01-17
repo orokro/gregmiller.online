@@ -201,6 +201,7 @@ export class ThreeManager {
 			color: 0xffffff,
 			roughness: 1,
 			metalness: 0,
+			envMapIntensity: 0, // Disable IBL on bg so shadows are sharper
 		});
 
 		// add the background plane to the scene, positioned at the back
@@ -795,7 +796,7 @@ export class ThreeManager {
 		}
 
 		this.scene.remove(group);
-		this.cleanGroupNonEmptyChildren(data.group, data.empties, !rebuildCustom);
+		this.cleanGroupNonEmptyChildren(data.group, data.empties);
 		this.registeredElements.delete(id);
 
 		// make sure to re-render now that it's gone
