@@ -196,19 +196,22 @@ export class ThreeManager {
 		texture.wrapT = THREE.RepeatWrapping;
 
 		// build a texture-mapped material for the background
-		// no tone mapping, we want the colors to be exactly as they are in the texture
-		const material = new THREE.MeshPhysicalMaterial({
+		const material = new THREE.MeshStandardMaterial({
 			map: texture,
 			color: 0xffffff,
 			roughness: 1,
 			metalness: 0,
 		});
-		material.toneMapped = false;
 
 		// add the background plane to the scene, positioned at the back
 		this.bgPlane = new THREE.Mesh(geometry, material);
-		this.bgPlane.position.z = -1101;
-		this.camera.add(this.bgPlane);
+		
+		// Camera is at (100, 0, 1000). Plane was at local z=-1101.
+		// So World Z = -101.
+		this.bgPlane.position.set(100, 0, -101);
+		this.bgPlane.receiveShadow = true;
+		
+		this.scene.add(this.bgPlane);
 		this.scene.add(this.camera);
 	}
 
@@ -237,7 +240,7 @@ export class ThreeManager {
 		}
 
 		// Clean any potential remaining theme artifacts from the scene (but keep registered element groups and bg plane)
-		this.nukeThemeArtifacts();
+		// this.nukeThemeArtifacts();
 
 		// Set new theme & init
 		this.currentTheme = new ThemeClass();
@@ -792,7 +795,7 @@ export class ThreeManager {
 		}
 
 		this.scene.remove(group);
-		this.cleanGroupNonEmptyChildren(data.group, data.empties);
+		this.cleanGroupNonEmptyChildren(data.group, data.empties, !rebuildCustom);
 		this.registeredElements.delete(id);
 
 		// make sure to re-render now that it's gone
@@ -839,7 +842,7 @@ export class ThreeManager {
 	 * @param {THREE.Group} group
 	 * @param {Object} empties
 	 */
-	cleanGroupNonEmptyChildren(group, empties) {
+	cleanGroupNonEmptyChildren(group, empties, skipEmpties = false) {
 
 		if (!group)
 			return;
@@ -849,7 +852,9 @@ export class ThreeManager {
 			return;
 
 		// clean children of empties first to prevent orphaned geometry if themes add directly to empties instead of using their own sub-groups
-		this.cleanEmptiesChildren(empties);
+		if (!skipEmpties) {
+			this.cleanEmptiesChildren(empties);
+		}
 
 		// build a set of the empties so we can skip them when cleaning the sibling children of the main group
 		const keep = new Set([
@@ -951,8 +956,9 @@ export class ThreeManager {
 	 * Builds a registered element by calling the appropriate theme build function based on the element type.
 	 *
 	 * @param {Object} data - the data about registered object
+	 * @param {boolean} rebuildCustom - whether to rebuild custom boxes (if false, skips straight to default theme build for custom boxes, which is useful for theme switches where we want to preserve custom builds but re-apply theming)
 	 */
-	buildRegisteredElement(data) {
+	buildRegisteredElement(data, rebuildCustom = true) {
 
 		if (!data)
 			return;
@@ -969,7 +975,8 @@ export class ThreeManager {
 
 		// If this is a CustomContainer3D and it supplied a cleanup hook,
 		// let it dispose custom resources BEFORE we wipe the empties.
-		if (data.type === 'customBox' && data.options && typeof data.options.cleanFn === 'function') {
+		// Only run this if we are actually rebuilding the custom part.
+		if (rebuildCustom && data.type === 'customBox' && data.options && typeof data.options.cleanFn === 'function') {
 			try {
 				data.options.cleanFn({
 					group: data.group,
@@ -981,7 +988,7 @@ export class ThreeManager {
 		}
 
 		// Always clear any existing geometry so rebuilds don't stack
-		this.cleanGroupNonEmptyChildren(data.group, data.empties);
+		this.cleanGroupNonEmptyChildren(data.group, data.empties, !rebuildCustom);
 
 		// Regular Container3D always uses theme buildBox
 		if (data.type === 'box') {
@@ -1009,7 +1016,7 @@ export class ThreeManager {
 
 			// If a custom buildFn exists, it replaces default theming unless it calls defaultBuild()
 			if (data.options && typeof data.options.buildFn === 'function') {
-				data.options.buildFn(defaultBuild, customRoot, this);
+				data.options.buildFn(defaultBuild, customRoot, this, rebuildCustom);
 			} else {
 				defaultBuild();
 			}
@@ -1450,5 +1457,52 @@ export class ThreeManager {
 			this._rafId = requestAnimationFrame(this.tick);
 		}
 	}
+
+
+
+	/* ============================================================================
+	   SHADOW HELPERS
+	   ============================================================================ */
+
+
+	/**
+	 * Recursively sets castShadow on the object and its children.
+	 * @param {THREE.Object3D} object - The root object to traverse.
+	 * @param {boolean} enabled - Whether to enable or disable casting.
+	 */
+	setShadowCasting(object, enabled) {
+		object.traverse((child) => {
+			// We usually only want Meshes to cast shadows, not helper objects or lights
+			if (child.isMesh) {
+				child.castShadow = enabled;
+			}
+		});
+	}
+
+
+	/**
+	 * Recursively sets receiveShadow on the object and its children.
+	 * @param {THREE.Object3D} object - The root object to traverse.
+	 * @param {boolean} enabled - Whether to enable or disable receiving.
+	 */
+	setShadowReceiving(object, enabled) {
+		object.traverse((child) => {
+			if (child.isMesh) {
+				child.receiveShadow = enabled;
+			}
+		});
+	}
+
+
+	/**
+	 * Recursively sets both casting and receiving.
+	 * @param {THREE.Object3D} object - The root object to traverse.
+	 * @param {boolean} enabled - Whether to enable or disable both.
+	 */
+	setShadows(object, enabled) {
+		this.setShadowCasting(object, enabled);
+		this.setShadowReceiving(object, enabled);
+	}
+
 
 }

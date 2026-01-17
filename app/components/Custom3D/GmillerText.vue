@@ -32,10 +32,18 @@ async function loadModel(manager) {
 
 let model = null;
 
-async function build(defaultBuild, customRoot, threeManager) {
+async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 
 	// Run theme default (if any)
 	// defaultBuild();
+
+	console.clear();
+	console.log("Building GmillerText...", { rebuildCustom });
+
+	// if rebuild custom is false, gtfo early
+	if (!rebuildCustom) {
+		return;
+	}
 
 	model = await loadModel(threeManager);
 
@@ -74,6 +82,11 @@ async function build(defaultBuild, customRoot, threeManager) {
 	model.scale.set(200, 200, 200);
 	model.rotation.x = 90 * (Math.PI / 180);
 	model.material = glassMaterial;
+
+	model.castShadow = true;
+	model.receiveShadow = true;
+
+	threeManager.setShadows(model, true);
 
 	// Add cube to the CENTER empty by default
 	const center = customRoot.empties.center;

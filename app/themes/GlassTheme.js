@@ -1,5 +1,5 @@
 /*
-	GlassTheme2.js
+	GlassTheme.js
 	--------------
 
 	Performance-focused rewrite of GlassTheme.js that preserves:
@@ -88,17 +88,27 @@ export class GlassTheme {
 	}
 
 	init(manager) {
-
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 2.0);
 
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;
 
-		this.camLight = new THREE.PointLight(0xffffff, 50000, 5000);
-		this.camLight.position.set(50, 50, 50);
-		manager.camera.add(this.camLight);
+		// --- CHANGE 1: Use DirectionalLight for the main shadow caster ---
+		// DirectionalLight works best for general "scene shadows" and supports the .left/.right box settings.
+		this.camLight = new THREE.DirectionalLight(0xffffff, 1.5); // Intensity is higher for Directional (approx 1-10) vs Point (thousands)
 
+		// Position it high and to the side (Simulating a sun or studio lamp)
+		this.camLight.position.set(200, 500, 1000);
+		this.camLight.castShadow = true;
+
+		// --- CHANGE 2: Do NOT add shadow-casting lights to the camera ---
+		// If you add it to the camera, the shadow is always behind the object and you can't see it.
+		manager.scene.add(this.camLight);
+		manager.scene.add(this.camLight.target);
+		this.camLight.target.position.set(0, 0, 0);
+
+		// --- RIM LIGHTS (Keep as PointLights, usually no shadows needed) ---
 		this.rimLightL = new THREE.PointLight(0xffffff, 18000, 4000);
 		this.rimLightL.position.set(-180, 10, 0);
 		manager.scene.add(this.rimLightL);
@@ -107,13 +117,42 @@ export class GlassTheme {
 		this.rimLightR.position.set(180, 10, 0);
 		manager.scene.add(this.rimLightR);
 
+		// --- FILL LIGHT ---
 		this.fillLight = new THREE.PointLight(0xffffff, 12000, 6000);
 		this.fillLight.position.set(0, -120, 60);
+		// You usually only want ONE light casting shadows for performance,
+		// but if you need this one too, remove the .left/.right logic below for it.
+		this.fillLight.castShadow = false;
 		manager.scene.add(this.fillLight);
 
 		this.backLight = new THREE.PointLight(0xffffff, 14000, 6000);
 		this.backLight.position.set(0, 140, -80);
 		manager.scene.add(this.backLight);
+
+		// Allow background to receive shadows
+		manager.setShadowReceiving(manager.bgPlane, true);
+
+		// --- SHADOW CONFIGURATION ---
+		const d = 2000; 
+		this.camLight.shadow.camera.left = -d;
+		this.camLight.shadow.camera.right = d;
+		this.camLight.shadow.camera.top = d;
+		this.camLight.shadow.camera.bottom = -d;
+
+		this.camLight.shadow.camera.near = 1;
+		this.camLight.shadow.camera.far = 5000;
+
+		this.camLight.shadow.bias = -0.001; 
+		this.camLight.shadow.mapSize.width = 2048;
+		this.camLight.shadow.mapSize.height = 2048;
+
+		// Helper will now show a proper box
+		const helper = new THREE.CameraHelper(this.camLight.shadow.camera);
+		manager.scene.add(helper);
+
+		// Ensure renderer settings are correct
+		manager.renderer.shadowMap.enabled = true;
+		manager.renderer.shadowMap.type = THREE.PCFShadowMap;
 
 		this._loadPromise = this._loadModel(manager);
 	}
@@ -121,7 +160,8 @@ export class GlassTheme {
 	destroy(manager) {
 
 		if (this.camLight) {
-			manager.camera.remove(this.camLight);
+			manager.scene.remove(this.camLight);
+			manager.scene.remove(this.camLight.target);
 			this.camLight = null;
 		}
 
@@ -163,6 +203,8 @@ export class GlassTheme {
 			'Bottom_Left', 'Bottom', 'Bottom_Right'
 		];
 
+		manager.setShadows(gltfScene, true);
+
 		names.forEach((name) => {
 
 			const obj = gltfScene.getObjectByName(name);
@@ -195,7 +237,7 @@ export class GlassTheme {
 		this.isReady = true;
 
 		manager.registeredElements.forEach((data) => {
-			manager.buildRegisteredElement(data);
+			manager.buildRegisteredElement(data, false);
 		});
 
 		manager.onResize();
@@ -326,7 +368,7 @@ export class GlassTheme {
 					}
 				}
 
-				o.castShadow = false;
+				o.castShadow = true;
 				o.receiveShadow = true;
 			});
 
