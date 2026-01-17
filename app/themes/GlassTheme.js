@@ -88,14 +88,14 @@ export class GlassTheme {
 	}
 
 	init(manager) {
-		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 2.0);
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 0.65);
 
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;
 
 		// --- CHANGE 1: Use DirectionalLight for the main shadow caster ---
-		this.camLight = new THREE.DirectionalLight(0xffffff, 5.0); // Boost intensity
+		this.camLight = new THREE.DirectionalLight(0xffffff, 3.0); // Boost intensity
 
 		// Position it to cast a clear diagonal shadow
 		this.camLight.position.set(-300, 500, 500);
@@ -103,19 +103,19 @@ export class GlassTheme {
 
 		manager.scene.add(this.camLight);
 		manager.scene.add(this.camLight.target);
-		this.camLight.target.position.set(0, 0, 0);
+		this.camLight.target.position.set(-500, 400, 0);
 
 		// --- RIM LIGHTS (Reduced for testing) ---
-		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
-		this.rimLightL.position.set(-180, 10, 0);
-		manager.scene.add(this.rimLightL);
+		// this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
+		// this.rimLightL.position.set(-180, 10, 0);
+		// manager.scene.add(this.rimLightL);
 
 		this.rimLightR = new THREE.PointLight(0xffffff, 5000, 4000);
-		this.rimLightR.position.set(180, 10, 0);
+		this.rimLightR.position.set(280, 50, 0);
 		manager.scene.add(this.rimLightR);
 
 		// --- SHADOW CONFIGURATION ---
-		const d = 2500; 
+		const d = 2500;
 		this.camLight.shadow.camera.left = -d;
 		this.camLight.shadow.camera.right = d;
 		this.camLight.shadow.camera.top = d;
@@ -125,12 +125,13 @@ export class GlassTheme {
 		this.camLight.shadow.camera.far = 5000;
 
 		this.camLight.shadow.bias = 0; // Reset bias
-		this.camLight.shadow.mapSize.width = 2048;
-		this.camLight.shadow.mapSize.height = 2048;
+		this.camLight.shadow.mapSize.width = 2048 * 2;
+		this.camLight.shadow.mapSize.height = 2048 * 2;
 
 		// Ensure renderer settings are correct
 		manager.renderer.shadowMap.enabled = true;
-		manager.renderer.shadowMap.type = THREE.BasicShadowMap;
+		// manager.renderer.shadowMap.type = THREE.BasicShadowMap;
+		manager.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         console.log("GlassTheme: Shadows enabled.", {
             light: this.camLight,

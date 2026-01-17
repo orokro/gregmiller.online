@@ -107,7 +107,10 @@ function update(defaultUpdate, customRoot, threeManager) {
 	const scale = 200 * (width / 800);
 	if (model) {
 		model.scale.set(scale, scale, scale);
+		model.position.set(0, 30, (1 - scale/200) * -90);
 	}
+
+
 }
 
 function destroy(customRoot, threeManager) {

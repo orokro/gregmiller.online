@@ -219,12 +219,14 @@ export class ThreeManager {
 		this.scene.add(this.camera);
 
 		// SHADOW TEST CUBE
+		/*
 		const testGeo = new THREE.BoxGeometry(100, 100, 100);
 		const testMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
 		const testMesh = new THREE.Mesh(testGeo, testMat);
 		testMesh.position.set(-200, 0, 0);
 		testMesh.castShadow = true;
 		this.scene.add(testMesh);
+		*/
 	}
 
 

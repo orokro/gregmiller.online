@@ -10,5 +10,15 @@ export default defineNuxtConfig({
 				{ name: 'theme-color', content: '#00ABAE' },
 			]
 		}
+	},
+
+	vite: {
+		css: {
+			preprocessorOptions: {
+				scss: {
+					api: 'modern-compiler'
+				}
+			}
+		}
 	}
 });
