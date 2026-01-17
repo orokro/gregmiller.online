@@ -19,6 +19,10 @@ export default defineNuxtConfig({
 					api: 'modern-compiler'
 				}
 			}
+		},
+		define: {
+			// Enables detailed hydration mismatch warnings in the console
+			__VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'true'
 		}
 	}
 });

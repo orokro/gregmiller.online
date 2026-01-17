@@ -14,13 +14,13 @@ import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import Resume from '../components/Resume.vue';
 import SkillIcon from '../components/SkillIcon.vue';
-import GmillerText from '../components/Custom3D/GmillerText.vue';
+import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 </script>
 <template>
 
 	<div align="center">
-		<GmillerText />
+		<DynamicText3D text="Resume" />
 	</div>
 
 	<div class="static-page">

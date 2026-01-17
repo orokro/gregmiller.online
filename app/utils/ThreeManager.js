@@ -1286,7 +1286,7 @@ export class ThreeManager {
 			const ndcY = -((cy / this.height) * 2 - 1);
 
 			// 3) Project to a plane at the desired depth (camera-local)
-			const targetZ = this.bgPlane.position.z + 0.25; // slightly closer than bg
+			const targetZ = this.bgPlane.position.z;// + 0.25; // slightly closer than bg
 			const dist = Math.abs(targetZ);
 
 			const fovRad = this.camera.fov * Math.PI / 180;
@@ -1315,7 +1315,7 @@ export class ThreeManager {
 				y += map.offset.y * UNITS_PER_UV;
 			}
 
-			data.group.position.set(x, y, targetZ);
+			data.group.position.set(x, -y*0.653, targetZ);
 
 			// 5) Scale from DOM px -> world units at this depth
 			if (data._bgImage3D && data._bgImage3D.mesh) {
