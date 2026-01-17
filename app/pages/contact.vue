@@ -259,8 +259,6 @@ onBeforeUnmount(() => {
 </template>
 <style lang="scss" scoped>
 
-
-
 // list of social media icons
 .icon-list {
 

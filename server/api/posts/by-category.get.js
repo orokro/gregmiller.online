@@ -55,13 +55,6 @@ export default defineEventHandler(async (event) => {
 		tags: 1,
 		content: 1,
 		featuredImage: 1,
-
-		// include common “thumbnail-ish” fields if they exist in your documents
-		thumbnail: 1,
-		thumb: 1,
-		coverImage: 1,
-		heroImage: 1,
-		flickrSetId: 1,
 	};
 
 	const posts = await Post.find({ categories: category }, projection)

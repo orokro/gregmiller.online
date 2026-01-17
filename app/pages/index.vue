@@ -11,12 +11,58 @@ const { data, error } = await useFetch('/api/posts');
 
 // components
 import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
+import Container3D from '../components/Container3D.vue';
+import Spacer3D from '../components/Spacer3D.vue';
+import CategorySampler from '../components/CategorySampler.vue';
 
-const getPostLink = (post) => {
-    const d = new Date(post.date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `/${year}/${month}/${post.slug}`;
+// Fetch the homepage content, which is a set of posts grouped by category. We send a list of categories we want to show, and the backend returns an object where each key is a category and the value is an array of posts in that category.
+const { data: homeContent } = await useFetch('/api/posts/homepage', {
+    method: 'POST',
+    body: {
+		count: 4,
+        categories: [
+            "Urban Ex",
+            "Graffiti Yards",
+            "3D Modeling",
+            "Art",
+            "Other Projects",
+            "Code Projects",
+            "Favorite Musicians",
+            "My Music",
+            "Technology Reviews"
+        ]
+    }
+});
+
+// rename "any" category to "Latest Posts" for the homepage sampler
+homeContent.value["Posts"] = homeContent.value.any;
+
+// our list of categories in the order we want to display them. Any category not in this list will be ignored, and any category in the list that doesn't exist in the data will simply show an empty section.
+const orderedCategories = [
+	"Posts",
+	"Urban Ex",
+	"Graffiti Yards",
+	"3D Modeling",
+	"Art",
+	"Other Projects",
+	"Code Projects",
+	"Favorite Musicians",
+	"My Music",
+	"Technology Reviews"
+];
+
+// map of category links to use for the "See All" link in each sampler. If a category isn't in this map, it defaults to "/category/[slugified-category-name]"
+const categoryLinks = {
+	"Posts": "",
+	"Urban Ex": "urban-ex",
+	"Graffiti Yards": "graffiti-yards",
+	"3D Modeling": "category/3d-modeling",
+	"Art": "category/art",
+	"Other Projects": "category/other-projects",
+	"Code Projects": "category/code-projects",
+	"Favorite Musicians": "music",
+	"My Music": "my-beats",
+	"Technology Reviews": "category/technology-reviews",
 };
 
 </script>
@@ -27,147 +73,41 @@ const getPostLink = (post) => {
 	</div>
 	<br/><br/>
 
-	<div class="container">
+	<div class="static-page">
 
-		<div v-if="error" class="error">
-			<p>Error loading posts: {{ error }}</p>
-		</div>
+		<div
+			v-for="cat in orderedCategories"
+			:key="cat"
+			class="container"
+		>
+			<Container3D>
 
-		<div v-else-if="data" class="post-grid">
-			<article v-for="post in data" :key="post._id" class="card">
+				<h1><span>Latest {{ cat }}</span></h1>
+				<div class="white-box">
+					<CategorySampler
+						:category="cat"
+						:category-link="categoryLinks[cat]"
+						:posts="homeContent[cat]"
+						:disable-see-all="cat === 'Posts'"
+					/>
+				</div>
 
-                <NuxtLink :to="getPostLink(post)" class="card-link">
+			</Container3D>
 
-                    <div v-if="post.featuredImage" class="card-image">
-                        <img :src="post.featuredImage" :alt="post.title" loading="lazy" />
-                    </div>
-                    <div v-else class="card-image placeholder">
-                        <span>No Image</span>
-                    </div>
+			<Spacer3D/>
 
-                    <div class="card-content">
-                        <div class="meta">
-                            <span class="date">{{ new Date(post.date).toLocaleDateString() }}</span>
-                            <span v-if="post.categories?.length" class="category">{{ post.categories[0] }}</span>
-                        </div>
-
-                        <h2>{{ post.title }}</h2>
-
-                        <div class="tags" v-if="post.tags?.length">
-                            <span v-for="tag in post.tags.slice(0, 3)" :key="tag">#{{ tag }}</span>
-                        </div>
-
-                        <div class="badges">
-                            <span v-if="post.flickrSetId" class="badge flickr">📸 Flickr Set</span>
-                        </div>
-                    </div>
-
-                </NuxtLink>
-
-			</article>
 		</div>
 
 	</div>
+
 </template>
-<style scoped>
-.container {
+<style lang="scss" scoped>
+
+.static-page {
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 2rem;
 	font-family: "Alumni Sans Pinstripe", sans-serif;
 }
 
-header {
-	margin-bottom: 3rem;
-	text-align: center;
-}
-
-.post-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 2rem;
-}
-
-.card {
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	overflow: hidden;
-	transition: transform 0.2s;
-}
-
-.card:hover {
-	transform: translateY(-5px);
-	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-}
-
-.card-link {
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    height: 100%;
-}
-
-.card-image {
-	height: 200px;
-	background: #eee;
-	overflow: hidden;
-}
-
-.card-image img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-}
-
-.placeholder {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: #999;
-}
-
-.card-content {
-	padding: 1.5rem;
-}
-
-.meta {
-	font-size: 0.85rem;
-	color: #666;
-	margin-bottom: 0.5rem;
-	display: flex;
-	justify-content: space-between;
-}
-
-.category {
-	color: #2c3e50;
-	font-weight: bold;
-	text-transform: uppercase;
-}
-
-h2 {
-	margin: 0 0 1rem 0;
-	font-size: 1.4rem;
-	line-height: 1.3;
-}
-
-.tags {
-	font-size: 0.8rem;
-	color: #888;
-	margin-bottom: 1rem;
-}
-
-.tags span {
-	margin-right: 8px;
-}
-
-.badge {
-	display: inline-block;
-	background: #0063dc;
-	/* Flickr Blue */
-	color: white;
-	padding: 2px 8px;
-	border-radius: 4px;
-	font-size: 0.75rem;
-	font-weight: bold;
-}
 </style>
