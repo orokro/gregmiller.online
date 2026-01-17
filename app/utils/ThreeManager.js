@@ -113,19 +113,19 @@ export class ThreeManager {
 	 */
 	init() {
 
-		// 1. Capability Check
+		// Capability Check
 		if (!window.WebGLRenderingContext)
 			return;
 
-		// 2. Scene Setup
+		// Scene Setup
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(this.config.bgColor);
 
-		// 3. Camera Setup
+		// Camera Setup
 		this.camera = new THREE.PerspectiveCamera(50, this.width / this.height, 10, 10000);
 		this.camera.position.z = this.config.cameraZ;
 
-		// 4. Renderer
+		// Renderer
 		this.renderer = new THREE.WebGLRenderer({
 			canvas: this.canvas,
 			alpha: true,
@@ -137,10 +137,10 @@ export class ThreeManager {
 		// Initial sizing - will be immediately overridden by onResize
 		this.renderer.setSize(this.width, this.height);
 
-		// 5. Global Background Plane
+		// Global Background Plane
 		this.setupBackground();
 
-		// 6. Bind Events
+		// Bind Events
 		window.addEventListener('scroll', this.onScroll.bind(this));
 
 		// NEW: Bind Visual Viewport events for iOS Zoom/Pan support
@@ -236,6 +236,9 @@ export class ThreeManager {
 			this.currentTheme.destroy(this);
 		}
 
+		// Clean any potential remaining theme artifacts from the scene (but keep registered element groups and bg plane)
+		this.nukeThemeArtifacts();
+
 		// Set new theme & init
 		this.currentTheme = new ThemeClass();
 		this.currentTheme.init(this);
@@ -329,6 +332,108 @@ export class ThreeManager {
 		this.scene.environment = null;
 	}
 
+
+	/**
+	 * Nuclear cleanup after a theme switch:
+	 * - Preserves: camera (and its bgPlane child), all registered element root groups,
+	 *   and backgroundImage3D groups.
+	 * - Destroys: everything else in scene/camera (and disposes geometries/materials/textures).
+	 */
+	nukeThemeArtifacts() {
+
+		// Build keep set
+		const keep = new Set();
+
+		// Keep camera (bgPlane is attached under it)
+		if (this.camera)
+			keep.add(this.camera);
+
+		// Keep all registered element root groups (and background image groups)
+		this.registeredElements.forEach((data) => {
+			if (data && data.group)
+				keep.add(data.group);
+		});
+
+		// Helper to dispose object tree
+		const disposeTree = (obj) => {
+			if (!obj)
+				return;
+
+			obj.traverse((child) => {
+
+				// geometry
+				if (child.geometry)
+					child.geometry.dispose();
+
+				// material(s) + textures
+				if (child.material) {
+					const mats = Array.isArray(child.material) ? child.material : [child.material];
+					mats.forEach((m) => {
+						if (!m) return;
+
+						// dispose common texture slots if present
+						Object.keys(m).forEach((k) => {
+							const v = m[k];
+							if (v && v.isTexture) {
+								v.dispose();
+							}
+						});
+
+						m.dispose();
+					});
+				}
+			});
+		};
+
+		// 1) Clear all per-element theme artifacts under empties
+		this.registeredElements.forEach((data) => {
+
+			if (!data || !data.empties)
+				return;
+
+			// backgroundImage3D doesn't use empties; skip
+			if (data.type === 'backgroundImage3D')
+				return;
+
+			this.cleanEmptiesChildren(data.empties);
+
+			// Also clear any theme junk added directly under the element's group (but keep empties)
+			this.cleanGroupNonEmptyChildren(data.group, data.empties);
+		});
+
+		// 2) Nuke stray stuff attached to the camera (except bgPlane if you want to keep it)
+		if (this.camera) {
+			const camChildren = [...this.camera.children];
+			camChildren.forEach((child) => {
+
+				// Keep background plane if it exists
+				if (this.bgPlane && child === this.bgPlane)
+					return;
+
+				// Also keep any registered groups that someone attached under camera (rare, but possible)
+				if (keep.has(child))
+					return;
+
+				this.camera.remove(child);
+				disposeTree(child);
+			});
+		}
+
+		// 3) Nuke stray stuff attached directly to the scene (except keep set)
+		if (this.scene) {
+			const sceneChildren = [...this.scene.children];
+			sceneChildren.forEach((child) => {
+
+				if (keep.has(child))
+					return;
+
+				this.scene.remove(child);
+				disposeTree(child);
+			});
+		}
+
+		this.requestRender();
+	}
 
 
 
