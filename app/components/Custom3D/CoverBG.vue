@@ -24,6 +24,11 @@ const props = defineProps({
 		required: true
 	},
 
+	// Optional Texture Maps
+	normalSrc: { type: String, default: null },
+	roughSrc: { type: String, default: null },
+	metalSrc: { type: String, default: null },
+
 	// The depth position of the background plane. Default is -30 units.
 	depth: {
 		type: Number,
@@ -34,17 +39,38 @@ const props = defineProps({
 	catchShadows: {
 		type: Boolean,
 		default: true
-	}
+	},
+
+	// If true, recalculates UVs based on width/height so texture stays stable (tiles)
+	reprojectUvs: {
+		type: Boolean,
+		default: false
+	},
+
+	// Scaling factor for the texture.
+	// If reprojectUvs is false: 1 = stretch to fit.
+	// If reprojectUvs is true: acts as a multiplier for screen-space tiling.
+	uvScale: {
+		type: Number,
+		default: 1
+	},
+
+	// optional name parameter for the ContainerCustom3D registry
+	name: {
+		type: String,
+		default: null,
+	},
 
 });
 
-const { src, depth, catchShadows } = toRefs(props);
+const { src, depth, catchShadows, reprojectUvs, uvScale, normalSrc, roughSrc, metalSrc } = toRefs(props);
 
 // References
 const el = ref(null);
 let mesh = null;
 let material = null;
-let texture = null;
+
+let textures = {}; // Store refs to dispose later
 
 
 // --- Helper: Perspective Correction ---
@@ -55,21 +81,45 @@ function applyPerspectiveTransform(rect, group, camera, cameraZ, depthVal) {
 
 	// 1. Calculate Perspective Scale Factor (S)
 	// S = (CameraZ + Depth) / CameraZ
-	// This ensures the plane is scaled up enough to fill the visual angle of the container at distance -Depth.
 	const scaleFactor = (cameraZ + depthVal) / cameraZ;
 
 	mesh.scale.set(rect.width * scaleFactor, rect.height * scaleFactor, 1);
 
 	// 2. Calculate Parallax Alignment Offset
-	// Since the mesh is deeper (further from camera), it effectively moves "slower" in screen space
-	// than the group (which is at Z=0). We must shift the mesh in world space to align its
-	// perspective projection with the group's projection.
-	// Formula: Offset = (ObjectWorldPos - CameraWorldPos) * (ScaleFactor - 1)
-
 	const offsetX = (group.position.x - camera.position.x) * (scaleFactor - 1);
 	const offsetY = (group.position.y - camera.position.y) * (scaleFactor - 1);
 
 	mesh.position.set(offsetX, offsetY, -depthVal);
+}
+
+// --- Helper: UV Reprojection ---
+
+function updateUVs(width, height) {
+
+	if (!material || !material.map) return;
+
+	const map = material.map;
+	const s = uvScale.value;
+
+	if (reprojectUvs.value) {
+		// "Stable" mapping:
+		// We normalize by a reference size (1000px) so s=1 means "1 tile per 1000px"
+		// If we didn't divide, s=1 would mean "1 tile per pixel", causing the solid color bug.
+		const REFERENCE_UNIT = 1000;
+
+		map.repeat.set(
+			(width / REFERENCE_UNIT) * s,
+			(height / REFERENCE_UNIT) * s
+		);
+	} else {
+		// "Stretch" mapping: constant repeat
+		map.repeat.set(s, s);
+	}
+
+	// Apply same transform to other maps if they exist
+	if (material.normalMap) material.normalMap.repeat.copy(map.repeat);
+	if (material.roughnessMap) material.roughnessMap.repeat.copy(map.repeat);
+	if (material.metalnessMap) material.metalnessMap.repeat.copy(map.repeat);
 }
 
 
@@ -80,41 +130,58 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	if (!rebuildCustom)
 		return;
 
-	// 1. Load the texture
-	const assets = await threeManager.assetsReady([src.value]);
-	texture = assets[0];
+	// 1. Prepare asset list
+	const mapKeys = [
+		{ key: 'map', url: src.value },
+		{ key: 'normalMap', url: normalSrc.value },
+		{ key: 'roughnessMap', url: roughSrc.value },
+		{ key: 'metalnessMap', url: metalSrc.value }
+	].filter(item => item.url);
 
-	if (!texture) {
-		console.warn(`BGCover: Failed to load texture ${src.value}`);
+	const urls = mapKeys.map(i => i.url);
+	const assets = await threeManager.assetsReady(urls);
+
+	// 2. Process loaded textures
+	const loadedMaps = {};
+	assets.forEach((tex, i) => {
+		if (tex) {
+			tex.colorSpace = (mapKeys[i].key === 'map') ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+			tex.wrapS = THREE.RepeatWrapping;
+			tex.wrapT = THREE.RepeatWrapping;
+			loadedMaps[mapKeys[i].key] = tex;
+			textures[mapKeys[i].key] = tex; // Save for cleanup
+		}
+	});
+
+	if (!loadedMaps.map) {
+		console.warn(`CoverBG: Failed to load main texture ${src.value}`);
 		return;
 	}
 
-	// Configure texture for color space if it's a color map
-	texture.colorSpace = THREE.SRGBColorSpace;
-
-	// 2. Create Material
+	// 3. Create Material
 	material = new THREE.MeshStandardMaterial({
-		map: texture,
 		color: 0xffffff,
 		roughness: 1,
 		metalness: 0,
-		side: THREE.DoubleSide
+		side: THREE.DoubleSide,
+		...loadedMaps // Spread in map, normalMap, etc.
 	});
 
-	// 3. Create Geometry
+	// 4. Create Geometry
 	const geometry = new THREE.PlaneGeometry(1, 1);
 
-	// 4. Create Mesh
+	// 5. Create Mesh
 	mesh = new THREE.Mesh(geometry, material);
 
-	// 5. Configure Shadows
+	// 6. Configure Shadows
 	if (catchShadows.value) {
 		threeManager.setShadowReceiving(mesh, true);
 	}
 
-	// 6. Initial Transform
+	// 7. Initial Transform & UVs
 	if (el.value?.$el) {
 		const rect = el.value.$el.getBoundingClientRect();
+
 		applyPerspectiveTransform(
 			rect,
 			customRoot.group,
@@ -122,11 +189,11 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 			threeManager.config.cameraZ,
 			depth.value
 		);
+
+		updateUVs(rect.width, rect.height);
 	}
 
-	// 7. Add to Scene
-	// We attach to the center empty. The offsets calculated above are local to this empty.
-	// (Since the empty is at 0,0,0 relative to the group, the math works out).
+	// 8. Add to Scene
 	customRoot.empties.center.add(mesh);
 
 	threeManager.requestRender();
@@ -150,7 +217,10 @@ function update(defaultUpdate, customRoot, threeManager) {
 		depth.value
 	);
 
-	// 3. Update Shadow setting
+	// 3. Update UVs
+	updateUVs(rect.width, rect.height);
+
+	// 4. Update Shadow setting
 	mesh.receiveShadow = catchShadows.value;
 }
 
@@ -165,11 +235,13 @@ function destroy(customRoot, threeManager) {
 	}
 
 	if (material) material.dispose();
-	if (texture) texture.dispose();
+
+	// Dispose all textures
+	Object.values(textures).forEach(t => t.dispose());
+	textures = {};
 
 	mesh = null;
 	material = null;
-	texture = null;
 
 	threeManager.requestRender();
 }
@@ -193,6 +265,7 @@ watch(depth, () => {
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
+		:name="name"
 	>
 		<slot />
 	</ContainerCustom3D>

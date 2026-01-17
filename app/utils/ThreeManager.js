@@ -90,6 +90,9 @@ export class ThreeManager {
 		this.bgPlane = null;
 
 		this.init();
+
+		// for debugging
+		window.tm = this;
 	}
 
 
@@ -954,6 +957,22 @@ export class ThreeManager {
 		});
 	}
 
+
+	/**
+	 * Helper to find a registered element by its name option, which is useful for themes that want to apply specific styling to certain elements (e.g., a "card" element).
+	 *
+	 * @param {String} name - name of element to find
+	 * @returns {null|Object} - the registered element object
+	 */
+	getRegisteredElementByName(name) {
+		for (const entry of this.registeredElements.values()) {
+			if (entry.options?.name === name) {
+				return entry;
+			}
+		}
+
+		return null;
+	}
 
 
 

@@ -49,6 +49,8 @@ onMounted(() => {
 	}
 });
 
+
+
 </script>
 <template>
 
@@ -66,15 +68,22 @@ onMounted(() => {
 		<!-- main content area -->
 		<div class="app-shell">
 
-			<!-- <CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true"> -->
-
+			<CoverBG
+				class="cover-test"
+				src="/textures/bg_graph_paper.jpg"
+				:depth="100"
+				:catchShadows="true"
+				:reproject-uvs="true"
+				:uv-scale="1"
+				name="app-cover-bg"
+			>
 				<main class="app-main">
 					<div class="main-inner">
 						<NuxtPage />
 					</div>
 				</main>
 
-			<!-- </CoverBG> -->
+			</CoverBG>
 
 		</div>
 
