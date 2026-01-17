@@ -48,6 +48,8 @@ export class GlassTheme {
 
 		this.glassMaterial = new THREE.MeshPhysicalMaterial({
 			color: 0xffffff,
+			emissive: 0x00AABAE,
+			emissiveIntensity: 0.15,
 
 			transmission: 1.0,
 			transparent: true,
@@ -57,15 +59,15 @@ export class GlassTheme {
 			thickness: 0.6,
 
 			roughness: 0.05,
-			metalness: 0.0,
+			metalness: 0.1,
 
 			clearcoat: 1.0,
 			clearcoatRoughness: 0.02,
 
-			envMapIntensity: 2.5,
+			envMapIntensity: 20.5,
 
-			attenuationColor: new THREE.Color(0xe6ffff),
-			attenuationDistance: 0.8,
+			attenuationColor: new THREE.Color(0xfaffff),
+			attenuationDistance: 0.08,
 
 			side: THREE.DoubleSide
 		});
@@ -106,9 +108,9 @@ export class GlassTheme {
 		this.camLight.target.position.set(-500, 400, 0);
 
 		// --- RIM LIGHTS (Reduced for testing) ---
-		// this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
-		// this.rimLightL.position.set(-180, 10, 0);
-		// manager.scene.add(this.rimLightL);
+		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
+		this.rimLightL.position.set(-180, 10, 0);
+		manager.scene.add(this.rimLightL);
 
 		this.rimLightR = new THREE.PointLight(0xffffff, 5000, 4000);
 		this.rimLightR.position.set(280, 50, 0);
@@ -127,11 +129,18 @@ export class GlassTheme {
 		this.camLight.shadow.bias = 0; // Reset bias
 		this.camLight.shadow.mapSize.width = 2048 * 2;
 		this.camLight.shadow.mapSize.height = 2048 * 2;
+		this.camLight.shadow.normalBias = 0.05; // Reduce shadow acne without needing a bias
+		this.camLight.shadow.radius = 1;
 
 		// Ensure renderer settings are correct
 		manager.renderer.shadowMap.enabled = true;
 		// manager.renderer.shadowMap.type = THREE.BasicShadowMap;
 		manager.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+		manager.renderer.shadowMap.type = THREE.PCFShadowMap;
+
+		this.camLight.shadow.radius = 4;	// try 2–8
+		this.camLight.shadow.needsUpdate = true;
 
         console.log("GlassTheme: Shadows enabled.", {
             light: this.camLight,
