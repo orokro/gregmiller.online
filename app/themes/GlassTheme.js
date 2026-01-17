@@ -92,6 +92,8 @@ export class GlassTheme {
 	init(manager) {
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 0.65);
 
+		manager.enableMouseLight(false);
+
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;

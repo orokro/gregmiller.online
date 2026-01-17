@@ -80,6 +80,11 @@ export class ThreeManager {
 		this.onVisualScroll = this.onScroll.bind(this);
 		this.onVisualResize = this.onResize.bind(this);
 
+		// NEW: Mouse Light Feature
+		this.mouseLightEnabled = false;
+		this.mouseLight = null;
+		this.onMouseMove = this._handleMouseLightMove.bind(this);
+
 		this.init();
 	}
 
@@ -99,6 +104,9 @@ export class ThreeManager {
 			window.visualViewport.removeEventListener('scroll', this.onVisualScroll);
 			window.visualViewport.removeEventListener('resize', this.onVisualResize);
 		}
+
+		// Cleanup Mouse Light
+		this.enableMouseLight(false);
 
 		// Dispose renderer
 		if (this.renderer) {
@@ -208,13 +216,13 @@ export class ThreeManager {
 
 		// add the background plane to the scene, positioned at the back
 		this.bgPlane = new THREE.Mesh(geometry, material);
-		
+
 		// Camera is at (100, 0, 1000). Plane was at local z=-1101.
 		// So World Z = -101.
 		this.bgPlane.position.set(100, 0, -101);
 		this.bgPlane.receiveShadow = true;
 		this.bgPlane.frustumCulled = false;
-		
+
 		this.scene.add(this.bgPlane);
 		this.scene.add(this.camera);
 
@@ -1518,5 +1526,76 @@ export class ThreeManager {
 		this.setShadowReceiving(object, enabled);
 	}
 
+
+	/* ============================================================================
+	   MOUSE LIGHT
+	   ============================================================================ */
+
+	/**
+	 * Toggles the "mouse light" feature.
+	 * When enabled, a light follows the mouse cursor.
+	 *
+	 * @param {boolean} enabled - whether to turn the feature on or off
+	 */
+	enableMouseLight(enabled = true) {
+
+		if (enabled === this.mouseLightEnabled)
+			return;
+
+		this.mouseLightEnabled = enabled;
+
+		if (enabled) {
+
+			// Create light if it doesn't exist
+			if (!this.mouseLight) {
+				this.mouseLight = new THREE.PointLight(0xffffff, 500000, 500);
+				this.mouseLight.castShadow = true;
+				this.mouseLight.shadow.bias = -0.0001;
+			}
+
+			this.scene.add(this.mouseLight);
+			window.addEventListener('mousemove', this.onMouseMove);
+
+		} else {
+
+			if (this.mouseLight) {
+				this.scene.remove(this.mouseLight);
+			}
+			window.removeEventListener('mousemove', this.onMouseMove);
+		}
+
+		this.requestRender();
+	}
+
+
+	/**
+	 * Handles mouse move events to update the position of the mouse light.
+	 *
+	 * @param {MouseEvent} event - the mouse move event
+	 */
+	_handleMouseLightMove(event) {
+
+		if (!this.mouseLightEnabled || !this.mouseLight)
+			return;
+
+		// Convert mouse screen coords to world coords on the Z=0 plane (or config.planeZ)
+		// Similar logic to updateElementPosition but simpler since we just want the point
+
+		const x = event.clientX;
+		const y = event.clientY;
+
+		// Center (0,0) is at the center of the screen
+		// X increases to the right
+		// Y increases upwards
+		const worldX = (x - this.width / 2);
+		const worldY = -(y - this.height / 2);
+
+		// Position the light slightly above the plane so it casts nice shadows
+		// this.config.planeZ is usually 0
+		const z = this.config.planeZ + 150;
+
+		this.mouseLight.position.set(worldX, worldY, z);
+		this.requestRender();
+	}
 
 }
