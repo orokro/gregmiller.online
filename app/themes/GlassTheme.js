@@ -94,6 +94,8 @@ export class GlassTheme {
 
 		manager.enableMouseLight(false);
 
+		// manager.enableDefaultBGPlane(true);
+
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;

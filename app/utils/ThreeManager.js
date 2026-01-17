@@ -85,6 +85,10 @@ export class ThreeManager {
 		this.mouseLight = null;
 		this.onMouseMove = this._handleMouseLightMove.bind(this);
 
+		// NEW: Default Background Plane Feature (Optional)
+		this.useDefaultBgPlane = false;
+		this.bgPlane = null;
+
 		this.init();
 	}
 
@@ -147,8 +151,8 @@ export class ThreeManager {
 		// Initial sizing - will be immediately overridden by onResize
 		this.renderer.setSize(this.width, this.height);
 
-		// Global Background Plane
-		this.setupBackground();
+		// Global Background Plane (Optional - call enableDefaultBGPlane(true) to enable)
+		// this.setupBackground();
 
 		// Bind Events
 		window.addEventListener('scroll', this.onScroll.bind(this));
@@ -182,6 +186,44 @@ export class ThreeManager {
 
 		// 9. Start Loop
 		this.tick();
+	}
+
+
+	/**
+	 * Toggles the default background plane.
+	 * If enabling for the first time, it builds the plane.
+	 * If disabling, it hides the plane.
+	 *
+	 * @param {boolean} enabled
+	 */
+	enableDefaultBGPlane(enabled = true) {
+
+		if (enabled === this.useDefaultBgPlane)
+			return;
+
+		this.useDefaultBgPlane = enabled;
+
+		if (enabled) {
+			// If we haven't built it yet, build it now
+			if (!this.bgPlane) {
+				this.setupBackground();
+			}
+			// Ensure it's visible and in the scene
+			if (this.bgPlane) {
+				this.bgPlane.visible = true;
+				// In case it was removed from scene manually (though usually we just hide it)
+				if (!this.bgPlane.parent) {
+					this.scene.add(this.bgPlane);
+				}
+			}
+		} else {
+			// Just hide it if it exists
+			if (this.bgPlane) {
+				this.bgPlane.visible = false;
+			}
+		}
+
+		this.requestRender();
 	}
 
 
@@ -1189,7 +1231,7 @@ export class ThreeManager {
 		const vH = 4 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
 		const vW = vH * this.camera.aspect;
 
-		if (this.bgPlane) {
+		if (this.useDefaultBgPlane && this.bgPlane) {
 
 			this.bgPlane.scale.set(vW, vH, 1);
 			if (this.bgPlane.material.map) {
@@ -1230,7 +1272,7 @@ export class ThreeManager {
 		// 2. Parallax Background
 		// We still want the background to scroll, even if the camera is static relative to the screen.
 		// Total Scroll = Document Scroll + Visual Offset (Pan)
-		if (this.bgPlane && this.bgPlane.material.map) {
+		if (this.useDefaultBgPlane && this.bgPlane && this.bgPlane.material.map) {
 			const totalScrollY = this.scrollY + visualOffsetY;
 			const totalScrollX = this.scrollX + visualOffsetX;
 
@@ -1270,7 +1312,7 @@ export class ThreeManager {
 		// BackgroundImage3D doesn't have corners or theme-based positioning, so we handle it separately here.
 		if (data.type === 'backgroundImage3D') {
 
-			if (!this.bgPlane)
+			if (!this.useDefaultBgPlane || !this.bgPlane)
 				return;
 
 			// 1) DOM anchor (center)

@@ -66,7 +66,7 @@ onMounted(() => {
 		<!-- main content area -->
 		<div class="app-shell">
 
-			<CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true">
+			<!-- <CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true"> -->
 
 				<main class="app-main">
 					<div class="main-inner">
@@ -74,7 +74,7 @@ onMounted(() => {
 					</div>
 				</main>
 
-			</CoverBG>
+			<!-- </CoverBG> -->
 
 		</div>
 
