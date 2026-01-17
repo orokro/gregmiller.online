@@ -39,9 +39,9 @@ export class ThreeManager {
 
 		// Configuration
 		this.config = {
-			cameraZ: 1000,     // The camera distance
+			cameraZ: 10,     // The camera distance
 			planeZ: 0,         // The plane where 1 unit = 1 pixel
-			bgZ: -500,         // The depth of the background plane
+			bgZ: -5,         // The depth of the background plane
 			bgColor: 0xf0f0f0,  // Default fog/bg color (themes can override)
 			perspectiveX: -100,
 			perspectiveY: 0
@@ -209,9 +209,9 @@ export class ThreeManager {
 		// add the background plane to the scene, positioned at the back
 		this.bgPlane = new THREE.Mesh(geometry, material);
 		
-		// Camera is at (100, 0, 1000). Plane was at local z=-1101.
-		// So World Z = -101.
-		this.bgPlane.position.set(100, 0, -101);
+		// Camera is at (1, 0, 10). Plane was at local z=-11.01.
+		// So World Z = -1.01.
+		this.bgPlane.position.set(1, 0, -1.01);
 		this.bgPlane.receiveShadow = true;
 		this.bgPlane.frustumCulled = false;
 		
@@ -219,10 +219,10 @@ export class ThreeManager {
 		this.scene.add(this.camera);
 
 		// SHADOW TEST CUBE
-		const testGeo = new THREE.BoxGeometry(100, 100, 100);
+		const testGeo = new THREE.BoxGeometry(1, 1, 1);
 		const testMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
 		const testMesh = new THREE.Mesh(testGeo, testMat);
-		testMesh.position.set(-200, 0, 0);
+		testMesh.position.set(-2, 0, 0);
 		testMesh.castShadow = true;
 		this.scene.add(testMesh);
 	}
@@ -633,7 +633,7 @@ export class ThreeManager {
 		// Put it inside the group
 		data.group.add(mesh);
 
-		const targetZ = this.bgPlane.position.z + 0.025; // -1101 + 0.25 = -1100.75 (closer)
+		const targetZ = this.bgPlane.position.z + 0.00025; // -11.01 + 0.0025 = -11.0075 (closer)
 		data.group.position.z = targetZ;
 
 		// Load the texture (and guard against unregister-before-load)
@@ -1082,7 +1082,7 @@ export class ThreeManager {
 	updateFOV() {
 
 		const dist = this.camera.position.z - this.config.planeZ;
-		const fov = 2 * Math.atan((this.height / 2) / dist) * (180 / Math.PI);
+		const fov = 2 * Math.atan((this.height / 100 / 2) / dist) * (180 / Math.PI);
 		this.camera.fov = fov;
 		this.camera.aspect = this.width / this.height;
 
@@ -1175,7 +1175,7 @@ export class ThreeManager {
 		this.updateFOV();
 
 		// Update BG Plane Scale
-		const distBg = 1101;
+		const distBg = 11.01;
 		const vH = 4 * Math.tan((this.camera.fov * Math.PI / 180) / 2) * distBg;
 		const vW = vH * this.camera.aspect;
 
@@ -1184,7 +1184,7 @@ export class ThreeManager {
 			this.bgPlane.scale.set(vW, vH, 1);
 			if (this.bgPlane.material.map) {
 				const tex = this.bgPlane.material.map;
-				tex.repeat.set(vW / 1000, vH / 1000);
+				tex.repeat.set(vW / 10, vH / 10);
 			}
 		}
 
@@ -1214,8 +1214,8 @@ export class ThreeManager {
 		// FIX: CAMERA IS NOW STATIC
 		// Since the canvas moves to match the Visual Viewport, the camera
 		// stays centered on the "screen". We don't move it.
-		this.camera.position.x = -this.config.perspectiveX;
-		this.camera.position.y = -this.config.perspectiveY;
+		this.camera.position.x = -this.config.perspectiveX / 100;
+		this.camera.position.y = -this.config.perspectiveY / 100;
 
 		// 2. Parallax Background
 		// We still want the background to scroll, even if the camera is static relative to the screen.
@@ -1224,7 +1224,7 @@ export class ThreeManager {
 			const totalScrollY = this.scrollY + visualOffsetY;
 			const totalScrollX = this.scrollX + visualOffsetX;
 
-			const worldUnitScale = 1000;
+			const worldUnitScale = 10;
 			this.bgPlane.material.map.offset.y = -totalScrollY / worldUnitScale;
 			this.bgPlane.material.map.offset.x = totalScrollX / worldUnitScale;
 		}
@@ -1276,7 +1276,7 @@ export class ThreeManager {
 			const ndcY = -((cy / this.height) * 2 - 1);
 
 			// 3) Project to a plane at the desired depth (camera-local)
-			const targetZ = this.bgPlane.position.z + 0.25; // slightly closer than bg
+			const targetZ = this.bgPlane.position.z + 0.0025; // slightly closer than bg
 			const dist = Math.abs(targetZ);
 
 			const fovRad = this.camera.fov * Math.PI / 180;
@@ -1297,7 +1297,7 @@ export class ThreeManager {
 				// In your bg setup you typically set repeat = vW/256, vH/256
 				// which means: 1.0 UV offset == 256 world units on the bg plane.
 				// Use that same constant here (keep in sync with your bg repeat logic).
-				const UNITS_PER_UV = 256;
+				const UNITS_PER_UV = 2.56;
 
 				// NOTE: Signs depend on how you perceive the offset direction.
 				// This pairing is the one that usually makes decals "stick" to the texture.
@@ -1358,15 +1358,15 @@ export class ThreeManager {
 		const group = data.group;
 
 		// Map Screen Coordinates (Top-Left 0,0) to Three.js Plane (Center 0,0)
-		group.position.x = (-this.width / 2) + left + halfW;
-		group.position.y = (this.height / 2) - top - halfH;
+		group.position.x = ((-this.width / 2) + left + halfW) / 100;
+		group.position.y = ((this.height / 2) - top - halfH) / 100;
 
 		const { empties } = data;
 		empties.center.position.set(0, 0, 0);
-		empties.tl.position.set(-halfW, halfH, 0);
-		empties.tr.position.set(halfW, halfH, 0);
-		empties.bl.position.set(-halfW, -halfH, 0);
-		empties.br.position.set(halfW, -halfH, 0);
+		empties.tl.position.set(-halfW / 100, halfH / 100, 0);
+		empties.tr.position.set(halfW / 100, halfH / 100, 0);
+		empties.bl.position.set(-halfW / 100, -halfH / 100, 0);
+		empties.br.position.set(halfW / 100, -halfH / 100, 0);
 
 		const rect = { width, height, top, left };
 		this.updateRegisteredElement(data, rect);

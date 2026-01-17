@@ -54,7 +54,7 @@ export class GlassTheme {
 			opacity: 1.0,
 
 			ior: 1.45,
-			thickness: 0.6,
+			thickness: 0.05,
 
 			roughness: 0.05,
 			metalness: 0.0,
@@ -65,7 +65,7 @@ export class GlassTheme {
 			envMapIntensity: 2.5,
 
 			attenuationColor: new THREE.Color(0xe6ffff),
-			attenuationDistance: 0.8,
+			attenuationDistance: 0.1,
 
 			side: THREE.DoubleSide
 		});
@@ -95,10 +95,10 @@ export class GlassTheme {
 		manager.renderer.toneMappingExposure = 1.0;
 
 		// --- CHANGE 1: Use DirectionalLight for the main shadow caster ---
-		this.camLight = new THREE.DirectionalLight(0xffffff, 5.0); // Boost intensity
+		this.camLight = new THREE.DirectionalLight(0xffffff, 1.0); // Boost intensity
 
 		// Position it to cast a clear diagonal shadow
-		this.camLight.position.set(-300, 500, 500);
+		this.camLight.position.set(-3, 5, 5);
 		this.camLight.castShadow = true;
 
 		manager.scene.add(this.camLight);
@@ -107,22 +107,22 @@ export class GlassTheme {
 
 		// --- RIM LIGHTS (Reduced for testing) ---
 		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
-		this.rimLightL.position.set(-180, 10, 0);
+		this.rimLightL.position.set(-1.8, 0.1, 0);
 		manager.scene.add(this.rimLightL);
 
 		this.rimLightR = new THREE.PointLight(0xffffff, 5000, 4000);
-		this.rimLightR.position.set(180, 10, 0);
+		this.rimLightR.position.set(1.8, 0.1, 0);
 		manager.scene.add(this.rimLightR);
 
 		// --- SHADOW CONFIGURATION ---
-		const d = 2500; 
+		const d = 25;
 		this.camLight.shadow.camera.left = -d;
 		this.camLight.shadow.camera.right = d;
 		this.camLight.shadow.camera.top = d;
 		this.camLight.shadow.camera.bottom = -d;
 
-		this.camLight.shadow.camera.near = 1;
-		this.camLight.shadow.camera.far = 5000;
+		this.camLight.shadow.camera.near = 0.01;
+		this.camLight.shadow.camera.far = 50;
 
 		this.camLight.shadow.bias = 0; // Reset bias
 		this.camLight.shadow.mapSize.width = 2048;
@@ -357,7 +357,7 @@ export class GlassTheme {
 				o.receiveShadow = true;
 			});
 
-			clone.scale.z = 1;
+			clone.scale.z = 0.01;
 
 			// Store cached UV mesh list + last uv scales
 			clone.userData.__uvMeshes = uvMeshes;
@@ -462,7 +462,7 @@ export class GlassTheme {
 			if (!obj)
 				return;
 			// IMPORTANT: height is Z scale in your exported slices
-			obj.scale.set(sx, 1, sy);
+			obj.scale.set(sx, 0.05, sy);
 		};
 
 		const setPosFlat = (obj, x, y) => {
@@ -474,19 +474,19 @@ export class GlassTheme {
 
 		// corners (no scaling, no UV scaling)
 		if (parts.Top_Left) {
-			parts.Top_Left.scale.set(1, 1, 1);
+			parts.Top_Left.scale.set(0.001, 0.05, 0.001);
 			setPosFlat(parts.Top_Left, tl.x, tl.y);
 		}
 		if (parts.Top_Right) {
-			parts.Top_Right.scale.set(1, 1, 1);
+			parts.Top_Right.scale.set(0.001, 0.05, 0.001);
 			setPosFlat(parts.Top_Right, tr.x, tr.y);
 		}
 		if (parts.Bottom_Left) {
-			parts.Bottom_Left.scale.set(1, 1, 1);
+			parts.Bottom_Left.scale.set(0.001, 0.05, 0.001);
 			setPosFlat(parts.Bottom_Left, bl.x, bl.y);
 		}
 		if (parts.Bottom_Right) {
-			parts.Bottom_Right.scale.set(1, 1, 1);
+			parts.Bottom_Right.scale.set(0.001, 0.05, 0.001);
 			setPosFlat(parts.Bottom_Right, br.x, br.y);
 		}
 
@@ -494,7 +494,7 @@ export class GlassTheme {
 		if (parts.Top) {
 			const base = this.sliceSizes.Top;
 			const sx = topWidth / base.x;
-			scaleXY(parts.Top, sx, 1);
+			scaleXY(parts.Top, sx, 0.001);
 			setPosFlat(parts.Top, topMid.x, topMid.y);
 			this._scalePieceUV(parts.Top, sx, 1);
 		}
@@ -503,7 +503,7 @@ export class GlassTheme {
 		if (parts.Bottom) {
 			const base = this.sliceSizes.Bottom;
 			const sx = bottomWidth / base.x;
-			scaleXY(parts.Bottom, sx, 1);
+			scaleXY(parts.Bottom, sx, 0.001);
 			setPosFlat(parts.Bottom, bottomMid.x, bottomMid.y);
 			this._scalePieceUV(parts.Bottom, sx, 1);
 		}
@@ -512,7 +512,7 @@ export class GlassTheme {
 		if (parts.Left) {
 			const base = this.sliceSizes.Left;
 			const sy = leftHeight / base.z;
-			scaleXY(parts.Left, 1, sy);
+			scaleXY(parts.Left, 0.001, sy);
 			setPosFlat(parts.Left, leftMidX, leftMidY);
 			this._scalePieceUV(parts.Left, 1, sy);
 		}
@@ -521,7 +521,7 @@ export class GlassTheme {
 		if (parts.Right) {
 			const base = this.sliceSizes.Right;
 			const sy = rightHeight / base.z;
-			scaleXY(parts.Right, 1, sy);
+			scaleXY(parts.Right, 0.001, sy);
 			setPosFlat(parts.Right, rightMidX, rightMidY);
 			this._scalePieceUV(parts.Right, 1, sy);
 		}
