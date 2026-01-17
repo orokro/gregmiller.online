@@ -37,8 +37,8 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	// Run theme default (if any)
 	// defaultBuild();
 
-	console.clear();
-	console.log("Building GmillerText...", { rebuildCustom });
+	// console.clear();
+	// console.log("Building GmillerText...", { rebuildCustom });
 
 	// if rebuild custom is false, gtfo early
 	if (!rebuildCustom) {
