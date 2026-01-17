@@ -7,7 +7,7 @@
 <script setup>
 
 // vue
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue';
 
 // components
 import Container3D from '../components/Container3D.vue';
@@ -65,11 +65,91 @@ function hideTawk() {
 		window.Tawk_API.hideWidget();
 }
 
+let searchTimer = null;
+const styleBlockId = 'dynamic-widget-mover-style';
+
+const findAndStyleWidget = () => {
+
+	// Set to true to enable detailed logs
+	const showLogs = false;
+
+    // Debug: Announce we are searching
+    if(showLogs)
+		console.log('🔍 Searching for .widget-visible...');
+
+    const widget = document.querySelector('.widget-visible');
+
+    // 1. If not found, queue retry
+    if (!widget) {
+        // Stop recursion if it takes too long (optional safety) or just keep going
+        searchTimer = setTimeout(findAndStyleWidget, 500);
+        return;
+    }
+
+    if(showLogs)
+		console.log('✅ Widget found:', widget);
+
+    // 2. Ensure ID exists
+    if (!widget.id) {
+        widget.id = 'moved-widget-fallback-id';
+        if(showLogs)
+			console.log('⚠️ Widget had no ID, assigned:', widget.id);
+    }
+
+    // 3. Check for existing style block
+    if (document.getElementById(styleBlockId)) {
+        if(showLogs)
+			console.log('ℹ️ Style block already exists. Skipping injection.');
+        return;
+    }
+
+    // 4. Create and inject
+    try {
+        const style = document.createElement('style');
+        style.id = styleBlockId;
+        style.type = 'text/css'; // Explicit type sometimes helps older parsers
+
+        const cssRule = `
+
+			#${widget.id} {
+				transform: translate(11px, -50px) !important;
+				transition: transform 0.3s ease-out !important;
+			}
+
+            @media (min-width: 900px) {
+
+                #${widget.id} {
+                    transform: translate(0px, 0px) !important;
+                }
+            }
+        `;
+
+        style.textContent = cssRule;
+
+        // Try Head first, fallback to Body
+        if (document.head) {
+            document.head.appendChild(style);
+            if(showLogs)
+				console.log('🎉 Style injected into HEAD:', cssRule);
+        } else {
+            document.body.appendChild(style);
+            if(showLogs)
+				console.log('🎉 Style injected into BODY (Head missing?):', cssRule);
+        }
+
+    } catch (err) {
+       	if(showLogs)
+			console.error('❌ Error injecting style:', err);
+    }
+};
+
 
 // make sure the widget is loaded and shown when this page is visited
 onMounted(() => {
 
 	ensureTawkLoaded();
+
+	findAndStyleWidget();
 
 	// If it's already loaded, show immediately
 	showTawk();
@@ -79,6 +159,13 @@ onMounted(() => {
 	window.Tawk_API.onLoad = () => {
 		showTawk();
 	};
+});
+
+
+onUnmounted(() => {
+	if (searchTimer) {
+		clearTimeout(searchTimer);
+	}
 });
 
 
