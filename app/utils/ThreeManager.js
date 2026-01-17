@@ -696,6 +696,38 @@ export class ThreeManager {
 
 
 	/**
+	 * Remove everything under the empties (but keep the empties themselves).
+	 * This is the missing piece that caused DebugTheme wireframes to persist.
+	 */
+	cleanEmptiesChildren(empties) {
+
+		if (!empties)
+			return;
+
+		const emptyList = [
+			empties.center,
+			empties.tl,
+			empties.tr,
+			empties.bl,
+			empties.br,
+		].filter(Boolean);
+
+		emptyList.forEach((empty) => {
+			// disposes recursively (your code already expects this to exist)
+			if (typeof this.cleanGroupChildren === 'function') {
+				this.cleanGroupChildren(empty);
+				return;
+			}
+
+			// fallback: remove only
+			while (empty.children.length > 0) {
+				empty.remove(empty.children[0]);
+			}
+		});
+	}
+
+
+	/**
 	 * Clean all children of a group except the 5 empties groups.
 	 * This prevents themes from leaking geometry added directly to data.group (like GlassTheme).
 	 *
@@ -711,6 +743,10 @@ export class ThreeManager {
 		if (!empties || !empties.center || !empties.tl || !empties.tr || !empties.bl || !empties.br)
 			return;
 
+		// clean children of empties first to prevent orphaned geometry if themes add directly to empties instead of using their own sub-groups
+		this.cleanEmptiesChildren(empties);
+
+		// build a set of the empties so we can skip them when cleaning the sibling children of the main group
 		const keep = new Set([
 			empties.center,
 			empties.tl,
