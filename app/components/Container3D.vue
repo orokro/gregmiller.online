@@ -112,6 +112,7 @@ onUnmounted(() => {
 		width: 100%;
 		min-width: 0;
 		box-sizing: border-box;
+		padding: 8px;
 	}
 
 	/* MEASUREMENT SYSTEM

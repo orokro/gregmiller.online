@@ -14,11 +14,16 @@ import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import Resume from '../components/Resume.vue';
 import SkillIcon from '../components/SkillIcon.vue';
+import GmillerText from '../components/Custom3D/GmillerText.vue';
 
 </script>
 <template>
 
 	<div class="static-page">
+
+		<div align="center">
+			<GmillerText />
+		</div>
 
 		<Container3D>
 			<h1><span>Resume</span></h1>
@@ -385,7 +390,7 @@ import SkillIcon from '../components/SkillIcon.vue';
 		border-radius: 3px;
 		padding: 2rem;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-
+		// margin: 5px;
 	}// .white-box
 
 	.flex-grid {

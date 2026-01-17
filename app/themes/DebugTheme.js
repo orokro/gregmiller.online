@@ -57,7 +57,7 @@ export class DebugTheme {
 			wireframe: true
 		});
 
-		this.cornerGeometry = new THREE.BoxGeometry(10, 10, 10); // 10px cubes
+		this.cornerGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // 10px cubes -> 0.1 units
 
 		// CustomContainer3D (different styling so we can visually confirm the pipeline)
 		this.customLineMaterial = new THREE.LineBasicMaterial({
@@ -72,6 +72,8 @@ export class DebugTheme {
 	 * * @param {ThreeManager} manager - The ThreeManager instance.
 	 */
 	destroy(manager) {
+
+		manager.clearEnvironmentTexture();
 
 		// Clean up reusable assets
 		if (this.boxMaterial)
@@ -133,10 +135,10 @@ export class DebugTheme {
 		const cube = data.empties.center.getObjectByName("debug_cube");
 
 		if (cube) {
-			const depth = 100; // Arbitrary depth for the debug box
+			const depth = 1; // Arbitrary depth for the debug box
 
 			// 1. Scale
-			cube.scale.set(rect.width, rect.height, depth);
+			cube.scale.set(rect.width / 100, rect.height / 100, depth);
 
 			// 2. Position Shift
 			// By default, a box is centered at (0,0,0).
@@ -177,9 +179,9 @@ export class DebugTheme {
 		if (lines) {
 
 			// Keep it thinner than the normal debug box so it's visually distinct
-			const depth = this.customDepth;
+			const depth = this.customDepth / 100;
 
-			lines.scale.set(rect.width, rect.height, depth);
+			lines.scale.set(rect.width / 100, rect.height / 100, depth);
 			lines.position.z = -depth / 2;
 		}
 	}

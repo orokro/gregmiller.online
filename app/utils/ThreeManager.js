@@ -208,13 +208,13 @@ export class ThreeManager {
 
 		// add the background plane to the scene, positioned at the back
 		this.bgPlane = new THREE.Mesh(geometry, material);
-		
+
 		// Camera is at (1, 0, 10). Plane was at local z=-11.01.
 		// So World Z = -1.01.
 		this.bgPlane.position.set(1, 0, -1.01);
 		this.bgPlane.receiveShadow = true;
 		this.bgPlane.frustumCulled = false;
-		
+
 		this.scene.add(this.bgPlane);
 		this.scene.add(this.camera);
 
@@ -1224,7 +1224,7 @@ export class ThreeManager {
 			const totalScrollY = this.scrollY + visualOffsetY;
 			const totalScrollX = this.scrollX + visualOffsetX;
 
-			const worldUnitScale = 10;
+			const worldUnitScale = 1000;
 			this.bgPlane.material.map.offset.y = -totalScrollY / worldUnitScale;
 			this.bgPlane.material.map.offset.x = totalScrollX / worldUnitScale;
 		}
