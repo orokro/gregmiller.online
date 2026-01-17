@@ -16,10 +16,13 @@ let cube = null;
 let cubeGeo = null;
 let cubeMat = null;
 
-function build(defaultBuild, customRoot, threeManager) {
+async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 
 	// Run theme default (if any)
 	defaultBuild();
+
+	if (!rebuildCustom)
+		return;
 
 	// Add cube to the CENTER empty by default
 	const center = customRoot.empties.center;

@@ -10,6 +10,7 @@ import Container3D from '~/components/Container3D.vue';
 import ContainerCustom3D from '../components/ContainerCustom3D.vue';
 import SpinningCube from '../components/Custom3D/SpinningCube.vue';
 import BackgroundImage3D from '../components/BackgroundImage3D.vue';
+import CoverBG from '../components/Custom3D/CoverBG.vue';
 
 </script>
 <template>
@@ -34,7 +35,6 @@ import BackgroundImage3D from '../components/BackgroundImage3D.vue';
 					<p>I should have a red wireframe around me.</p>
 					<p>I should have a red wireframe around me.</p>
 					<p>I should have a red wireframe around me.</p>
-
 				</div>
 			</Container3D>
 
@@ -69,6 +69,9 @@ import BackgroundImage3D from '../components/BackgroundImage3D.vue';
 
 		<br/><br/><br/>
 		<SpinningCube />
+
+		<br/><br/><br/>
+		<CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true" />
 
 		<section class="spacer">
 			<p>Scroll down...</p>
@@ -148,6 +151,17 @@ import BackgroundImage3D from '../components/BackgroundImage3D.vue';
 	align-items: center;
 	justify-content: center;
 	color: #ccc;
+}
+
+.cover-test {
+	width: 600px;
+	height: 500px !important;
+	margin: 0 auto;
+
+	border: 1px solid red;
+
+	position: relative;
+	top: -150px;
 }
 
 </style>
