@@ -14,10 +14,38 @@ import { use3DLettering } from '@/composables/use3DLettering'; // Adjust path as
 
 // define props
 const props = defineProps({
+
+	// The text to display in 3D. Default is "HELLO" for testing, but can be set to anything.
 	text: {
 		type: String,
 		default: 'HELLO',
-	}
+	},
+
+	// optional scaler
+	scale: {
+		type: Number,
+		default: 1.0,
+	},
+
+	// adjustable x-offset
+	xOffset: {
+		type: Number,
+		default: 0.0,
+	},
+
+	// height max
+	heightMax: {
+		type: Number,
+		default: -30,
+	},
+
+	// height min
+	heightMin: {
+		type: Number,
+		default: -90,
+	},
+
+
 });
 
 const { text } = toRefs(props);
@@ -38,7 +66,7 @@ function applyTransform(object3d, containerWidth) {
 		return;
 
 	// Scale logic from original GmillerText.vue
-	const baseScale = 200;
+	const baseScale = 200 * props.scale;
 	const refWidth = 800;
 	const scale = baseScale * (containerWidth / refWidth);
 
@@ -46,8 +74,8 @@ function applyTransform(object3d, containerWidth) {
 
 	// Position logic
 	// Original: model.position.set(0, 30, (1 - scale/200) * -90);
-	const zPos = (1 - scale / baseScale) * -90;
-	object3d.position.set(0, 30, zPos);
+	const zPos = props.heightMax + (1 - scale / baseScale) * (props.heightMin - props.heightMax);
+	object3d.position.set(props.xOffset * (containerWidth / refWidth) , -10, zPos);
 }
 
 
@@ -168,7 +196,7 @@ function tick(root, LockManager, time) {
 <style lang="scss" scoped>
 
 	.dynamic-text-container {
-		height: 250px;
+		height: 150px;
 		// border: 1px solid blue; // Debug
 
 	}// .dynamic-text-container

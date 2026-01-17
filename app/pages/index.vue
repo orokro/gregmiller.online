@@ -10,7 +10,7 @@
 const { data, error } = await useFetch('/api/posts');
 
 // components
-import GmillerText from '../components/Custom3D/GmillerText.vue';
+import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 const getPostLink = (post) => {
     const d = new Date(post.date);
@@ -22,11 +22,12 @@ const getPostLink = (post) => {
 </script>
 <template>
 
-	<div class="container">
+	<div align="center">
+		<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" />
+	</div>
+	<br/><br/>
 
-		<div align="center">
-			<GmillerText />
-		</div>
+	<div class="container">
 
 		<div v-if="error" class="error">
 			<p>Error loading posts: {{ error }}</p>

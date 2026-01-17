@@ -20,7 +20,7 @@ import IcoInstagram from '../components/Social_Icons/IcoInstagram.vue';
 import IcoLinkedIn from '../components/Social_Icons/IcoLinkedIn.vue';
 import IcoX from '../components/Social_Icons/IcoX.vue';
 import IcoYouTube from '../components/Social_Icons/IcoYouTube.vue';
-
+import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 // our tawk.to script
 const src = 'https://embed.tawk.to/696897a9726a11197a5f8a3a/1jf090s2n'
@@ -89,6 +89,10 @@ onBeforeUnmount(() => {
 
 </script>
 <template>
+
+	<div align="center">
+		<DynamicText3D text="Contact" :scale="0.70" :x-offset="20" />
+	</div>
 
 	<div class="static-page">
 

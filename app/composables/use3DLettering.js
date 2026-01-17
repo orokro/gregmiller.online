@@ -71,6 +71,7 @@ export function use3DLettering() {
 	function assembleTextGroup(text, letterData, material) {
 		const group = new THREE.Group();
 		const spacing = 0.15; // Adjustable kerning value
+		const spaceWidth = spacing * 2; // A space is approx 5x the kerning distance
 
 		let currentX = 0;
 		const letterObjects = [];
@@ -78,7 +79,7 @@ export function use3DLettering() {
 		// 1. Create meshes and calculate positions
 		for (const char of text) {
 			if (char === ' ') {
-				currentX += 10; // Space width
+				currentX += spaceWidth;
 				continue;
 			}
 

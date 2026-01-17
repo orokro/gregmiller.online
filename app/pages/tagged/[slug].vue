@@ -9,6 +9,7 @@ import { computed } from 'vue';
 
 // components
 import CategoryGrid from '../../components/CategoryGrid.vue';
+import DynamicText3D from '../../app/components/Custom3D/DynamicText3D.vue';
 
 // nuxt
 const route = useRoute();
@@ -16,6 +17,10 @@ const slug = route.params.slug;
 
 </script>
 <template>
+
+	<div align="center">
+		<DynamicText3D text="Tag" :scale="0.7" :x-offset="20" />
+	</div>
 
 	<div class="static-page">
 

@@ -20,7 +20,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 <template>
 
 	<div align="center">
-		<DynamicText3D text="Resume" />
+		<DynamicText3D text="Resume" :scale="0.7" :x-offset="20" />
 	</div>
 
 	<div class="static-page">

@@ -13,9 +13,14 @@ import { ref } from 'vue';
 import Container3D from '../../components/Container3D.vue';
 import Spacer3D from '../../components/Spacer3D.vue';
 import CategoryGrid from '../../app/components/CategoryGrid.vue';
+import DynamicText3D from '../../components/Custom3D/DynamicText3D.vue';
 
 </script>
 <template>
+
+	<div align="center">
+		<DynamicText3D text="Art" :scale="0.7" :x-offset="20" />
+	</div>
 
 	<div class="static-page">
 

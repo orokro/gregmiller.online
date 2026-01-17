@@ -25,6 +25,10 @@ const { data, pending, error } = await useFetch('/api/posts/by-category', {
 </script>
 <template>
 
+	<div align="center">
+		<DynamicText3D text="UE Articles" :scale="0.7" :x-offset="20" />
+	</div>
+
 	<div class="static-page">
 
 		<Container3D>
