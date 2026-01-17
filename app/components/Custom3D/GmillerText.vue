@@ -78,8 +78,9 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	});
 
 	model = model.children[0]; // Assume the GLB has a single root mesh
-	model.position.set(0, 30, 0);
-	model.scale.set(10, 10, 10);
+	model.position.set(0, 0, 0);
+	const scale = 2;
+	model.scale.set(scale, scale, scale);
 	model.rotation.x = 90 * (Math.PI / 180);
 	model.material = glassMaterial;
 
@@ -104,7 +105,7 @@ function update(defaultUpdate, customRoot, threeManager) {
 	const rect =  el.value?.$el.getBoundingClientRect();
 	const width = rect.width;
 
-	const scale = 10 * (width / 800);
+	const scale = 2 * (width / 800);
 	if (model) {
 		model.scale.set(scale, scale, scale);
 	}

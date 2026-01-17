@@ -62,7 +62,7 @@ export class GlassTheme {
 			clearcoat: 1.0,
 			clearcoatRoughness: 0.02,
 
-			envMapIntensity: 2.5,
+			envMapIntensity: 1.0,
 
 			attenuationColor: new THREE.Color(0xe6ffff),
 			attenuationDistance: 0.1,
@@ -88,14 +88,14 @@ export class GlassTheme {
 	}
 
 	init(manager) {
-		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 2.0);
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 0.5);
 
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-		manager.renderer.toneMappingExposure = 1.0;
+		manager.renderer.toneMappingExposure = 0.8;
 
 		// --- CHANGE 1: Use DirectionalLight for the main shadow caster ---
-		this.camLight = new THREE.DirectionalLight(0xffffff, 1.0); // Boost intensity
+		this.camLight = new THREE.DirectionalLight(0xffffff, 0.8); // Boost intensity
 
 		// Position it to cast a clear diagonal shadow
 		this.camLight.position.set(-3, 5, 5);
@@ -106,11 +106,11 @@ export class GlassTheme {
 		this.camLight.target.position.set(0, 0, 0);
 
 		// --- RIM LIGHTS (Reduced for testing) ---
-		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
+		this.rimLightL = new THREE.PointLight(0xffffff, 50, 4000);
 		this.rimLightL.position.set(-1.8, 0.1, 0);
 		manager.scene.add(this.rimLightL);
 
-		this.rimLightR = new THREE.PointLight(0xffffff, 5000, 4000);
+		this.rimLightR = new THREE.PointLight(0xffffff, 50, 4000);
 		this.rimLightR.position.set(1.8, 0.1, 0);
 		manager.scene.add(this.rimLightR);
 
