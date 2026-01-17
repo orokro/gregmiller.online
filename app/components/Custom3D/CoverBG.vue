@@ -47,6 +47,32 @@ let material = null;
 let texture = null;
 
 
+// --- Helper: Perspective Correction ---
+
+function applyPerspectiveTransform(rect, group, camera, cameraZ, depthVal) {
+
+	if (!mesh) return;
+
+	// 1. Calculate Perspective Scale Factor (S)
+	// S = (CameraZ + Depth) / CameraZ
+	// This ensures the plane is scaled up enough to fill the visual angle of the container at distance -Depth.
+	const scaleFactor = (cameraZ + depthVal) / cameraZ;
+
+	mesh.scale.set(rect.width * scaleFactor, rect.height * scaleFactor, 1);
+
+	// 2. Calculate Parallax Alignment Offset
+	// Since the mesh is deeper (further from camera), it effectively moves "slower" in screen space
+	// than the group (which is at Z=0). We must shift the mesh in world space to align its
+	// perspective projection with the group's projection.
+	// Formula: Offset = (ObjectWorldPos - CameraWorldPos) * (ScaleFactor - 1)
+
+	const offsetX = (group.position.x - camera.position.x) * (scaleFactor - 1);
+	const offsetY = (group.position.y - camera.position.y) * (scaleFactor - 1);
+
+	mesh.position.set(offsetX, offsetY, -depthVal);
+}
+
+
 // --- Lifecycle Methods ---
 
 async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
@@ -67,18 +93,15 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	texture.colorSpace = THREE.SRGBColorSpace;
 
 	// 2. Create Material
-	// We use Standard material to support receiving shadows
 	material = new THREE.MeshStandardMaterial({
 		map: texture,
 		color: 0xffffff,
 		roughness: 1,
 		metalness: 0,
-		side: THREE.DoubleSide // Ensure it's visible from both sides
+		side: THREE.DoubleSide
 	});
 
 	// 3. Create Geometry
-	// PlaneGeometry(1, 1) creates a 1x1 unit quad facing Z.
-	// We will scale this in the update() loop to match the container dimensions.
 	const geometry = new THREE.PlaneGeometry(1, 1);
 
 	// 4. Create Mesh
@@ -90,22 +113,20 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	}
 
 	// 6. Initial Transform
-	// Apply depth immediately
-	mesh.position.z = -depth.value;
-
-	// If we have DOM dimensions ready, apply them now to prevent FOUC
 	if (el.value?.$el) {
 		const rect = el.value.$el.getBoundingClientRect();
-
-		// Calculate perspective scale so it fills the screen area at this depth
-		const cameraZ = threeManager.config.cameraZ;
-		const scaleFactor = (cameraZ + depth.value) / cameraZ;
-
-		mesh.scale.set(rect.width * scaleFactor, rect.height * scaleFactor, 1);
+		applyPerspectiveTransform(
+			rect,
+			customRoot.group,
+			threeManager.camera,
+			threeManager.config.cameraZ,
+			depth.value
+		);
 	}
 
 	// 7. Add to Scene
-	// We attach to the center empty.
+	// We attach to the center empty. The offsets calculated above are local to this empty.
+	// (Since the empty is at 0,0,0 relative to the group, the math works out).
 	customRoot.empties.center.add(mesh);
 
 	threeManager.requestRender();
@@ -117,21 +138,19 @@ function update(defaultUpdate, customRoot, threeManager) {
 	if (!mesh || !el.value)
 		return;
 
-	// 1. Get current dimensions of the DOM element
+	// 1. Get current dimensions
 	const rect = el.value.$el.getBoundingClientRect();
 
-	// 2. Scale the 1x1 plane to match the pixel dimensions
-	// We calculate the perspective ratio: (CameraZ + Depth) / CameraZ
-	// This ensures the plane looks the exact same size as the container, even when pushed back.
-	const cameraZ = threeManager.config.cameraZ;
-	const scaleFactor = (cameraZ + depth.value) / cameraZ;
+	// 2. Apply Transform (Size + Parallax Position)
+	applyPerspectiveTransform(
+		rect,
+		customRoot.group,
+		threeManager.camera,
+		threeManager.config.cameraZ,
+		depth.value
+	);
 
-	mesh.scale.set(rect.width * scaleFactor, rect.height * scaleFactor, 1);
-
-	// 3. Update Depth (in case prop changed dynamically)
-	mesh.position.z = -depth.value;
-
-	// 4. Update Shadow setting (in case prop changed)
+	// 3. Update Shadow setting
 	mesh.receiveShadow = catchShadows.value;
 }
 
@@ -142,13 +161,10 @@ function destroy(customRoot, threeManager) {
 
 	if (mesh) {
 		center.remove(mesh);
-
 		if (mesh.geometry) mesh.geometry.dispose();
 	}
 
 	if (material) material.dispose();
-
-	// Note: We dispose the texture here because ThreeManager returns clones.
 	if (texture) texture.dispose();
 
 	mesh = null;
@@ -159,21 +175,13 @@ function destroy(customRoot, threeManager) {
 }
 
 
-// Watch for src changes to trigger a full rebuild
+// Watchers
 watch(src, () => {
-
-	if (el.value)
-		el.value.rebuild();
+	if (el.value) el.value.rebuild();
 });
 
-
-// Watch for depth changes to trigger a render (handled in update loop)
 watch(depth, () => {
-
-	// We don't need a full rebuild for depth, just a render request
-	// The update() loop runs on scroll/resize, but we force one here
-	if (el.value)
-		el.value.threeManager?.requestRender();
+	if (el.value) el.value.threeManager?.requestRender();
 });
 
 </script>
@@ -193,8 +201,6 @@ watch(depth, () => {
 <style lang="scss" scoped>
 
 .bg-cover-container {
-
-	// Default styles, usually this component wraps content
 	position: relative;
 }
 

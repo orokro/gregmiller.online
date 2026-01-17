@@ -23,10 +23,37 @@ import { useThree } from '~/composables/useThree';
 
 // Props
 const props = defineProps({
-	buildFn: { type: Function, default: null },
-	updateFn: { type: Function, default: null },
-	clean: { type: Function, default: null },
-	tickFn: { type: Function, default: null },
+
+	// Optional custom build function for this instance. If not provided, will use theme default if available.
+	buildFn: {
+		type: Function,
+		default: null
+	},
+
+	// Optional custom update function for this instance. If not provided, will use theme default if available.
+	updateFn: {
+		type: Function,
+		default: null
+	},
+
+	// Optional custom cleanup function for this instance. If not provided, will use theme default if available.
+	clean: {
+		type: Function,
+		default: null
+	},
+
+	// Optional tick function for this instance, called every frame. If not provided, will use theme default if available.
+	tickFn: {
+		type: Function,
+		default: null
+	},
+
+	// Optional, name
+	name: {
+		type: String,
+		default: null,
+	},
+
 });
 
 // State
@@ -39,6 +66,7 @@ const { getThree } = useThree();
 
 // We store the raw manager instance here for cleanup later
 let threeManagerInstance = null;
+
 
 onMounted(async () => {
 
@@ -56,12 +84,16 @@ onMounted(async () => {
 	// 3. Register
 	if (mgr.isOk && el.value) {
 
-		const result = mgr.register(el.value, 'customBox', {
+		const options = {
 			buildFn: props.buildFn,
 			updateFn: props.updateFn,
 			cleanFn: props.clean,
 			tickFn: props.tickFn,
-		});
+		};
+		if(props.name)
+			options.name = props.name;
+
+		const result = mgr.register(el.value, 'customBox', options);
 
 		if (result) {
 			registeredId.value = result.id;
@@ -114,7 +146,6 @@ onUnmounted(() => {
 	if (registeredId.value && threeManagerInstance) {
 		threeManagerInstance.unregister(registeredId.value);
 	}
-
 });
 
 </script>

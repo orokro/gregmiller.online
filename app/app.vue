@@ -18,14 +18,19 @@ import { useDeviceContext } from './composables/useDeviceContext';
 // components
 import UILayer from './components/UILayer.vue';
 import DebugConsole from './components/DebugConsole.vue';
-
-const canvasRef = ref(null);
+import CoverBG from './components/Custom3D/CoverBG.vue';
+import ContainerCustom3D from './components/ContainerCustom3D.vue';
 
 // composables
 const { initThree } = useThree();
 const { themeCSSVars } = useTheming();
 const { has3DCapability } = useDeviceContext();
 
+
+// refs
+const canvasRef = ref(null);
+
+// update theme CSS variables in the document head whenever they change
 watch(themeCSSVars, (vars) => {
 	useHead({
 		htmlAttrs: {
@@ -34,13 +39,14 @@ watch(themeCSSVars, (vars) => {
 	});
 }, { immediate: true });
 
+
+// Start up the 3D system when the component mounts
 onMounted(() => {
 
 	// Initialize the 3D System
 	if (canvasRef.value	&& has3DCapability.value) {
 		initThree(canvasRef.value);
 	}
-
 });
 
 </script>
@@ -60,11 +66,15 @@ onMounted(() => {
 		<!-- main content area -->
 		<div class="app-shell">
 
-			<main class="app-main">
-				<div class="main-inner">
-					<NuxtPage />
-				</div>
-			</main>
+			<CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true">
+
+				<main class="app-main">
+					<div class="main-inner">
+						<NuxtPage />
+					</div>
+				</main>
+
+			</CoverBG>
 
 		</div>
 

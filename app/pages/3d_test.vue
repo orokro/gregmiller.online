@@ -15,78 +15,82 @@ import CoverBG from '../components/Custom3D/CoverBG.vue';
 </script>
 <template>
 
-	<div class="test-page">
+	<CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true">
 
-		<section class="intro">
-			<h1>3D Coordination Test</h1>
-			<p>
-				The red boxes below should match the DOM elements exactly.
-				Try resizing the window or scrolling.
-			</p>
-		</section>
+		<div class="test-page">
 
-		<section class="test-section relative">
-			<Container3D>
+			<section class="intro">
+				<h1>3D Coordination Test</h1>
+				<p>
+					The red boxes below should match the DOM elements exactly.
+					Try resizing the window or scrolling.
+				</p>
+			</section>
+
+			<section class="test-section relative">
+				<Container3D>
+					<div class="box-content">
+						<h2>Center Box</h2>
+						<p>I should have a red wireframe around me.</p>
+						<p>I should have a red wireframe around me.</p>
+						<p>I should have a red wireframe around me.</p>
+						<p>I should have a red wireframe around me.</p>
+						<p>I should have a red wireframe around me.</p>
+						<p>I should have a red wireframe around me.</p>
+					</div>
+				</Container3D>
+
+				<BackgroundImage3D class="pencil_bg_img" src="/img/bg_doodles/pencil.png" width="380" height="440" />
+
+			</section>
+
+			<section class="test-section columns">
+
+				<Container3D>
+					<div class="box-content small">
+						<h3>Left</h3>
+					</div>
+				</Container3D>
+
+				<Container3D>
+					<div class="box-content small">
+						<h3>Right</h3>
+					</div>
+				</Container3D>
+
+			</section>
+
+			<ContainerCustom3D>
 				<div class="box-content">
-					<h2>Center Box</h2>
-					<p>I should have a red wireframe around me.</p>
-					<p>I should have a red wireframe around me.</p>
-					<p>I should have a red wireframe around me.</p>
-					<p>I should have a red wireframe around me.</p>
-					<p>I should have a red wireframe around me.</p>
-					<p>I should have a red wireframe around me.</p>
+					Custom container
 				</div>
-			</Container3D>
+			</ContainerCustom3D>
 
-			<BackgroundImage3D class="pencil_bg_img" src="/img/bg_doodles/pencil.png" width="380" height="440" />
+			<br/><br/><br/>
+			<SpinningCube />
 
-		</section>
+			<br/><br/><br/>
+			<SpinningCube />
 
-		<section class="test-section columns">
+			<br/><br/><br/>
 
-			<Container3D>
-				<div class="box-content small">
-					<h3>Left</h3>
-				</div>
-			</Container3D>
 
-			<Container3D>
-				<div class="box-content small">
-					<h3>Right</h3>
-				</div>
-			</Container3D>
+			<section class="spacer">
+				<p>Scroll down...</p>
+			</section>
 
-		</section>
+			<section class="test-section">
+				<Container3D>
+					<div class="box-content wide">
+						<h2>Bottom Anchor</h2>
+						<p>If the parallax math is wrong, I will drift away from my wireframe.</p>
+					</div>
+				</Container3D>
+			</section>
 
-		<ContainerCustom3D>
-			<div class="box-content">
-				Custom container
-			</div>
-		</ContainerCustom3D>
+		</div>
 
-		<br/><br/><br/>
-		<SpinningCube />
-
-		<br/><br/><br/>
-		<SpinningCube />
-
-		<br/><br/><br/>
-		<CoverBG class="cover-test" src="/textures/test.jpg" :depth="100" :receiveShadow="true" />
-
-		<section class="spacer">
-			<p>Scroll down...</p>
-		</section>
-
-		<section class="test-section">
-			<Container3D>
-				<div class="box-content wide">
-					<h2>Bottom Anchor</h2>
-					<p>If the parallax math is wrong, I will drift away from my wireframe.</p>
-				</div>
-			</Container3D>
-		</section>
-
-	</div>
+	</CoverBG>
 
 </template>
 <style scoped>
@@ -154,8 +158,9 @@ import CoverBG from '../components/Custom3D/CoverBG.vue';
 }
 
 .cover-test {
-	width: 600px;
-	height: 500px !important;
+
+	/* width: 600px;
+	height: 500px !important; */
 	margin: 0 auto;
 
 	border: 1px solid red;
