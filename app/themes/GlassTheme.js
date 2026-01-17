@@ -95,45 +95,27 @@ export class GlassTheme {
 		manager.renderer.toneMappingExposure = 1.0;
 
 		// --- CHANGE 1: Use DirectionalLight for the main shadow caster ---
-		// DirectionalLight works best for general "scene shadows" and supports the .left/.right box settings.
-		this.camLight = new THREE.DirectionalLight(0xffffff, 1.5); // Intensity is higher for Directional (approx 1-10) vs Point (thousands)
+		this.camLight = new THREE.DirectionalLight(0xffffff, 5.0); // Boost intensity
 
-		// Position it high and to the side (Simulating a sun or studio lamp)
-		this.camLight.position.set(200, 500, 1000);
+		// Position it to cast a clear diagonal shadow
+		this.camLight.position.set(-300, 500, 500);
 		this.camLight.castShadow = true;
 
-		// --- CHANGE 2: Do NOT add shadow-casting lights to the camera ---
-		// If you add it to the camera, the shadow is always behind the object and you can't see it.
 		manager.scene.add(this.camLight);
 		manager.scene.add(this.camLight.target);
 		this.camLight.target.position.set(0, 0, 0);
 
-		// --- RIM LIGHTS (Keep as PointLights, usually no shadows needed) ---
-		this.rimLightL = new THREE.PointLight(0xffffff, 18000, 4000);
+		// --- RIM LIGHTS (Reduced for testing) ---
+		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
 		this.rimLightL.position.set(-180, 10, 0);
 		manager.scene.add(this.rimLightL);
 
-		this.rimLightR = new THREE.PointLight(0xffffff, 18000, 4000);
+		this.rimLightR = new THREE.PointLight(0xffffff, 5000, 4000);
 		this.rimLightR.position.set(180, 10, 0);
 		manager.scene.add(this.rimLightR);
 
-		// --- FILL LIGHT ---
-		this.fillLight = new THREE.PointLight(0xffffff, 12000, 6000);
-		this.fillLight.position.set(0, -120, 60);
-		// You usually only want ONE light casting shadows for performance,
-		// but if you need this one too, remove the .left/.right logic below for it.
-		this.fillLight.castShadow = false;
-		manager.scene.add(this.fillLight);
-
-		this.backLight = new THREE.PointLight(0xffffff, 14000, 6000);
-		this.backLight.position.set(0, 140, -80);
-		manager.scene.add(this.backLight);
-
-		// Allow background to receive shadows
-		manager.setShadowReceiving(manager.bgPlane, true);
-
 		// --- SHADOW CONFIGURATION ---
-		const d = 2000; 
+		const d = 2500; 
 		this.camLight.shadow.camera.left = -d;
 		this.camLight.shadow.camera.right = d;
 		this.camLight.shadow.camera.top = d;
@@ -142,17 +124,13 @@ export class GlassTheme {
 		this.camLight.shadow.camera.near = 1;
 		this.camLight.shadow.camera.far = 5000;
 
-		this.camLight.shadow.bias = -0.001; 
+		this.camLight.shadow.bias = 0; // Reset bias
 		this.camLight.shadow.mapSize.width = 2048;
 		this.camLight.shadow.mapSize.height = 2048;
 
-		// Helper will now show a proper box
-		const helper = new THREE.CameraHelper(this.camLight.shadow.camera);
-		manager.scene.add(helper);
-
 		// Ensure renderer settings are correct
 		manager.renderer.shadowMap.enabled = true;
-		manager.renderer.shadowMap.type = THREE.PCFShadowMap;
+		manager.renderer.shadowMap.type = THREE.BasicShadowMap;
 
         console.log("GlassTheme: Shadows enabled.", {
             light: this.camLight,

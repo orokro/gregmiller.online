@@ -133,6 +133,8 @@ export class ThreeManager {
 			powerPreference: "high-performance"
 		});
 		this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+		this.renderer.shadowMap.enabled = true;
+		this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
 		// Initial sizing - will be immediately overridden by onResize
 		this.renderer.setSize(this.width, this.height);
@@ -211,9 +213,18 @@ export class ThreeManager {
 		// So World Z = -101.
 		this.bgPlane.position.set(100, 0, -101);
 		this.bgPlane.receiveShadow = true;
+		this.bgPlane.frustumCulled = false;
 		
 		this.scene.add(this.bgPlane);
 		this.scene.add(this.camera);
+
+		// SHADOW TEST CUBE
+		const testGeo = new THREE.BoxGeometry(100, 100, 100);
+		const testMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+		const testMesh = new THREE.Mesh(testGeo, testMat);
+		testMesh.position.set(-200, 0, 0);
+		testMesh.castShadow = true;
+		this.scene.add(testMesh);
 	}
 
 
