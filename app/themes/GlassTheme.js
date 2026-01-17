@@ -187,7 +187,7 @@ export class GlassTheme {
 
 	async _loadModel(manager) {
 
-		const [gltfScene] = await manager.assetsReady(['/models/glass_slice_2.glb']);
+		const [gltfScene] = await manager.assetsReady(['/models/glass_slice.glb']);
 
 		if (!gltfScene) {
 			console.error("GlassTheme2: Failed to load model.");
