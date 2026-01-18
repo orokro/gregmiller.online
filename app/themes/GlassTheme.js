@@ -146,12 +146,12 @@ export class GlassTheme {
 		this.camLight.shadow.radius = 4;	// try 2–8
 		this.camLight.shadow.needsUpdate = true;
 
-        console.log("GlassTheme: Shadows enabled.", {
-            light: this.camLight,
-            shadow: this.camLight.shadow,
-            mapSize: this.camLight.shadow.mapSize,
-            camera: this.camLight.shadow.camera
-        });
+        // console.log("GlassTheme: Shadows enabled.", {
+        //     light: this.camLight,
+        //     shadow: this.camLight.shadow,
+        //     mapSize: this.camLight.shadow.mapSize,
+        //     camera: this.camLight.shadow.camera
+        // });
 
 		this._loadPromise = this._loadModel(manager);
 	}
