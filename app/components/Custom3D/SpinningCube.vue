@@ -16,6 +16,15 @@ let cube = null;
 let cubeGeo = null;
 let cubeMat = null;
 
+const props = defineProps({
+
+	// name is optional, but if provided allows this instance to be targeted by name from the theme's build/update functions if desired
+	name: {
+		type: String,
+		default: null,
+	},
+});
+
 async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 
 	// Run theme default (if any)
@@ -99,7 +108,10 @@ function tick(root, LockManager, time){
 		:updateFn="update"
 		:clean="destroy"
 		:tickFn="tick"
-	/>
+		:name="name"
+	>
+		<slot />
+	</ContainerCustom3D>
 
 </template>
 <style lang="scss" scoped>

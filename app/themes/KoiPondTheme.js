@@ -78,6 +78,8 @@ export class KoiPondTheme {
 
 		manager.enableMouseLight(false);
 
+		manager.setFrameMode('active');
+
 		const bgTexture = manager.loadPBR('rocky-rugged-terrain', true, false, false, {});
 		manager.setBackground(bgTexture, 200, 0.5, true);
 
@@ -542,4 +544,8 @@ export class KoiPondTheme {
 
 		manager.requestRender();
 	}
+
+	onTick(manager, time) {
+	}
+
 }

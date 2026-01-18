@@ -94,6 +94,8 @@ export class GlassTheme {
 
 		manager.enableMouseLight(false);
 
+		manager.setFrameMode('active');
+
 		// manager.enableDefaultBGPlane(true);
 
 		manager.renderer.physicallyCorrectLights = true;
@@ -552,4 +554,5 @@ export class GlassTheme {
 
 		manager.requestRender();
 	}
+
 }
