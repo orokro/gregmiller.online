@@ -69,6 +69,7 @@ const { src, depth, catchShadows, reprojectUvs, uvScale, normalSrc, roughSrc, me
 const el = ref(null);
 let mesh = null;
 let material = null;
+let localMaterial = null; // Track the locally created material to dispose safely
 
 let textures = {}; // Store refs to dispose later
 
@@ -94,12 +95,12 @@ function applyPerspectiveTransform(rect, group, camera, cameraZ, depthVal) {
 
 // --- Helper: UV Reprojection ---
 
-function updateUVs(width, height) {
+function updateUVs(width, height, scaleOverride = null) {
 
 	if (!material || !material.map) return;
 
 	const map = material.map;
-	const s = uvScale.value;
+	const s = (scaleOverride !== null) ? scaleOverride : uvScale.value;
 
 	if (reprojectUvs.value) {
 		// "Stable" mapping:
@@ -159,13 +160,14 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	}
 
 	// 3. Create Material
-	material = new THREE.MeshStandardMaterial({
+	localMaterial = new THREE.MeshStandardMaterial({
 		color: 0xffffff,
 		roughness: 1,
 		metalness: 0,
 		side: THREE.DoubleSide,
 		...loadedMaps // Spread in map, normalMap, etc.
 	});
+	material = localMaterial;
 
 	// 4. Create Geometry
 	const geometry = new THREE.PlaneGeometry(1, 1);
@@ -205,6 +207,26 @@ function update(defaultUpdate, customRoot, threeManager) {
 	if (!mesh || !el.value)
 		return;
 
+	// Check for dynamic config from ThreeManager (via setBackground)
+	let currentDepth = depth.value;
+	let currentScale = uvScale.value;
+	let currentShadows = catchShadows.value;
+
+	if (props.name) {
+		const data = threeManager.getRegisteredElementByName(props.name);
+		if (data && data.bgConfig) {
+			if (data.bgConfig.depth !== undefined) currentDepth = data.bgConfig.depth;
+			if (data.bgConfig.uvScale !== undefined) currentScale = data.bgConfig.uvScale;
+			if (data.bgConfig.catchShadows !== undefined) currentShadows = data.bgConfig.catchShadows;
+
+			// Handle Material Swap
+			if (data.bgConfig.material && mesh.material !== data.bgConfig.material) {
+				mesh.material = data.bgConfig.material;
+				material = data.bgConfig.material;
+			}
+		}
+	}
+
 	// 1. Get current dimensions
 	const rect = el.value.$el.getBoundingClientRect();
 
@@ -214,14 +236,16 @@ function update(defaultUpdate, customRoot, threeManager) {
 		customRoot.group,
 		threeManager.camera,
 		threeManager.config.cameraZ,
-		depth.value
+		currentDepth
 	);
 
 	// 3. Update UVs
-	updateUVs(rect.width, rect.height);
+	updateUVs(rect.width, rect.height, currentScale);
 
 	// 4. Update Shadow setting
-	mesh.receiveShadow = catchShadows.value;
+	if (mesh.receiveShadow !== currentShadows) {
+		mesh.receiveShadow = currentShadows;
+	}
 }
 
 
@@ -234,7 +258,10 @@ function destroy(customRoot, threeManager) {
 		if (mesh.geometry) mesh.geometry.dispose();
 	}
 
-	if (material) material.dispose();
+	// Only dispose the material if we created it locally
+	if (material && material === localMaterial) {
+		material.dispose();
+	}
 
 	// Dispose all textures
 	Object.values(textures).forEach(t => t.dispose());
@@ -242,6 +269,7 @@ function destroy(customRoot, threeManager) {
 
 	mesh = null;
 	material = null;
+	localMaterial = null;
 
 	threeManager.requestRender();
 }

@@ -283,6 +283,137 @@ export class ThreeManager {
 	}
 
 
+	/**
+	 * Loads a PBR material from the textures directory.
+	 *
+	 * @param {string} baseName - the base name of the texture files (e.g. "mossy_rock")
+	 * @param {boolean} normal - whether to expect a normal map
+	 * @param {boolean} smooth - whether to expect a smoothness/roughness map
+	 * @param {boolean} metal - whether to expect a metalness map
+	 * @param {Object} options - additional options for the material
+	 * @param {boolean} noCache - if true, forces a reload of the material instead of using the cache
+	 * @returns {THREE.MeshStandardMaterial}
+	 */
+	loadPBR(baseName, normal = false, smooth = false, metal = false, options = {}, noCache = false) {
+
+		// Initialize cache if needed
+		if (!this.materialCache) {
+			this.materialCache = new Map();
+		}
+
+		// Return cached material if available
+		if (!noCache && this.materialCache.has(baseName)) {
+			return this.materialCache.get(baseName);
+		}
+
+		const loader = new THREE.TextureLoader();
+		const path = `/textures/${baseName}`;
+
+		// Load Maps
+		const maps = {};
+
+		// ALBEDO (Always expected)
+		maps.map = loader.load(`${path}_ALBEDO.png`);
+		maps.map.colorSpace = THREE.SRGBColorSpace;
+		maps.map.wrapS = THREE.RepeatWrapping;
+		maps.map.wrapT = THREE.RepeatWrapping;
+
+		if (normal) {
+			maps.normalMap = loader.load(`${path}_NORMAL.png`);
+			maps.normalMap.wrapS = THREE.RepeatWrapping;
+			maps.normalMap.wrapT = THREE.RepeatWrapping;
+		}
+
+		if (smooth) {
+			// Assuming _SMOOTH.png maps to roughnessMap
+			maps.roughnessMap = loader.load(`${path}_SMOOTH.png`);
+			maps.roughnessMap.wrapS = THREE.RepeatWrapping;
+			maps.roughnessMap.wrapT = THREE.RepeatWrapping;
+		}
+
+		if (metal) {
+			maps.metalnessMap = loader.load(`${path}_METAL.png`);
+			maps.metalnessMap.wrapS = THREE.RepeatWrapping;
+			maps.metalnessMap.wrapT = THREE.RepeatWrapping;
+		}
+
+		// Merge options
+		const matConfig = Object.assign({
+			color: 0xffffff,
+			roughness: 1,
+			metalness: 0,
+			...maps
+		}, options);
+
+		const material = new THREE.MeshStandardMaterial(matConfig);
+
+		// Cache it
+		this.materialCache.set(baseName, material);
+
+		return material;
+	}
+
+
+	/**
+	 * Clears the material cache.
+	 *
+	 * @param {string[]} names - optional list of names to clear. If omitted, clears all.
+	 */
+	clearCache(names) {
+
+		if (!this.materialCache)
+			return;
+
+		const disposeMat = (mat) => {
+			if (!mat) return;
+			// Dispose textures
+			['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'aoMap', 'emissiveMap'].forEach(key => {
+				if (mat[key] && mat[key].isTexture) {
+					mat[key].dispose();
+				}
+			});
+			mat.dispose();
+		};
+
+		if (Array.isArray(names)) {
+			names.forEach(name => {
+				const mat = this.materialCache.get(name);
+				if (mat) {
+					disposeMat(mat);
+					this.materialCache.delete(name);
+				}
+			});
+		} else {
+			this.materialCache.forEach(disposeMat);
+			this.materialCache.clear();
+		}
+	}
+
+
+	/**
+	 * Updates the background cover component (app-cover-bg) with a new configuration.
+	 *
+	 * @param {THREE.Material} material - The new material to use
+	 * @param {number} depth - The new depth value
+	 * @param {number} uvScale - The new UV scale
+	 * @param {boolean} catchShadows - Whether to receive shadows
+	 */
+	setBackground(material, depth, uvScale, catchShadows) {
+		const data = this.getRegisteredElementByName('app-cover-bg');
+		if (!data) return;
+
+		// Set configuration on the data object so the component can read it
+		data.bgConfig = {
+			material,
+			depth,
+			uvScale,
+			catchShadows
+		};
+
+		this.requestRender();
+	}
+
+
 
 
 	/* ==========================================================================
@@ -1586,6 +1717,7 @@ export class ThreeManager {
 		this.setShadowCasting(object, enabled);
 		this.setShadowReceiving(object, enabled);
 	}
+
 
 
 	/* ============================================================================
