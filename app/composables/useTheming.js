@@ -6,7 +6,7 @@
 */
 
 // vue
-import { computed, ref, shallowRef } from 'vue';
+import { computed, nextTick, ref, shallowRef } from 'vue';
 
 // app imports
 import { useThree } from './useThree';
@@ -104,6 +104,9 @@ const setTheme = (theme) => {
 	const { getThree } = useThree();
 	getThree().then(threeManager => {
 		threeManager.setTheme(currentTheme.value.themeClass);
+		nextTick(() => {
+			threeManager.requestRender();
+		});
 	});
 };
 

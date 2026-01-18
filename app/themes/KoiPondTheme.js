@@ -79,7 +79,7 @@ export class KoiPondTheme {
 		manager.enableMouseLight(false);
 
 		const bgTexture = manager.loadPBR('rocky-rugged-terrain', true, false, false, {});
-		manager.setBackground(bgTexture, 100, 1, true);
+		manager.setBackground(bgTexture, 200, 0.5, true);
 
 		console.log(bgTexture);
 

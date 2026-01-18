@@ -73,13 +73,13 @@ const sideBarWidth = computed(() => {
 			inset: -1px -1px -1px -1px;
 
 			// inner shadow
-			box-shadow: inset 0px 0px 20px 5px rgba(0, 0, 0, 0.25);
+			box-shadow: inset 0px 0px 20px 5px rgba(0, 0, 0, 1.25);
 
 			// nice rounded corners and border
 			border-radius: 55px 55px 0px 55px;
 			border: 5px solid var(--color-primary);
 
-			transition: left 220ms ease;
+			transition: left 220ms linear;
 			@media (min-width: 900px) {
 				left: var(--sidebar-w);
 			}

@@ -205,7 +205,7 @@ const sideBarWidth = computed(() => {
 	// for mobile / narrow, we animate the sidebar in from the left as a drawer,
 	// using transform for GPU-accelerated animation
 	transform: translate3d(-100%, 0, 0);
-	transition: transform 220ms ease, width 220ms ease;
+	transition: transform 220ms linear, width 220ms linear;
 
 	// open state
 	&.is-open {
