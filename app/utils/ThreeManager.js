@@ -15,6 +15,11 @@ import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 // Themes
 import { GlassTheme } from '../themes/GlassTheme';
 import { DebugTheme } from '../themes/DebugTheme';
+import { KoiPondTheme } from '../themes/KoiPondTheme';
+
+import { useTheming } from '../composables/useTheming';
+import { nextTick } from 'vue';
+const { setTheme } = useTheming();
 
 // Simple UUID generator (Works everywhere, no crypto requirement)
 function uuid() {
@@ -63,6 +68,7 @@ export class ThreeManager {
 		// Theming
 		this.currentTheme = null;
 		this.envTexture = null;
+		this.currentBgConfig = null; // Stores the current background configuration globally
 
 		// Loop Control
 		this.isOk = false;
@@ -182,7 +188,10 @@ export class ThreeManager {
 		this.isOk = true;
 
 		// 7. Load Default Theme
-		this.setTheme(GlassTheme);
+		// this.setTheme(GlassTheme);
+		setTimeout(() => {
+			setTheme("KoiPondTheme");
+		}, 1000);
 
 		// 8. Force initial layout update
 		this.onResize();
@@ -390,28 +399,91 @@ export class ThreeManager {
 	}
 
 
-	/**
-	 * Updates the background cover component (app-cover-bg) with a new configuration.
-	 *
-	 * @param {THREE.Material} material - The new material to use
-	 * @param {number} depth - The new depth value
-	 * @param {number} uvScale - The new UV scale
-	 * @param {boolean} catchShadows - Whether to receive shadows
-	 */
-	setBackground(material, depth, uvScale, catchShadows) {
-		const data = this.getRegisteredElementByName('app-cover-bg');
-		if (!data) return;
+		/**
 
-		// Set configuration on the data object so the component can read it
-		data.bgConfig = {
-			material,
-			depth,
-			uvScale,
-			catchShadows
-		};
 
-		this.requestRender();
-	}
+		 * Updates the background cover component (app-cover-bg) with a new configuration.
+
+
+		 *
+
+
+		 * @param {THREE.Material} material - The new material to use
+
+
+		 * @param {number} depth - The new depth value
+
+
+		 * @param {number} uvScale - The new UV scale
+
+
+		 * @param {boolean} catchShadows - Whether to receive shadows
+
+
+		 */
+
+
+		setBackground(material, depth, uvScale, catchShadows) {
+
+
+
+
+
+			// Store globally so it persists if the element re-registers
+
+
+			this.currentBgConfig = {
+
+
+				material,
+
+
+				depth,
+
+
+				uvScale,
+
+
+				catchShadows
+
+
+			};
+
+
+
+
+
+			const data = this.getRegisteredElementByName('app-cover-bg');
+
+
+			if (!data) return;
+
+
+
+
+
+			// Set configuration on the data object so the component can read it
+
+
+			data.bgConfig = this.currentBgConfig;
+
+
+
+
+
+			// FORCE UPDATE: Ensure the component re-evaluates its state immediately
+
+
+			this.updateElementPosition(data.id);
+
+
+
+
+
+			this.requestRender();
+
+
+		}
 
 
 
@@ -936,6 +1008,12 @@ export class ThreeManager {
 		// pack up the data and save it
 		const data = { id, element, group, type, empties, options };
 		this.registeredElements.set(id, data);
+
+		// Apply global background config if this is the background element
+		if (options.name === 'app-cover-bg' && this.currentBgConfig) {
+			data.bgConfig = this.currentBgConfig;
+		}
+
 		if (this.resizeObserver) {
 			this.resizeObserver.observe(element);
 		}

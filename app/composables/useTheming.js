@@ -15,6 +15,7 @@ import { useThree } from './useThree';
 import { DebugTheme } from '../themes/DebugTheme';
 import { GlassThemeOld } from '../themes/GlassThemeOld';
 import { GlassTheme } from '../themes/GlassTheme';
+import { KoiPondTheme } from '../themes/KoiPondTheme';
 
 // our current theme
 const currentTheme = shallowRef(null);
@@ -119,11 +120,12 @@ const setThemeColors = (newTheme) => {
 // add our initial themes
 addTheme('Debug Theme', DebugTheme);
 addTheme('Glass Theme', GlassTheme);
+addTheme('Koi Pond Theme', KoiPondTheme);
 addTheme('Glass Theme Old', GlassThemeOld);
 
 
 // save our initial theme
-currentTheme.value = themes.value[1];
+currentTheme.value = themes.value[2];
 
 /**
  * Exports theme data and utilities for use in components.
