@@ -81,30 +81,63 @@ export class KoiPondTheme {
 		});
 
 		// make our water material
-		this.waterMaterial = new THREE.MeshPhysicalMaterial({
-			color: 0xffffff,
-			emissive: 0x00AABAE,
-			emissiveIntensity: 0.15,
+		this.waterMaterial = new THREE.ShaderMaterial({
+			uniforms: {
+				foamColor: { value: new THREE.Color(0xFFFFFF) },
+				waterColor: { value: new THREE.Color(0x00ABAE) },
+				blendDepth: { value: 30.0 },
+				tDepth: { value: null },
+				cameraNear: { value: 0.1 },
+				cameraFar: { value: 10000.0 }
+			},
+			vertexShader: `
+				varying vec2 vUv;
+				varying vec4 vViewPosition;
+				varying vec4 vScreenPos;
 
-			transmission: 1.0,
+				void main() {
+					vUv = uv;
+					vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+					vViewPosition = mvPosition;
+					vScreenPos = projectionMatrix * mvPosition;
+					gl_Position = vScreenPos;
+				}
+			`,
+			fragmentShader: `
+				#include <packing>
+
+				varying vec2 vUv;
+				varying vec4 vViewPosition;
+				varying vec4 vScreenPos;
+
+				uniform vec3 foamColor;
+				uniform vec3 waterColor;
+				uniform float blendDepth;
+				uniform sampler2D tDepth;
+				uniform float cameraNear;
+				uniform float cameraFar;
+
+				void main() {
+					vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
+					float depthZ = texture2D(tDepth, screenUV).x;
+
+					float sceneViewZ = perspectiveDepthToViewZ(depthZ, cameraNear, cameraFar);
+					float fragmentViewZ = vViewPosition.z;
+
+					// Difference in depth (scene is behind water, so sceneViewZ is more negative than fragmentViewZ)
+					float depthDiff = fragmentViewZ - sceneViewZ;
+
+					// Foam factor
+					float foam = 1.0 - clamp(depthDiff / blendDepth, 0.0, 1.0);
+					foam = smoothstep(0.0, 1.0, foam); // smooth the gradient
+
+					vec3 finalColor = mix(waterColor, foamColor, foam);
+
+					gl_FragColor = vec4(finalColor, 0.85);
+				}
+			`,
 			transparent: true,
-			opacity: 1.0,
-
-			ior: 1.45,
-			thickness: 0.6,
-
-			roughness: 0.05,
-			metalness: 0.1,
-
-			clearcoat: 1.0,
-			clearcoatRoughness: 0.02,
-
-			envMapIntensity: 20.5,
-
-			attenuationColor: new THREE.Color(0xfaffff),
-			attenuationDistance: 0.08,
-
-			side: THREE.DoubleSide
+			depthWrite: false
 		});
 
 		// Prepare reusable materials/geometries
@@ -190,6 +223,7 @@ export class KoiPondTheme {
 		// Create Geometry & water mesh
 		const geometry = new THREE.PlaneGeometry(10, 10);
 		this.waterPlane = new THREE.Mesh(geometry, this.waterMaterial);
+		this.waterPlane.renderOrder = 100; // Render after everything else so we can read depth
 
 		// get reference to the plane that covers the screen (not the background plane)
 		// get the registered element data for the background cover component or GTFO if doesn't exist
@@ -233,6 +267,11 @@ export class KoiPondTheme {
 		// set up our lighting
 		this.buildThemeLighting(manager);
 
+		// Initialize depth target for foam calculations
+		this.depthTarget = new THREE.WebGLRenderTarget(manager.width, manager.height);
+		this.depthTarget.depthBuffer = true;
+		this.depthTarget.depthTexture = new THREE.DepthTexture();
+
 		// build our water layer
 		setTimeout(() => {
 			this.buildWater(manager);
@@ -272,6 +311,12 @@ export class KoiPondTheme {
 		if (this.backLight) {
 			manager.scene.remove(this.backLight);
 			this.backLight = null;
+		}
+
+		// dispose depth target
+		if (this.depthTarget) {
+			this.depthTarget.dispose();
+			this.depthTarget = null;
 		}
 
 		// clear and reset references
@@ -411,6 +456,38 @@ export class KoiPondTheme {
 	 * @param {Number} time - current performance.now() timestamp
 	 */
 	onTick(manager, time) {
+
+		if (!this.waterPlane || !this.isReady || !this.depthTarget)
+			return;
+
+		// 1. Update resolution if it changed
+		const width = manager.width;
+		const height = manager.height;
+		const pixelRatio = manager.renderer.getPixelRatio();
+		const dWidth = Math.floor(width * pixelRatio);
+		const dHeight = Math.floor(height * pixelRatio);
+
+		if (this.depthTarget.width !== dWidth || this.depthTarget.height !== dHeight) {
+			this.depthTarget.setSize(dWidth, dHeight);
+		}
+
+		// 2. Perform depth pass
+		// Hide water so it doesn't write to its own depth buffer during the capture
+		const wasVisible = this.waterPlane.visible;
+		this.waterPlane.visible = false;
+
+		// Render the scene to our depth target
+		manager.renderer.setRenderTarget(this.depthTarget);
+		manager.renderer.render(manager.scene, manager.camera);
+		manager.renderer.setRenderTarget(null);
+
+		// Restore visibility
+		this.waterPlane.visible = wasVisible;
+
+		// 3. Update Uniforms
+		this.waterMaterial.uniforms.tDepth.value = this.depthTarget.depthTexture;
+		this.waterMaterial.uniforms.cameraNear.value = manager.camera.near;
+		this.waterMaterial.uniforms.cameraFar.value = manager.camera.far;
 
 	}
 

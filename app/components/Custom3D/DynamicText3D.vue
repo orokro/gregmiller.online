@@ -98,7 +98,8 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 		clearcoatRoughness: 0.02,
 		envMapIntensity: 2.5,
 		attenuationDistance: 0.8,
-		side: THREE.DoubleSide
+		side: THREE.DoubleSide,
+		depthWrite: true
 	});
 
 	// 2. Load & Cache Letters
