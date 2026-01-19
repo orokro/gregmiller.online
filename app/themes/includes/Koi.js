@@ -9,18 +9,30 @@
 import * as THREE from 'three';
 import { AxesHelper } from 'three';
 
+// used for our koi states
+const KOI_STATE = {
+	IDLE: 'idle',
+	SWIMMING: 'swimming',
+	SURFACING: 'surfacing'
+};
+
 // main money
 export class Koi extends THREE.Object3D {
 
 	/**
 	 * Constructor
 	 *
+	 * @param {KoiSystem} koiSystem - the KoiSystem instance to which this Koi belongs
 	 * @param {ThreeManager} manager - the ThreeManager instance to which this Koi belongs
 	 * @param {Object} options - Configuration options for the Koi
 	 */
-	constructor(manager, options = {}) {
+	constructor(koiSystem, manager, options = {}) {
 
 		super();
+
+		// save reference to our koi system and manager
+		this.koiSystem = koiSystem;
+		this.manager = manager;
 
 		// Store options and state
 		this.options = options;
@@ -30,7 +42,15 @@ export class Koi extends THREE.Object3D {
 		this.axisHelper = new THREE.AxesHelper(100);
 		this.koiTarget = new THREE.Group();
 		this.koiTarget.add(this.axisHelper);
-		this.add(this.koiTarget);
+		this.koiSystem.backgroundCenter.add(this.koiTarget);
+
+		// use these knobs to tweak the animations for the koi states
+		this.swimAnimationSpeed = 1;
+		this.idleAnimationSpeed = 0.5;
+		this.surfaceAnimationSpeed = 0.75;
+
+		// our initial state is idle
+		this.state = KOI_STATE.IDLE;
 
 		// load our koi model and add it to this object
 		this._loadModel(manager);
@@ -46,7 +66,7 @@ export class Koi extends THREE.Object3D {
 	destroy() {
 
 		// Clean up any resources, event listeners, etc. here
-		this.remove(this.koiTarget);
+		this.koiSystem.backgroundCenter.remove(this.koiTarget);
 
 		// Clean up target
 		this.axisHelper.geometry.dispose();

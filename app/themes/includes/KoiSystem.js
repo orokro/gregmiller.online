@@ -29,6 +29,9 @@ export class KoiSystem {
 		const data = manager.getRegisteredElementByName('app-cover-bg');
 		this.backgroundCenter = data.empties.center;
 
+		// get the view ports corner/center empties for positioning
+		this.viewportRefs = manager.getRegisteredElementByName('main_frame_ref').empties;
+
 		// for computing delta time in the update loop
 		this.lastTime = 0;
 
@@ -79,7 +82,7 @@ export class KoiSystem {
 	addKoi(x, y) {
 
 		// Create a new Koi instance and add it to the scene
-		const newKoi = new Koi(this.manager);
+		const newKoi = new Koi(this, this.manager);
 		this.koi.push(newKoi);
 		this.backgroundCenter.add(newKoi);
 
