@@ -35,6 +35,11 @@ export class KoiSystem {
 		// for computing delta time in the update loop
 		this.lastTime = 0;
 
+		// scratch
+		this._vTL = new THREE.Vector3();
+		this._vBR = new THREE.Vector3();
+		this._tmp = new THREE.Vector3();
+
 		// Initialize the system
 		this.init();
 
@@ -48,9 +53,7 @@ export class KoiSystem {
 	destroy(){
 
 		// remove koi / target from scene
-		this.koi.forEach(koi => this.backgroundCenter.scene.remove(koi));
-
-		// Clean up koi
+		this.koi.forEach(koi => this.backgroundCenter.remove(koi));
 		this.koi.forEach(koi => koi.destroy());
 		this.koi = [];
 	}
@@ -92,17 +95,62 @@ export class KoiSystem {
 
 
 	/**
+	 * Returns viewport bounds, converted into backgroundCenter-local space.
+	 */
+	getViewportBoundsInBackground(margin = 80) {
+
+		if (!this.viewportRefs || !this.viewportRefs.tl || !this.viewportRefs.br)
+			return { minX: -500, maxX: 500, minY: -500, maxY: 500 };
+
+		// make sure matrices are current
+		this.manager.scene.updateMatrixWorld(true);
+
+		this.viewportRefs.tl.getWorldPosition(this._vTL);
+		this.viewportRefs.br.getWorldPosition(this._vBR);
+
+		// convert world -> background local
+		this.backgroundCenter.worldToLocal(this._vTL);
+		this.backgroundCenter.worldToLocal(this._vBR);
+
+		const minX = Math.min(this._vTL.x, this._vBR.x) + margin;
+		const maxX = Math.max(this._vTL.x, this._vBR.x) - margin;
+		const minY = Math.min(this._vTL.y, this._vBR.y) + margin;
+		const maxY = Math.max(this._vTL.y, this._vBR.y) - margin;
+
+		return { minX, maxX, minY, maxY };
+	}
+
+
+	/**
+	 * Gets a random point within the viewport bounds, converted into backgroundCenter-local space.
+	 *
+	 * @param {Number} margin - how much space to leave from the edges of the viewport bounds when generating a random point
+	 */
+	getRandomViewportPointInBackground(margin = 80) {
+
+		const b = this.getViewportBoundsInBackground(margin);
+		return new THREE.Vector3(
+			THREE.MathUtils.lerp(b.minX, b.maxX, Math.random()),
+			THREE.MathUtils.lerp(b.minY, b.maxY, Math.random()),
+			-150
+		);
+	}
+
+
+	/**
 	 * Update our koi
 	 * @param {Number} time - The current time, passed from the ThreeManager's animation loop
 	 */
 	update(time){
 
-		// Compute delta time
-		let deltaTime = this.lastTime==0 ? 0 : time - this.lastTime;
+		// ms -> seconds
+		let dt = this.lastTime === 0 ? 0 : (time - this.lastTime) / 1000;
 		this.lastTime = time;
 
-		// update all our koi
-		this.koi.forEach(koi => koi.update(deltaTime));
+		// clamp to avoid huge jumps (tab switch, hitch, etc)
+		dt = Math.min(dt, 0.05);
+
+		this.koi.forEach(koi => koi.update(dt));
 	}
 
 }

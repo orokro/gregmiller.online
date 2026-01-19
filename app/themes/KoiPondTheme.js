@@ -474,6 +474,10 @@ export class KoiPondTheme {
 		if (!this.waterPlane || !this.isReady || !this.depthTarget || !this.diffuseTarget)
 			return;
 
+		if (this.koiSystem) {
+			this.koiSystem.update(time);
+		}
+
 		// 1. Update resolution if it changed
 		const width = manager.width;
 		const height = manager.height;
