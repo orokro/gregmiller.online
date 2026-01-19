@@ -37,6 +37,9 @@ export class KoiPondTheme {
 		this.fillLight = null;
 		this.backLight = null;
 
+		// reference to our water plane once it's created
+		this.waterPlane = null;
+
 		// build our materials once on load
 		this.buildMaterials();
 
@@ -50,8 +53,35 @@ export class KoiPondTheme {
 	 */
 	buildMaterials() {
 
-		// make ur glass material
+		// make our glass material
 		this.glassMaterial = new THREE.MeshPhysicalMaterial({
+			color: 0xffffff,
+			emissive: 0x00AABAE,
+			emissiveIntensity: 0.15,
+
+			transmission: 1.0,
+			transparent: true,
+			opacity: 1.0,
+
+			ior: 1.45,
+			thickness: 0.6,
+
+			roughness: 0.05,
+			metalness: 0.1,
+
+			clearcoat: 1.0,
+			clearcoatRoughness: 0.02,
+
+			envMapIntensity: 20.5,
+
+			attenuationColor: new THREE.Color(0xfaffff),
+			attenuationDistance: 0.08,
+
+			side: THREE.DoubleSide
+		});
+
+		// make our water material
+		this.waterMaterial = new THREE.MeshPhysicalMaterial({
 			color: 0xffffff,
 			emissive: 0x00AABAE,
 			emissiveIntensity: 0.15,
@@ -151,6 +181,42 @@ export class KoiPondTheme {
 
 
 	/**
+	 * Builds the animated water plane for the Koi pond
+	 *
+	 * @param {ThreeManager} manager - reference to the ThreeManager instance
+	 */
+	buildWater(manager) {
+
+		// Create Geometry & water mesh
+		const geometry = new THREE.PlaneGeometry(10, 10);
+		this.waterPlane = new THREE.Mesh(geometry, this.waterMaterial);
+
+		// get reference to the plane that covers the screen (not the background plane)
+		// get the registered element data for the background cover component or GTFO if doesn't exist
+		const data = manager.getRegisteredElementByName('main_frame_ref');
+		if (!data)
+			return;
+
+		// add the plane to our center empty
+		data.empties.center.add(this.waterPlane);
+
+		// rotate it flat like a pond, and position it deeper into the scene
+		// this.waterPlane.rotation.x = -Math.PI / 2;
+		this.waterPlane.position.x = 0;
+		this.waterPlane.position.y = 0;
+		this.waterPlane.position.z = -70;
+
+		// scale the plane big enough to cover the whole screen, even on large monitors
+		const scale = 2000;
+		this.waterPlane.scale.set(scale, scale, 10);
+
+		// console.clear();
+		// console.log(data);
+
+	}
+
+
+	/**
 	 * Called by ThemeManager when the theme is initialized. Sets up environment, lighting, and starts loading the model.
 	 *
 	 * @param {ThreeManager} manager - The ThreeManager Instance
@@ -166,6 +232,11 @@ export class KoiPondTheme {
 
 		// set up our lighting
 		this.buildThemeLighting(manager);
+
+		// build our water layer
+		setTimeout(() => {
+			this.buildWater(manager);
+		}, 500);
 
 		// load our glass slice model used for boxes
 		this._loadPromise = this._loadModel(manager);
