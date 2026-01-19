@@ -102,14 +102,14 @@ export class KoiPondTheme {
 						waveIntensity2: { value: 6.0 },
 						waveSpeed2: { value: 0.0007 },
 
-						distortIntensity: { value: 15.0 },
+						distortIntensity: { value: 20.0 },
 						waterDirX: { value: 1.0 },
 						waterDirY: { value: 1.0 },
+						scrollY: { value: 0.0 },
 						envMap: { value: null },
 						envMapIntensity: { value: 0.1 },
 						sunColor: { value: new THREE.Color(0xAAAAAA) },
-						sunDirection: { value: new THREE.Vector3(-300, 500, 500).normalize() }
-					},
+											},
 					vertexShader: `
 						varying vec2 vUv;
 						varying vec4 vViewPosition;
@@ -152,11 +152,19 @@ export class KoiPondTheme {
 						uniform float waveIntensity2;
 						uniform float waveSpeed2;
 
-						uniform float distortIntensity;
-						uniform float waterDirX;
-						uniform float waterDirY;
+										uniform float distortIntensity;
 
-						uniform sampler2D envMap;
+										uniform float waterDirX;
+
+										uniform float waterDirY;
+
+										uniform float scrollY;
+
+
+
+										uniform sampler2D envMap;
+
+
 						uniform float envMapIntensity;
 						uniform vec3 sunColor;
 						uniform vec3 sunDirection;
@@ -211,18 +219,21 @@ export class KoiPondTheme {
 							return getWave1(p) + getWave2(p);
 						}
 
-						void main() {
-							vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
+										void main() {
+											vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
 
-							// Calculate normals from combined wave gradient
-							float delta = 0.5; // Larger delta for smoother derivatives
-							float w = getCombinedWave(vWorldPosition.xy);
-							float wX = getCombinedWave(vWorldPosition.xy + vec2(delta, 0.0));
-							float wY = getCombinedWave(vWorldPosition.xy + vec2(0.0, delta));
+											// Offset world position by scroll to lock waves to the content
+											vec2 wavePos = vWorldPosition.xy;
+											wavePos.y -= scrollY;
 
-							vec3 normal = normalize(vec3(w - wX, w - wY, delta));
+											// Calculate normals from combined wave gradient
+											float delta = 0.5; // Larger delta for smoother derivatives
+											float w = getCombinedWave(wavePos);
+											float wX = getCombinedWave(wavePos + vec2(delta, 0.0));
+											float wY = getCombinedWave(wavePos + vec2(0.0, delta));
 
-							// Distort screen UV for fake refraction
+											vec3 normal = normalize(vec3(w - wX, w - wY, delta));
+													// Distort screen UV for fake refraction
 							vec2 distortedUV = screenUV + normal.xy * (distortIntensity / 1000.0);
 
 							// Sample depth and color with distortion
@@ -646,6 +657,7 @@ export class KoiPondTheme {
 		this.waterMaterial.uniforms.cameraNear.value = manager.camera.near;
 		this.waterMaterial.uniforms.cameraFar.value = manager.camera.far;
 		this.waterMaterial.uniforms.time.value = time;
+		this.waterMaterial.uniforms.scrollY.value = manager.scrollY;
 
 		// Update envMap if it's set in the scene
 		if (manager.scene.environment && !this.waterMaterial.uniforms.envMap.value) {
