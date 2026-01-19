@@ -80,131 +80,207 @@ export class KoiPondTheme {
 			side: THREE.DoubleSide
 		});
 
-		// make our water material
-		this.waterMaterial = new THREE.ShaderMaterial({
-			uniforms: {
-				foamColor: { value: new THREE.Color(0xEFEFEF) },
-				waterColor: { value: new THREE.Color(0x00ABAE) },
-				blendDepth: { value: 30.0 },
-				tDepth: { value: null },
-				tDiffuse: { value: null },
-				cameraNear: { value: 0.1 },
-				cameraFar: { value: 10000.0 },
-				time: { value: 0 },
-				waveSize: { value: 0.00025 },
-				waveIntensity: { value: 12.5 },
-				waveSpeed: { value: 0.001 },
-				distortIntensity: { value: 15.0 },
-				envMap: { value: null },
-				envMapIntensity: { value: 0.5 },
-				sunColor: { value: new THREE.Color(0xffffff) },
-				sunDirection: { value: new THREE.Vector3(-300, 500, 500).normalize() }
-			},
-			vertexShader: `
-				varying vec2 vUv;
-				varying vec4 vViewPosition;
-				varying vec4 vScreenPos;
-				varying vec3 vWorldPosition;
+		        // make our water material
+				this.waterMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+						foamColor: { value: new THREE.Color(0xEFEFEF) },
+						waterColor: { value: new THREE.Color(0x00ABAE) },
+						blendDepth: { value: 30.0 },
+						tDepth: { value: null },
+						tDiffuse: { value: null },
+						cameraNear: { value: 0.1 },
+						cameraFar: { value: 10000.0 },
+						time: { value: 0 },
 
-				void main() {
-					vUv = uv;
-					vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-					vWorldPosition = worldPosition.xyz;
-					vec4 mvPosition = viewMatrix * worldPosition;
-					vViewPosition = mvPosition;
-					vScreenPos = projectionMatrix * mvPosition;
-					gl_Position = vScreenPos;
-				}
-			`,
-			fragmentShader: `
-				#include <packing>
+						// Primary Wave
+						waveSize: { value: 0.00015 },
+						waveIntensity: { value: 2 }, //12.5 },
+						waveSpeed: { value: 0.001 },
 
-				varying vec2 vUv;
-				varying vec4 vViewPosition;
-				varying vec4 vScreenPos;
-				varying vec3 vWorldPosition;
+						// Secondary Wave (Break up pattern)
+						waveSize2: { value: 0.00002 },
+						waveIntensity2: { value: 6.0 },
+						waveSpeed2: { value: 0.0007 },
 
-				uniform vec3 foamColor;
-				uniform vec3 waterColor;
-				uniform float blendDepth;
-				uniform sampler2D tDepth;
-				uniform sampler2D tDiffuse;
-				uniform float cameraNear;
-				uniform float cameraFar;
+						distortIntensity: { value: 15.0 },
+						waterDirX: { value: 1.0 },
+						waterDirY: { value: 1.0 },
+						envMap: { value: null },
+						envMapIntensity: { value: 0.1 },
+						sunColor: { value: new THREE.Color(0xAAAAAA) },
+						sunDirection: { value: new THREE.Vector3(-300, 500, 500).normalize() }
+					},
+					vertexShader: `
+						varying vec2 vUv;
+						varying vec4 vViewPosition;
+						varying vec4 vScreenPos;
+						varying vec3 vWorldPosition;
 
-				uniform float time;
-				uniform float waveSize;
-				uniform float waveIntensity;
-				uniform float waveSpeed;
-				uniform float distortIntensity;
+						void main() {
+							vUv = uv;
+							vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+							vWorldPosition = worldPosition.xyz;
+							vec4 mvPosition = viewMatrix * worldPosition;
+							vViewPosition = mvPosition;
+							vScreenPos = projectionMatrix * mvPosition;
+							gl_Position = vScreenPos;
+						}
+					`,
+					fragmentShader: `
+						#include <packing>
 
-				uniform samplerCube envMap;
-				uniform float envMapIntensity;
-				uniform vec3 sunColor;
-				uniform vec3 sunDirection;
+						varying vec2 vUv;
+						varying vec4 vViewPosition;
+						varying vec4 vScreenPos;
+						varying vec3 vWorldPosition;
 
-				// Simple noise function for ripples
-				float getWave(vec2 p) {
-					float t = time * waveSpeed;
-					float w = sin(p.x * 100.0 * waveSize + t) * 0.5;
-					w += sin(p.y * 120.0 * waveSize - t * 0.8) * 0.5;
-					w += sin((p.x + p.y) * 80.0 * waveSize + t * 1.2) * 0.5;
-					return w * waveIntensity;
-				}
+						uniform vec3 foamColor;
+						uniform vec3 waterColor;
+						uniform float blendDepth;
+						uniform sampler2D tDepth;
+						uniform sampler2D tDiffuse;
+						uniform float cameraNear;
+						uniform float cameraFar;
 
-				void main() {
-					vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
+						uniform float time;
 
-					// Calculate normals from wave gradient
-					float delta = 0.1;
-					float w = getWave(vWorldPosition.xy);
-					float wX = getWave(vWorldPosition.xy + vec2(delta, 0.0));
-					float wY = getWave(vWorldPosition.xy + vec2(0.0, delta));
+						uniform float waveSize;
+						uniform float waveIntensity;
+						uniform float waveSpeed;
 
-					vec3 normal = normalize(vec3(w - wX, w - wY, delta));
+						uniform float waveSize2;
+						uniform float waveIntensity2;
+						uniform float waveSpeed2;
 
-					// Distort screen UV for fake refraction
-					vec2 distortedUV = screenUV + normal.xy * (distortIntensity / 1000.0);
+						uniform float distortIntensity;
+						uniform float waterDirX;
+						uniform float waterDirY;
 
-					// Sample depth and color with distortion
-					float depthZ = texture2D(tDepth, distortedUV).x;
-					vec3 sceneColor = texture2D(tDiffuse, distortedUV).rgb;
+						uniform sampler2D envMap;
+						uniform float envMapIntensity;
+						uniform vec3 sunColor;
+						uniform vec3 sunDirection;
 
-					float sceneViewZ = perspectiveDepthToViewZ(depthZ, cameraNear, cameraFar);
-					float fragmentViewZ = vViewPosition.z;
+						// Equirectangular mapping function
+						vec2 equirectUv(vec3 v) {
+							vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+							uv *= vec2(0.15915494309, 0.31830988618); // 1/(2*PI), 1/PI
+							uv += 0.5;
+							return uv;
+						}
 
-					// Difference in depth
-					float depthDiff = fragmentViewZ - sceneViewZ;
+						// Primary wave function
+						float getWave1(vec2 p) {
+							vec2 flow = vec2(waterDirX, waterDirY) * time * waveSpeed;
 
-					// Foam factor
-					float foam = 1.0 - clamp(depthDiff / blendDepth, 0.0, 1.0);
-					foam = smoothstep(0.0, 1.0, foam);
+							// Rotate coords slightly to break alignment
+							float c = cos(0.2);
+							float s = sin(0.2);
+							vec2 pRot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
 
-					// Lighting
-					vec3 viewDir = normalize(-vViewPosition.xyz);
-					vec3 worldNormal = normalize(normal);
+							vec2 p1 = pRot * 100.0 * waveSize + flow;
+							vec2 p2 = pRot * 120.0 * waveSize - flow * 0.8;
+							vec2 p3 = (pRot.x + pRot.y) * 80.0 * waveSize + flow * 1.2;
 
-					// Specular
-					vec3 halfDir = normalize(sunDirection + viewDir);
-					float spec = pow(max(dot(worldNormal, halfDir), 0.0), 128.0);
-					vec3 specular = sunColor * spec;
+							float w = sin(p1.x + p1.y) * 0.5;
+							w += sin(p2.x - p2.y) * 0.5;
+							w += sin(p3.x + p3.y) * 0.5;
+							return w * waveIntensity;
+						}
 
-					// Environment Reflection
-					vec3 reflectDir = reflect(-viewDir, worldNormal);
-					vec3 reflection = textureCube(envMap, reflectDir).rgb * envMapIntensity;
+						// Secondary wave function (different scale/speed)
+						float getWave2(vec2 p) {
+							vec2 flow = vec2(waterDirX, waterDirY) * time * waveSpeed2;
 
-					// Mix final color
-					vec3 baseWater = mix(sceneColor * waterColor * 1.5, waterColor, 0.5);
-					vec3 finalColor = mix(baseWater, foamColor, foam);
-					finalColor += specular + reflection * 0.2;
+							// Different rotation
+							float c = cos(-0.5);
+							float s = sin(-0.5);
+							vec2 pRot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
 
-					gl_FragColor = vec4(finalColor, 0.9);
-				}
-			`,
-			transparent: true,
-			depthWrite: false
-		});
+							vec2 p1 = pRot * 150.0 * waveSize2 + flow * 1.5;
+							vec2 p2 = pRot * 90.0 * waveSize2 - flow * 0.5;
 
+							float w = sin(p1.x) * 0.5;
+							w += sin(p2.y) * 0.5;
+							w += sin((p1.x + p2.y) * 0.7) * 0.5;
+							return w * waveIntensity2;
+						}
+
+						// Combined wave function
+						float getCombinedWave(vec2 p) {
+							return getWave1(p) + getWave2(p);
+						}
+
+						void main() {
+							vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
+
+							// Calculate normals from combined wave gradient
+							float delta = 0.5; // Larger delta for smoother derivatives
+							float w = getCombinedWave(vWorldPosition.xy);
+							float wX = getCombinedWave(vWorldPosition.xy + vec2(delta, 0.0));
+							float wY = getCombinedWave(vWorldPosition.xy + vec2(0.0, delta));
+
+							vec3 normal = normalize(vec3(w - wX, w - wY, delta));
+
+							// Distort screen UV for fake refraction
+							vec2 distortedUV = screenUV + normal.xy * (distortIntensity / 1000.0);
+
+							// Sample depth and color with distortion
+							float depthZ = texture2D(tDepth, distortedUV).x;
+							vec3 sceneColor = texture2D(tDiffuse, distortedUV).rgb;
+
+							float sceneViewZ = perspectiveDepthToViewZ(depthZ, cameraNear, cameraFar);
+							float fragmentViewZ = vViewPosition.z;
+
+							// Difference in depth
+							float depthDiff = fragmentViewZ - sceneViewZ;
+
+							// Foam factor
+							float foam = 1.0 - clamp(depthDiff / blendDepth, 0.0, 1.0);
+							foam = smoothstep(0.0, 1.0, foam);
+
+							// Lighting
+							vec3 viewDir = normalize(-vViewPosition.xyz);
+							vec3 worldNormal = normalize(normal);
+							vec3 worldViewDir = normalize(cameraPosition - vWorldPosition);
+
+							// Fresnel effect
+							float fresnel = pow(1.0 - max(dot(worldNormal, worldViewDir), 0.0), 4.0);
+							fresnel = clamp(fresnel, 0.0, 1.0);
+
+							// Specular (Sun)
+							vec3 halfDir = normalize(sunDirection + worldViewDir);
+							float spec = pow(max(dot(worldNormal, halfDir), 0.0), 64.0); // Softer specular
+							vec3 specular = sunColor * spec;
+
+							// Environment Reflection (Equirectangular)
+							vec3 reflectDir = reflect(-worldViewDir, worldNormal);
+							vec2 envUv = equirectUv(reflectDir);
+
+							// Offset env UVs slightly by wave normal to "wobble" the reflection
+							envUv += normal.xy * 0.05;
+
+							vec3 reflection = texture2D(envMap, envUv).rgb * envMapIntensity;
+
+							// Mix final color
+							// Darken base water slightly for better contrast with foam/spec
+							vec3 baseWater = mix(sceneColor * waterColor * 1.2, waterColor * 0.8, 0.6);
+
+							// Apply reflection based on fresnel
+							vec3 finalColor = mix(baseWater, reflection, fresnel * 0.9 + 0.05);
+
+							// Add foam
+							finalColor = mix(finalColor, foamColor, foam);
+
+							// Add specular
+							finalColor += specular;
+
+							gl_FragColor = vec4(finalColor, 0.92);
+						}
+					`,
+					transparent: true,
+					depthWrite: false
+				});
 		// Prepare reusable materials/geometries
 		this.boxMaterial = new THREE.MeshBasicMaterial({
 			color: 0xff0000,
