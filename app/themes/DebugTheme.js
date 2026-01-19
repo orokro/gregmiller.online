@@ -34,22 +34,16 @@ export class DebugTheme {
 		this.customLineMaterial = null;
 		this.customEdgesGeometry = null;
 		this.customDepth = 40;
+
+		// build our materials once on load
+		this.buildMaterials();
 	}
 
 
 	/**
-	 * Called when theme is loaded.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * Builds materials used by the theme, such as the glass material. This is called once during initialization.
 	 */
-	init(manager) {
-
-		manager.setFrameMode('lazy');
-
-		// 1. Load HDR Environment (High exposure for brightness)
-		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
-
-		// Set global background color
-		manager.scene.background = new THREE.Color(0x000000);
+	buildMaterials() {
 
 		// Prepare reusable materials/geometries
 		this.boxMaterial = new THREE.MeshBasicMaterial({
@@ -57,19 +51,57 @@ export class DebugTheme {
 			wireframe: true
 		});
 
-		this.cornerGeometry = new THREE.BoxGeometry(10, 10, 10); // 10px cubes
-
-		// CustomContainer3D (different styling so we can visually confirm the pipeline)
+		// box line material
 		this.customLineMaterial = new THREE.LineBasicMaterial({
 			color: 0x00ffff
 		});
+	}
+
+
+	/**
+	 * Called by ThemeManager when the theme is initialized. Sets up environment, lighting, and starts loading the model.
+	 *
+	 * @param {ThreeManager} manager - The ThreeManager Instance
+	 */
+	init(manager) {
+
+		// this theme doesn't need to be rendered every frame, so we can set the frame mode to 'lazy'
+		// to only render when necessary (like on scroll/resize/reflow or when registered elements update)
+		manager.setFrameMode('lazy');
+
+		// set the background texture for our built-in bg plane
+		const bgTexture = manager.loadPBR('bg_graph_paper', true, false, false, {});
+		manager.setBackground(bgTexture, 100, 1, true);
+
+		// set up our lighting
+		this.buildThemeLighting(manager);
+
+
+		// make box to highlight corners
+		this.cornerGeometry = new THREE.BoxGeometry(10, 10, 10); // 10px cubes
+
+		// CustomContainer3D (different styling so we can visually confirm the pipeline)
 		this.customEdgesGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 	}
 
 
 	/**
-	 * Called when theme is unloaded.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
+	 * Builds the lighting setup for the theme, including environment maps and scene lights. Called during initialization.
+	 *
+	 * @param {ThreeManager} manager - ThreeManager instance
+	 */
+	buildThemeLighting(manager) {
+
+		// 1. Load HDR Environment (High exposure for brightness)
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.0);
+
+	}
+
+
+	/**
+	 * Cleans up theme before another one is loaded
+	 *
+	 * @param {ThreeManager} manager - ThreeManager instance reference
 	 */
 	destroy(manager) {
 
@@ -89,20 +121,10 @@ export class DebugTheme {
 
 
 	/**
-	 * Called per frame (only if manager.frameMode === 'active').
-	 * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {number} time - The current performance.now() timestamp.
-	 */
-	onTick(manager, time) {
-
-		// Nothing to animate in debug mode
-	}
-
-
-	/**
-	 * Called when a <Container3D> is registered or theme is switched.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {object} data - The element data object { id, empties, group, ... }.
+	 * Called by the ThreeManager when a box needs to be built
+	 *
+	 * @param {ThreeManager} manager - reference to our ThreeManager instance
+	 * @param {Object} data - info about the box we're building from the ThreeManagers registered element system
 	 */
 	buildBox(manager, data) {
 
@@ -122,10 +144,11 @@ export class DebugTheme {
 
 
 	/**
-	 * Called on Resize/Scroll/Reflow to update content dimensions.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {object} data - The element data object.
-	 * @param {DOMRect} rect - The bounding client rect of the DOM element.
+	 * Updates a box when the themes scroll/resize/reflow events occur and the box's dimensions may have changed
+	 *
+	 * @param {ThreeManager} manager - ThreeManager reference
+	 * @param {Object} data - info about the box we're updating from the ThreeManagers registered element system
+	 * @param {Object} rect - info about the size and position of the element
 	 */
 	updateBox(manager, data, rect) {
 
@@ -149,10 +172,10 @@ export class DebugTheme {
 
 
 	/**
-	 * Called when a <ContainerCustom3D> is registered or theme is switched.
-	 * This is OPTIONAL for themes to implement.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {object} data - The element data object { id, empties, group, ... }.
+	 * Called by the ThreeManager when a custom box needs to be built
+	 *
+	 * @param {ThreeManager} manager - reference to our ThreeManager instance
+	 * @param {Object} data - info about the custom box we're building from the ThreeManagers registered element system
 	 */
 	buildCustomBox(manager, data) {
 
@@ -164,11 +187,11 @@ export class DebugTheme {
 
 
 	/**
-	 * Called on Resize/Scroll/Reflow to update CustomContainer dimensions.
-	 * This is OPTIONAL for themes to implement.
-	 * * @param {ThreeManager} manager - The ThreeManager instance.
-	 * @param {object} data - The element data object.
-	 * @param {DOMRect} rect - The bounding client rect of the DOM element.
+	 * Updates a custom box when the themes scroll/resize/reflow events occur and the box's dimensions may have changed
+	 *
+	 * @param {ThreeManager} manager - ThreeManager reference
+	 * @param {Object} data - info about the custom box we're updating from the ThreeManagers registered element system
+	 * @param {Object} rect - info about the size and position of the element
 	 */
 	updateCustomBox(manager, data, rect) {
 
@@ -182,5 +205,17 @@ export class DebugTheme {
 			lines.scale.set(rect.width, rect.height, depth);
 			lines.position.z = -depth / 2;
 		}
+	}
+
+
+	/**
+	 * Called per frame (only if manager.frameMode === 'active').
+	 *
+	 * @param {ThreeManager} manager - The ThreeManager instance.
+	 * @param {number} time - The current performance.now() timestamp.
+	 */
+	onTick(manager, time) {
+
+		// Nothing to animate in debug mode
 	}
 }

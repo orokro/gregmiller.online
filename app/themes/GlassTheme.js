@@ -384,6 +384,7 @@ export class GlassTheme {
 
 	/**
 	 * Called by the ThreeManager when a box needs to be built
+	 *
 	 * @param {ThreeManager} manager - reference to our ThreeManager instance
 	 * @param {Object} data - info about the box we're building from the ThreeManagers registered element system
 	 */
@@ -408,6 +409,7 @@ export class GlassTheme {
 
 	/**
 	 * Called by the ThreeManager when a custom box needs to be built
+	 *
 	 * @param {ThreeManager} manager - reference to our ThreeManager instance
 	 * @param {Object} data - info about the custom box we're building from the ThreeManagers registered element system
 	 */
