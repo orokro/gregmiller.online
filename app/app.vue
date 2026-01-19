@@ -287,6 +287,8 @@ body {
 		padding: 2rem;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
+		opacity: 0;
+
 		&.text {
 			text-align: left !important;
 			color: var(--color-text);

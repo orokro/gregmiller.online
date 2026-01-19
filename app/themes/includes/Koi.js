@@ -54,7 +54,7 @@ export class Koi extends THREE.Object3D {
 		this.minCreepSpeed = options.minCreepSpeed ?? rand(10, 16);
 
 		this.speed = 0;
-		this.yaw = 0;		// we store heading here (applied to rotation.y)
+		this.yaw = 0;		// we store heading here (applied to rotation.z)
 		this.yawVel = 0;
 
 		this.target = new THREE.Vector3(0, 0, -150);
@@ -77,6 +77,9 @@ export class Koi extends THREE.Object3D {
 		this.idleTurnT = 0;
 		this.idleTurnDuration = rand(3.5, 7.0);
 
+		// visual forward offset (matches the child rotation you apply to the GLB)
+		this.headingOffset = 0; // Math.PI / 2;
+
 		// target debug
 		this.axisHelper = new THREE.AxesHelper(100);
 		this.koiTarget = new THREE.Group();
@@ -92,8 +95,13 @@ export class Koi extends THREE.Object3D {
 
 		// start with a gentle random heading
 		this.yaw = rand(0, TAU);
-		this.rotation.y = this.yaw;
+
+		// IMPORTANT: yaw is around Z in XY movement plane
+		this.rotation.z = this.yaw;
 		this.rotation.x = 0;
+
+		// IMPORTANT: apply yaw first, then pitch, so pitch is local to fish heading
+		this.rotation.order = 'ZXY';
 	}
 
 	destroy() {
@@ -185,9 +193,8 @@ export class Koi extends THREE.Object3D {
 	_forward2D() {
 		// We treat yaw as “heading” and move in XY plane.
 		// Forward is +Y at yaw = 0.
-		const s = Math.sin(this.yaw);
-		const c = Math.cos(this.yaw);
-		return { x: s, y: c };
+		const a = this.yaw + this.headingOffset; // <<< IMPORTANT
+		return { x: Math.sin(a), y: Math.cos(a) };
 	}
 
 	_updateSteering(dt, desiredYaw) {
@@ -207,7 +214,7 @@ export class Koi extends THREE.Object3D {
 		this.yaw = (this.yaw % TAU + TAU) % TAU;
 
 		// apply to object (per your note: only x/y rotations)
-		this.rotation.y = this.yaw;
+		this.rotation.z = this.yaw;
 	}
 
 	_updateSpeed(dt, desiredSpeed) {
@@ -224,7 +231,7 @@ export class Koi extends THREE.Object3D {
 		const dy = this.target.y - this.position.y;
 		const dist = Math.hypot(dx, dy);
 
-		const desiredYaw = Math.atan2(dx, dy); // forward is +Y
+		const desiredYaw = Math.atan2(dx, dy) - this.headingOffset;
 		this._updateSteering(dt, desiredYaw);
 
 		let arrive01 = 1;

@@ -65,11 +65,12 @@ export class KoiSystem {
 	init() {
 
 		// add some koi to the pond
-		for(let i = 0; i < 3; i++) {
+		const count = 1;
+		for(let i = 0; i < count; i++) {
 
 			this.addKoi(
-				Math.random() * 200 - 100, // x between -100 and 100
-				Math.random() * 200 - 100  // y between -100 and 100
+				Math.random() * 1500 - 750,
+				Math.random() * 1500 - 750
 			);
 
 		}// next i
