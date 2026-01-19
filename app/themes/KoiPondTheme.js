@@ -83,21 +83,34 @@ export class KoiPondTheme {
 		// make our water material
 		this.waterMaterial = new THREE.ShaderMaterial({
 			uniforms: {
-				foamColor: { value: new THREE.Color(0xFFFFFF) },
+				foamColor: { value: new THREE.Color(0xEFEFEF) },
 				waterColor: { value: new THREE.Color(0x00ABAE) },
 				blendDepth: { value: 30.0 },
 				tDepth: { value: null },
+				tDiffuse: { value: null },
 				cameraNear: { value: 0.1 },
-				cameraFar: { value: 10000.0 }
+				cameraFar: { value: 10000.0 },
+				time: { value: 0 },
+				waveSize: { value: 0.00025 },
+				waveIntensity: { value: 12.5 },
+				waveSpeed: { value: 0.001 },
+				distortIntensity: { value: 15.0 },
+				envMap: { value: null },
+				envMapIntensity: { value: 0.5 },
+				sunColor: { value: new THREE.Color(0xffffff) },
+				sunDirection: { value: new THREE.Vector3(-300, 500, 500).normalize() }
 			},
 			vertexShader: `
 				varying vec2 vUv;
 				varying vec4 vViewPosition;
 				varying vec4 vScreenPos;
+				varying vec3 vWorldPosition;
 
 				void main() {
 					vUv = uv;
-					vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+					vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+					vWorldPosition = worldPosition.xyz;
+					vec4 mvPosition = viewMatrix * worldPosition;
 					vViewPosition = mvPosition;
 					vScreenPos = projectionMatrix * mvPosition;
 					gl_Position = vScreenPos;
@@ -109,31 +122,83 @@ export class KoiPondTheme {
 				varying vec2 vUv;
 				varying vec4 vViewPosition;
 				varying vec4 vScreenPos;
+				varying vec3 vWorldPosition;
 
 				uniform vec3 foamColor;
 				uniform vec3 waterColor;
 				uniform float blendDepth;
 				uniform sampler2D tDepth;
+				uniform sampler2D tDiffuse;
 				uniform float cameraNear;
 				uniform float cameraFar;
 
+				uniform float time;
+				uniform float waveSize;
+				uniform float waveIntensity;
+				uniform float waveSpeed;
+				uniform float distortIntensity;
+
+				uniform samplerCube envMap;
+				uniform float envMapIntensity;
+				uniform vec3 sunColor;
+				uniform vec3 sunDirection;
+
+				// Simple noise function for ripples
+				float getWave(vec2 p) {
+					float t = time * waveSpeed;
+					float w = sin(p.x * 100.0 * waveSize + t) * 0.5;
+					w += sin(p.y * 120.0 * waveSize - t * 0.8) * 0.5;
+					w += sin((p.x + p.y) * 80.0 * waveSize + t * 1.2) * 0.5;
+					return w * waveIntensity;
+				}
+
 				void main() {
 					vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
-					float depthZ = texture2D(tDepth, screenUV).x;
+
+					// Calculate normals from wave gradient
+					float delta = 0.1;
+					float w = getWave(vWorldPosition.xy);
+					float wX = getWave(vWorldPosition.xy + vec2(delta, 0.0));
+					float wY = getWave(vWorldPosition.xy + vec2(0.0, delta));
+
+					vec3 normal = normalize(vec3(w - wX, w - wY, delta));
+
+					// Distort screen UV for fake refraction
+					vec2 distortedUV = screenUV + normal.xy * (distortIntensity / 1000.0);
+
+					// Sample depth and color with distortion
+					float depthZ = texture2D(tDepth, distortedUV).x;
+					vec3 sceneColor = texture2D(tDiffuse, distortedUV).rgb;
 
 					float sceneViewZ = perspectiveDepthToViewZ(depthZ, cameraNear, cameraFar);
 					float fragmentViewZ = vViewPosition.z;
 
-					// Difference in depth (scene is behind water, so sceneViewZ is more negative than fragmentViewZ)
+					// Difference in depth
 					float depthDiff = fragmentViewZ - sceneViewZ;
 
 					// Foam factor
 					float foam = 1.0 - clamp(depthDiff / blendDepth, 0.0, 1.0);
-					foam = smoothstep(0.0, 1.0, foam); // smooth the gradient
+					foam = smoothstep(0.0, 1.0, foam);
 
-					vec3 finalColor = mix(waterColor, foamColor, foam);
+					// Lighting
+					vec3 viewDir = normalize(-vViewPosition.xyz);
+					vec3 worldNormal = normalize(normal);
 
-					gl_FragColor = vec4(finalColor, 0.85);
+					// Specular
+					vec3 halfDir = normalize(sunDirection + viewDir);
+					float spec = pow(max(dot(worldNormal, halfDir), 0.0), 128.0);
+					vec3 specular = sunColor * spec;
+
+					// Environment Reflection
+					vec3 reflectDir = reflect(-viewDir, worldNormal);
+					vec3 reflection = textureCube(envMap, reflectDir).rgb * envMapIntensity;
+
+					// Mix final color
+					vec3 baseWater = mix(sceneColor * waterColor * 1.5, waterColor, 0.5);
+					vec3 finalColor = mix(baseWater, foamColor, foam);
+					finalColor += specular + reflection * 0.2;
+
+					gl_FragColor = vec4(finalColor, 0.9);
 				}
 			`,
 			transparent: true,
@@ -272,6 +337,11 @@ export class KoiPondTheme {
 		this.depthTarget.depthBuffer = true;
 		this.depthTarget.depthTexture = new THREE.DepthTexture();
 
+		// Initialize diffuse target for fake refraction
+		this.diffuseTarget = new THREE.WebGLRenderTarget(manager.width, manager.height, {
+			format: THREE.RGBAFormat,
+		});
+
 		// build our water layer
 		setTimeout(() => {
 			this.buildWater(manager);
@@ -317,6 +387,11 @@ export class KoiPondTheme {
 		if (this.depthTarget) {
 			this.depthTarget.dispose();
 			this.depthTarget = null;
+		}
+
+		if (this.diffuseTarget) {
+			this.diffuseTarget.dispose();
+			this.diffuseTarget = null;
 		}
 
 		// clear and reset references
@@ -457,7 +532,7 @@ export class KoiPondTheme {
 	 */
 	onTick(manager, time) {
 
-		if (!this.waterPlane || !this.isReady || !this.depthTarget)
+		if (!this.waterPlane || !this.isReady || !this.depthTarget || !this.diffuseTarget)
 			return;
 
 		// 1. Update resolution if it changed
@@ -469,16 +544,21 @@ export class KoiPondTheme {
 
 		if (this.depthTarget.width !== dWidth || this.depthTarget.height !== dHeight) {
 			this.depthTarget.setSize(dWidth, dHeight);
+			this.diffuseTarget.setSize(dWidth, dHeight);
 		}
 
-		// 2. Perform depth pass
-		// Hide water so it doesn't write to its own depth buffer during the capture
+		// 2. Perform depth and diffuse pass
+		// Hide water so it doesn't write to its own depth/color buffer
 		const wasVisible = this.waterPlane.visible;
 		this.waterPlane.visible = false;
 
-		// Render the scene to our depth target
+		// Render the scene to our targets
 		manager.renderer.setRenderTarget(this.depthTarget);
 		manager.renderer.render(manager.scene, manager.camera);
+
+		manager.renderer.setRenderTarget(this.diffuseTarget);
+		manager.renderer.render(manager.scene, manager.camera);
+
 		manager.renderer.setRenderTarget(null);
 
 		// Restore visibility
@@ -486,8 +566,15 @@ export class KoiPondTheme {
 
 		// 3. Update Uniforms
 		this.waterMaterial.uniforms.tDepth.value = this.depthTarget.depthTexture;
+		this.waterMaterial.uniforms.tDiffuse.value = this.diffuseTarget.texture;
 		this.waterMaterial.uniforms.cameraNear.value = manager.camera.near;
 		this.waterMaterial.uniforms.cameraFar.value = manager.camera.far;
+		this.waterMaterial.uniforms.time.value = time;
+
+		// Update envMap if it's set in the scene
+		if (manager.scene.environment && !this.waterMaterial.uniforms.envMap.value) {
+			this.waterMaterial.uniforms.envMap.value = manager.scene.environment;
+		}
 
 	}
 
