@@ -65,7 +65,7 @@ export class KoiSystem {
 	init() {
 
 		// add some koi to the pond
-		const count = 1;
+		const count = 3;
 		for(let i = 0; i < count; i++) {
 
 			this.addKoi(

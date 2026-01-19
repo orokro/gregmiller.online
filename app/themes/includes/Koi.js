@@ -22,12 +22,18 @@ const easeInOut = (t) => {
 		: 1 - Math.pow(-2 * t + 2, 3) / 2;
 };
 
-// shortest signed angular difference (a -> b)
-const deltaAngle = (a, b) => {
-	let d = (b - a) % TAU;
-	if (d > Math.PI) d -= TAU;
-	if (d < -Math.PI) d += TAU;
-	return d;
+// 2D demo’s wrap: keep angles in [-PI, +PI]
+const angleWrap = (a) => {
+	a = (a + Math.PI) % TAU;
+	if (a <= 0) a += TAU;
+	return a - Math.PI;
+};
+
+// 2D demo’s convention: yaw=0 faces "up" (-Y)
+const angleTo = (x1, y1, x2, y2) => {
+	const dx = x2 - x1;
+	const dy = y2 - y1;
+	return Math.atan2(dx, -dy);
 };
 
 export class Koi extends THREE.Object3D {
@@ -37,7 +43,6 @@ export class Koi extends THREE.Object3D {
 
 		this.koiSystem = koiSystem;
 		this.manager = manager;
-
 		this.options = options;
 
 		// movement tuning (pixels == world units)
@@ -54,7 +59,7 @@ export class Koi extends THREE.Object3D {
 		this.minCreepSpeed = options.minCreepSpeed ?? rand(10, 16);
 
 		this.speed = 0;
-		this.yaw = 0;		// we store heading here (applied to rotation.z)
+		this.yaw = 0;		// heading in XY plane (applied to rotation.z)
 		this.yawVel = 0;
 
 		this.target = new THREE.Vector3(0, 0, -150);
@@ -77,8 +82,17 @@ export class Koi extends THREE.Object3D {
 		this.idleTurnT = 0;
 		this.idleTurnDuration = rand(3.5, 7.0);
 
-		// visual forward offset (matches the child rotation you apply to the GLB)
-		this.headingOffset = 0; // Math.PI / 2;
+		// IMPORTANT:
+		// Your GLB child is already rotated so that parent yaw=0 faces "up" on screen.
+		// So math should NOT apply any extra offset.
+		this.headingOffset = Math.PI;
+
+		// scratch forward vector (avoid allocs)
+		this._fwd = new THREE.Vector2();
+
+		// arrival bookkeeping
+		this._stuckTimer = 0;
+		this._lastDist = Infinity;
 
 		// target debug
 		this.axisHelper = new THREE.AxesHelper(100);
@@ -93,14 +107,13 @@ export class Koi extends THREE.Object3D {
 
 		this._loadModel(manager);
 
-		// start with a gentle random heading
-		this.yaw = rand(0, TAU);
+		// start with a gentle random heading in [-PI, PI]
+		this.yaw = angleWrap(rand(-Math.PI, Math.PI));
 
-		// IMPORTANT: yaw is around Z in XY movement plane
 		this.rotation.z = this.yaw;
 		this.rotation.x = 0;
 
-		// IMPORTANT: apply yaw first, then pitch, so pitch is local to fish heading
+		// yaw then pitch (pitch local to yaw)
 		this.rotation.order = 'ZXY';
 	}
 
@@ -114,7 +127,7 @@ export class Koi extends THREE.Object3D {
 		this.koiTarget = null;
 	}
 
-	async _loadModel(manager){
+	async _loadModel(manager) {
 		const [gltfScene] = await manager.assetsReady(['/models/koi_fish.glb']);
 
 		if (!gltfScene) {
@@ -128,7 +141,7 @@ export class Koi extends THREE.Object3D {
 		const scale = 50;
 		this.koiFish.scale.set(scale, scale, scale);
 
-		// model is facing 12 o'clock with zRot=0 at parent
+		// you’ve already oriented the child so parent yaw=0 is “up”
 		this.koiFish.rotation.x = 0;
 		this.koiFish.rotation.z = -Math.PI / 2;
 	}
@@ -146,7 +159,7 @@ export class Koi extends THREE.Object3D {
 		this.stateDuration = rand(5, 10);
 
 		this.idleTurnStart = this.yaw;
-		this.idleTurnTarget = this.yaw + THREE.MathUtils.degToRad(rand(-30, 30));
+		this.idleTurnTarget = angleWrap(this.yaw + THREE.MathUtils.degToRad(rand(-30, 30)));
 		this.idleTurnT = 0;
 		this.idleTurnDuration = rand(3.5, 7.0);
 	}
@@ -159,7 +172,6 @@ export class Koi extends THREE.Object3D {
 		this.target.copy(p);
 		this.koiTarget.position.copy(this.target);
 
-		// reset “arrive” bookkeeping
 		this._stuckTimer = 0;
 		this._lastDist = Infinity;
 	}
@@ -174,7 +186,6 @@ export class Koi extends THREE.Object3D {
 		this.surfacePauseTime = rand(0.25, 0.55);
 		this.surfaceDownTime = rand(1.0, 1.7);
 
-		// pick a point "in front" of fish but clamped into viewport bounds (in background space)
 		const bounds = this.koiSystem.getViewportBoundsInBackground(120);
 
 		const f = this._forward2D();
@@ -191,29 +202,35 @@ export class Koi extends THREE.Object3D {
 	}
 
 	_forward2D() {
-		// We treat yaw as “heading” and move in XY plane.
-		// Forward is +Y at yaw = 0.
-		const a = this.yaw + this.headingOffset; // <<< IMPORTANT
-		return { x: Math.sin(a), y: Math.cos(a) };
+		// Match 2D demo: yaw=0 faces "up" (-Y)
+		const a = this.yaw + this.headingOffset;
+		this._fwd.set(Math.sin(a), -Math.cos(a));
+		return this._fwd;
 	}
 
-	_updateSteering(dt, desiredYaw) {
-		const d = deltaAngle(this.yaw, desiredYaw);
+	_updateSteering(dt) {
+		// Match 2D demo: desired heading uses atan2(dx, -dy)
+		const desiredYaw = angleTo(
+			this.position.x,
+			this.position.y,
+			this.target.x,
+			this.target.y
+		) - this.headingOffset;
 
-		// springy-ish turn acceleration + damping
-		const accel = clamp(d * this.turnAccel, -this.turnAccel, this.turnAccel);
-		this.yawVel += accel * dt;
+		const delta = angleWrap(desiredYaw - this.yaw);
 
-		// clamp turn rate
-		this.yawVel = clamp(this.yawVel, -this.maxTurnRate, this.maxTurnRate);
+		// Convert heading error into a desired turn rate (same shape as 2D)
+		const gain = 2.2;
+		const desiredRate = clamp(delta * gain, -this.maxTurnRate, this.maxTurnRate);
 
-		// damping
-		this.yawVel -= this.yawVel * this.turnDamping * dt;
+		// Accelerate angular velocity toward desiredRate (inertia)
+		const maxDV = this.turnAccel * dt;
+		const dv = clamp(desiredRate - this.yawVel, -maxDV, maxDV);
+		this.yawVel += dv;
 
-		this.yaw += this.yawVel * dt;
-		this.yaw = (this.yaw % TAU + TAU) % TAU;
+		// Apply angular velocity
+		this.yaw = angleWrap(this.yaw + this.yawVel * dt);
 
-		// apply to object (per your note: only x/y rotations)
 		this.rotation.z = this.yaw;
 	}
 
@@ -231,8 +248,8 @@ export class Koi extends THREE.Object3D {
 		const dy = this.target.y - this.position.y;
 		const dist = Math.hypot(dx, dy);
 
-		const desiredYaw = Math.atan2(dx, dy) - this.headingOffset;
-		this._updateSteering(dt, desiredYaw);
+		// steering first (same as 2D)
+		this._updateSteering(dt);
 
 		let arrive01 = 1;
 		if (dist <= this.slowRadius) {
@@ -242,7 +259,6 @@ export class Koi extends THREE.Object3D {
 
 		const desiredSpeedRaw = this.maxSpeed * speedScale * arrive01;
 
-		// keep a creep speed inside slow radius until we truly "arrive"
 		let desiredSpeed = desiredSpeedRaw;
 		if (dist > this.stopRadius && dist < this.slowRadius) {
 			desiredSpeed = Math.max(desiredSpeed, this.minCreepSpeed);
@@ -257,13 +273,18 @@ export class Koi extends THREE.Object3D {
 		this.position.x += f.x * this.speed * dt;
 		this.position.y += f.y * this.speed * dt;
 
-		// stuck watchdog (prevents “almost there forever”)
-		const improving = (dist < this._lastDist - 0.15);
-		this._stuckTimer = improving ? 0 : (this._stuckTimer + dt);
-		this._lastDist = dist;
+		// ---- stuck watchdog ----
+		// IMPORTANT: only consider “stuck” when we're close enough that we should converge.
+		if (dist < this.slowRadius) {
+			const improving = (dist < this._lastDist - 0.15);
+			this._stuckTimer = improving ? 0 : (this._stuckTimer + dt);
 
-		if (this._stuckTimer > 1.25)
-			return true;
+			if (this._stuckTimer > 2.5)
+				return true;
+		} else {
+			this._stuckTimer = 0;
+		}
+		this._lastDist = dist;
 
 		if (dist <= this.stopRadius + 2) {
 			this.position.x = this.target.x;
@@ -279,17 +300,21 @@ export class Koi extends THREE.Object3D {
 
 		this.stateTimer += dt;
 
-		// gentle drift turn
 		this.idleTurnT += dt / this.idleTurnDuration;
 		const t = easeInOut(this.idleTurnT);
 
-		const desiredYaw = this.idleTurnStart + deltaAngle(this.idleTurnStart, this.idleTurnTarget) * t;
-		this._updateSteering(dt, desiredYaw);
+		const desiredYaw = angleWrap(this.idleTurnStart + angleWrap(this.idleTurnTarget - this.idleTurnStart) * t);
+		const delta = angleWrap(desiredYaw - this.yaw);
 
-		// ease speed to 0
+		const desiredRate = clamp(delta * 0.8, -0.25, 0.25);
+		const maxDV = (this.turnAccel * 0.6) * dt;
+		const dv = clamp(desiredRate - this.yawVel, -maxDV, maxDV);
+		this.yawVel += dv;
+
+		this.yaw = angleWrap(this.yaw + this.yawVel * dt);
+		this.rotation.z = this.yaw;
+
 		this._updateSpeed(dt, 0);
-
-		// level out pitch slowly in idle
 		this.rotation.x = lerp(this.rotation.x, 0, 1 - Math.pow(0.001, dt));
 
 		if (this.stateTimer >= this.stateDuration) {
@@ -300,7 +325,6 @@ export class Koi extends THREE.Object3D {
 	_updateSwimming(dt) {
 		const arrived = this._updateArrive(dt, 1.0);
 
-		// pitch back to flat while swimming
 		this.rotation.x = lerp(this.rotation.x, 0, 1 - Math.pow(0.001, dt));
 
 		if (arrived) {
@@ -310,23 +334,15 @@ export class Koi extends THREE.Object3D {
 
 	_updateSurfacing(dt) {
 
-		// We use a 3-phase “cubic” profile:
-		// 0: forward + tilt up
-		// 1: pause at top
-		// 2: forward + tilt down
-
 		if (this.surfacePhase === 0) {
 
 			this.surfaceT += dt / this.surfaceUpTime;
 			const t = easeInOut(this.surfaceT);
 
-			// move (but cap speed naturally via arrive)
 			const arrived = this._updateArrive(dt, 1.0);
 
-			// tilt up smoothly
 			this.rotation.x = lerp(0, this.surfacePitchMax, t);
 
-			// when we reach target (or finish time), pause
 			if (arrived || this.surfaceT >= 1) {
 				this.surfacePhase = 1;
 				this.surfaceT = 0;
@@ -334,14 +350,14 @@ export class Koi extends THREE.Object3D {
 
 		} else if (this.surfacePhase === 1) {
 
-			// pause briefly at top, hold pitch, ease speed to 0
 			this.surfaceT += dt / this.surfacePauseTime;
 			this._updateSpeed(dt, 0);
 			this.rotation.x = lerp(this.rotation.x, this.surfacePitchMax, 1 - Math.pow(0.001, dt));
 
 			if (this.surfaceT >= 1) {
-				// set a new target forward (still clamped in viewport) for the "dive" run
+
 				const bounds = this.koiSystem.getViewportBoundsInBackground(120);
+
 				const f = this._forward2D();
 				const dist = rand(220, 380);
 
@@ -365,7 +381,6 @@ export class Koi extends THREE.Object3D {
 
 			const arrived = this._updateArrive(dt, 1.0);
 
-			// tilt down smoothly
 			this.rotation.x = lerp(this.surfacePitchMax, 0, t);
 
 			if (arrived || this.surfaceT >= 1) {
@@ -376,18 +391,8 @@ export class Koi extends THREE.Object3D {
 	}
 
 	update(dt) {
-
-		// if model not loaded yet, still run logic (movement object exists)
-		this.stateTimer += 0; // (kept for clarity)
-
-		if (this.state === KOI_STATE.IDLE) {
-			this._updateIdle(dt);
-
-		} else if (this.state === KOI_STATE.SWIMMING) {
-			this._updateSwimming(dt);
-
-		} else if (this.state === KOI_STATE.SURFACING) {
-			this._updateSurfacing(dt);
-		}
+		if (this.state === KOI_STATE.IDLE) this._updateIdle(dt);
+		else if (this.state === KOI_STATE.SWIMMING) this._updateSwimming(dt);
+		else if (this.state === KOI_STATE.SURFACING) this._updateSurfacing(dt);
 	}
 }
