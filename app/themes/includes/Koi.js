@@ -34,6 +34,9 @@ export class Koi extends THREE.Object3D {
 
 		// load our koi model and add it to this object
 		this._loadModel(manager);
+
+		// for debug
+		// this.rotation.x = 45 * (Math.PI / 180); // rotate 45 degrees on X so it's oriented correctly in the pond
 	}
 
 
@@ -79,7 +82,8 @@ export class Koi extends THREE.Object3D {
 		// scale/rotate/position correctly
 		const scale = 50;
 		this.koiFish.scale.set(scale, scale, scale);
-		this.rotation.x = Math.PI/2;
+		this.koiFish.rotation.x = 0;
+		this.koiFish.rotation.z = -Math.PI / 2;
 	}
 
 

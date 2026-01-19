@@ -34,6 +34,8 @@ export class KoiSystem {
 
 		// Initialize the system
 		this.init();
+
+		window.ks = this; // for debugging
 	}
 
 
