@@ -400,91 +400,36 @@ export class ThreeManager {
 	}
 
 
-		/**
+	/**
+	 * Updates the background cover component (app-cover-bg) with a new configuration.
+	 *
+	 * @param {THREE.Material} material - The new material to use
+	 * @param {number} depth - The new depth value
+	 * @param {number} uvScale - The new UV scale
+	 * @param {boolean} catchShadows - Whether to receive shadows
+	 */
+	setBackground(material, depth, uvScale, catchShadows) {
 
+		// Store globally so it persists if the element re-registers
+		this.currentBgConfig = {
+			material,
+			depth,
+			uvScale,
+			catchShadows
+		};
 
-		 * Updates the background cover component (app-cover-bg) with a new configuration.
+		// Find the registered element data for the background cover component and update its configuration
+		const data = this.getRegisteredElementByName('app-cover-bg');
+		if (!data)
+			return;
 
+		// Set configuration on the data object so the component can read it
+		data.bgConfig = this.currentBgConfig;
 
-		 *
-
-
-		 * @param {THREE.Material} material - The new material to use
-
-
-		 * @param {number} depth - The new depth value
-
-
-		 * @param {number} uvScale - The new UV scale
-
-
-		 * @param {boolean} catchShadows - Whether to receive shadows
-
-
-		 */
-
-
-		setBackground(material, depth, uvScale, catchShadows) {
-
-
-
-
-
-			// Store globally so it persists if the element re-registers
-
-
-			this.currentBgConfig = {
-
-
-				material,
-
-
-				depth,
-
-
-				uvScale,
-
-
-				catchShadows
-
-
-			};
-
-
-
-
-
-			const data = this.getRegisteredElementByName('app-cover-bg');
-
-
-			if (!data) return;
-
-
-
-
-
-			// Set configuration on the data object so the component can read it
-
-
-			data.bgConfig = this.currentBgConfig;
-
-
-
-
-
-			// FORCE UPDATE: Ensure the component re-evaluates its state immediately
-
-
-			this.updateElementPosition(data.id);
-
-
-
-
-
-			this.requestRender();
-
-
-		}
+		// FORCE UPDATE: Ensure the component re-evaluates its state immediately
+		this.updateElementPosition(data.id);
+		this.requestRender();
+	}
 
 
 

@@ -5,10 +5,16 @@
 	Makes a koi pond!
 */
 
+// three
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
 import { Object3D } from 'three';
 
+// our app
+import { KoiSystem } from './includes/KoiSystem';
+
+
+// main money
 export class KoiPondTheme {
 
 	// static theme colors for UI elements, etc. (not used by theme code directly)
@@ -39,6 +45,9 @@ export class KoiPondTheme {
 
 		// reference to our water plane once it's created
 		this.waterPlane = null;
+
+		// our koi system once we're ready to initialize it
+		this.koiSystem = null;
 
 		// build our materials once on load
 		this.buildMaterials();
@@ -110,185 +119,8 @@ export class KoiPondTheme {
 						envMapIntensity: { value: 0.1 },
 						sunColor: { value: new THREE.Color(0xAAAAAA) },
 											},
-					vertexShader: `
-						varying vec2 vUv;
-						varying vec4 vViewPosition;
-						varying vec4 vScreenPos;
-						varying vec3 vWorldPosition;
-
-						void main() {
-							vUv = uv;
-							vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-							vWorldPosition = worldPosition.xyz;
-							vec4 mvPosition = viewMatrix * worldPosition;
-							vViewPosition = mvPosition;
-							vScreenPos = projectionMatrix * mvPosition;
-							gl_Position = vScreenPos;
-						}
-					`,
-					fragmentShader: `
-						#include <packing>
-
-						varying vec2 vUv;
-						varying vec4 vViewPosition;
-						varying vec4 vScreenPos;
-						varying vec3 vWorldPosition;
-
-						uniform vec3 foamColor;
-						uniform vec3 waterColor;
-						uniform float blendDepth;
-						uniform sampler2D tDepth;
-						uniform sampler2D tDiffuse;
-						uniform float cameraNear;
-						uniform float cameraFar;
-
-						uniform float time;
-
-						uniform float waveSize;
-						uniform float waveIntensity;
-						uniform float waveSpeed;
-
-						uniform float waveSize2;
-						uniform float waveIntensity2;
-						uniform float waveSpeed2;
-
-										uniform float distortIntensity;
-
-										uniform float waterDirX;
-
-										uniform float waterDirY;
-
-										uniform float scrollY;
-
-
-
-										uniform sampler2D envMap;
-
-
-						uniform float envMapIntensity;
-						uniform vec3 sunColor;
-						uniform vec3 sunDirection;
-
-						// Equirectangular mapping function
-						vec2 equirectUv(vec3 v) {
-							vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
-							uv *= vec2(0.15915494309, 0.31830988618); // 1/(2*PI), 1/PI
-							uv += 0.5;
-							return uv;
-						}
-
-						// Primary wave function
-						float getWave1(vec2 p) {
-							vec2 flow = vec2(waterDirX, waterDirY) * time * waveSpeed;
-
-							// Rotate coords slightly to break alignment
-							float c = cos(0.2);
-							float s = sin(0.2);
-							vec2 pRot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
-
-							vec2 p1 = pRot * 100.0 * waveSize + flow;
-							vec2 p2 = pRot * 120.0 * waveSize - flow * 0.8;
-							vec2 p3 = (pRot.x + pRot.y) * 80.0 * waveSize + flow * 1.2;
-
-							float w = sin(p1.x + p1.y) * 0.5;
-							w += sin(p2.x - p2.y) * 0.5;
-							w += sin(p3.x + p3.y) * 0.5;
-							return w * waveIntensity;
-						}
-
-						// Secondary wave function (different scale/speed)
-						float getWave2(vec2 p) {
-							vec2 flow = vec2(waterDirX, waterDirY) * time * waveSpeed2;
-
-							// Different rotation
-							float c = cos(-0.5);
-							float s = sin(-0.5);
-							vec2 pRot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
-
-							vec2 p1 = pRot * 150.0 * waveSize2 + flow * 1.5;
-							vec2 p2 = pRot * 90.0 * waveSize2 - flow * 0.5;
-
-							float w = sin(p1.x) * 0.5;
-							w += sin(p2.y) * 0.5;
-							w += sin((p1.x + p2.y) * 0.7) * 0.5;
-							return w * waveIntensity2;
-						}
-
-						// Combined wave function
-						float getCombinedWave(vec2 p) {
-							return getWave1(p) + getWave2(p);
-						}
-
-										void main() {
-											vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
-
-											// Offset world position by scroll to lock waves to the content
-											vec2 wavePos = vWorldPosition.xy;
-											wavePos.y -= scrollY;
-
-											// Calculate normals from combined wave gradient
-											float delta = 0.5; // Larger delta for smoother derivatives
-											float w = getCombinedWave(wavePos);
-											float wX = getCombinedWave(wavePos + vec2(delta, 0.0));
-											float wY = getCombinedWave(wavePos + vec2(0.0, delta));
-
-											vec3 normal = normalize(vec3(w - wX, w - wY, delta));
-													// Distort screen UV for fake refraction
-							vec2 distortedUV = screenUV + normal.xy * (distortIntensity / 1000.0);
-
-							// Sample depth and color with distortion
-							float depthZ = texture2D(tDepth, distortedUV).x;
-							vec3 sceneColor = texture2D(tDiffuse, distortedUV).rgb;
-
-							float sceneViewZ = perspectiveDepthToViewZ(depthZ, cameraNear, cameraFar);
-							float fragmentViewZ = vViewPosition.z;
-
-							// Difference in depth
-							float depthDiff = fragmentViewZ - sceneViewZ;
-
-							// Foam factor
-							float foam = 1.0 - clamp(depthDiff / blendDepth, 0.0, 1.0);
-							foam = smoothstep(0.0, 1.0, foam);
-
-							// Lighting
-							vec3 viewDir = normalize(-vViewPosition.xyz);
-							vec3 worldNormal = normalize(normal);
-							vec3 worldViewDir = normalize(cameraPosition - vWorldPosition);
-
-							// Fresnel effect
-							float fresnel = pow(1.0 - max(dot(worldNormal, worldViewDir), 0.0), 4.0);
-							fresnel = clamp(fresnel, 0.0, 1.0);
-
-							// Specular (Sun)
-							vec3 halfDir = normalize(sunDirection + worldViewDir);
-							float spec = pow(max(dot(worldNormal, halfDir), 0.0), 64.0); // Softer specular
-							vec3 specular = sunColor * spec;
-
-							// Environment Reflection (Equirectangular)
-							vec3 reflectDir = reflect(-worldViewDir, worldNormal);
-							vec2 envUv = equirectUv(reflectDir);
-
-							// Offset env UVs slightly by wave normal to "wobble" the reflection
-							envUv += normal.xy * 0.05;
-
-							vec3 reflection = texture2D(envMap, envUv).rgb * envMapIntensity;
-
-							// Mix final color
-							// Darken base water slightly for better contrast with foam/spec
-							vec3 baseWater = mix(sceneColor * waterColor * 1.2, waterColor * 0.8, 0.6);
-
-							// Apply reflection based on fresnel
-							vec3 finalColor = mix(baseWater, reflection, fresnel * 0.9 + 0.05);
-
-							// Add foam
-							finalColor = mix(finalColor, foamColor, foam);
-
-							// Add specular
-							finalColor += specular;
-
-							gl_FragColor = vec4(finalColor, 0.92);
-						}
-					`,
+					vertexShader,
+					fragmentShader,
 					transparent: true,
 					depthWrite: false
 				});
@@ -429,9 +261,15 @@ export class KoiPondTheme {
 			format: THREE.RGBAFormat,
 		});
 
-		// build our water layer
+		// build our water layer / koi
 		setTimeout(() => {
+
+			// builds the animated water layer
 			this.buildWater(manager);
+
+			// initialize our koi system
+			this.koiSystem = new KoiSystem(manager);
+
 		}, 500);
 
 		// load our glass slice model used for boxes
@@ -484,6 +322,20 @@ export class KoiPondTheme {
 		// clear and reset references
 		this.isReady = false;
 		this._didCopyMaps = false;
+
+		// clean up koi system
+		if (this.koiSystem) {
+			this.koiSystem.destroy();
+			this.koiSystem = null;
+		}
+
+		// remove water plane
+		if (this.waterPlane) {
+			this.waterPlane.geometry.dispose();
+			this.waterPlane.material.dispose();
+			this.waterPlane.parent.remove(this.waterPlane);
+			this.waterPlane = null;
+		}
 	}
 
 
@@ -667,3 +519,184 @@ export class KoiPondTheme {
 	}
 
 }
+
+const vertexShader = `
+	varying vec2 vUv;
+	varying vec4 vViewPosition;
+	varying vec4 vScreenPos;
+	varying vec3 vWorldPosition;
+
+	void main() {
+		vUv = uv;
+		vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+		vWorldPosition = worldPosition.xyz;
+		vec4 mvPosition = viewMatrix * worldPosition;
+		vViewPosition = mvPosition;
+		vScreenPos = projectionMatrix * mvPosition;
+		gl_Position = vScreenPos;
+	}
+`;
+
+const fragmentShader = `
+	#include <packing>
+
+	varying vec2 vUv;
+	varying vec4 vViewPosition;
+	varying vec4 vScreenPos;
+	varying vec3 vWorldPosition;
+
+	uniform vec3 foamColor;
+	uniform vec3 waterColor;
+	uniform float blendDepth;
+	uniform sampler2D tDepth;
+	uniform sampler2D tDiffuse;
+	uniform float cameraNear;
+	uniform float cameraFar;
+
+	uniform float time;
+
+	uniform float waveSize;
+	uniform float waveIntensity;
+	uniform float waveSpeed;
+
+	uniform float waveSize2;
+	uniform float waveIntensity2;
+	uniform float waveSpeed2;
+
+					uniform float distortIntensity;
+
+					uniform float waterDirX;
+
+					uniform float waterDirY;
+
+					uniform float scrollY;
+
+
+
+					uniform sampler2D envMap;
+
+
+	uniform float envMapIntensity;
+	uniform vec3 sunColor;
+	uniform vec3 sunDirection;
+
+	// Equirectangular mapping function
+	vec2 equirectUv(vec3 v) {
+		vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+		uv *= vec2(0.15915494309, 0.31830988618); // 1/(2*PI), 1/PI
+		uv += 0.5;
+		return uv;
+	}
+
+	// Primary wave function
+	float getWave1(vec2 p) {
+		vec2 flow = vec2(waterDirX, waterDirY) * time * waveSpeed;
+
+		// Rotate coords slightly to break alignment
+		float c = cos(0.2);
+		float s = sin(0.2);
+		vec2 pRot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+
+		vec2 p1 = pRot * 100.0 * waveSize + flow;
+		vec2 p2 = pRot * 120.0 * waveSize - flow * 0.8;
+		vec2 p3 = (pRot.x + pRot.y) * 80.0 * waveSize + flow * 1.2;
+
+		float w = sin(p1.x + p1.y) * 0.5;
+		w += sin(p2.x - p2.y) * 0.5;
+		w += sin(p3.x + p3.y) * 0.5;
+		return w * waveIntensity;
+	}
+
+	// Secondary wave function (different scale/speed)
+	float getWave2(vec2 p) {
+		vec2 flow = vec2(waterDirX, waterDirY) * time * waveSpeed2;
+
+		// Different rotation
+		float c = cos(-0.5);
+		float s = sin(-0.5);
+		vec2 pRot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+
+		vec2 p1 = pRot * 150.0 * waveSize2 + flow * 1.5;
+		vec2 p2 = pRot * 90.0 * waveSize2 - flow * 0.5;
+
+		float w = sin(p1.x) * 0.5;
+		w += sin(p2.y) * 0.5;
+		w += sin((p1.x + p2.y) * 0.7) * 0.5;
+		return w * waveIntensity2;
+	}
+
+	// Combined wave function
+	float getCombinedWave(vec2 p) {
+		return getWave1(p) + getWave2(p);
+	}
+
+					void main() {
+						vec2 screenUV = vScreenPos.xy / vScreenPos.w * 0.5 + 0.5;
+
+						// Offset world position by scroll to lock waves to the content
+						vec2 wavePos = vWorldPosition.xy;
+						wavePos.y -= scrollY;
+
+						// Calculate normals from combined wave gradient
+						float delta = 0.5; // Larger delta for smoother derivatives
+						float w = getCombinedWave(wavePos);
+						float wX = getCombinedWave(wavePos + vec2(delta, 0.0));
+						float wY = getCombinedWave(wavePos + vec2(0.0, delta));
+
+						vec3 normal = normalize(vec3(w - wX, w - wY, delta));
+								// Distort screen UV for fake refraction
+		vec2 distortedUV = screenUV + normal.xy * (distortIntensity / 1000.0);
+
+		// Sample depth and color with distortion
+		float depthZ = texture2D(tDepth, distortedUV).x;
+		vec3 sceneColor = texture2D(tDiffuse, distortedUV).rgb;
+
+		float sceneViewZ = perspectiveDepthToViewZ(depthZ, cameraNear, cameraFar);
+		float fragmentViewZ = vViewPosition.z;
+
+		// Difference in depth
+		float depthDiff = fragmentViewZ - sceneViewZ;
+
+		// Foam factor
+		float foam = 1.0 - clamp(depthDiff / blendDepth, 0.0, 1.0);
+		foam = smoothstep(0.0, 1.0, foam);
+
+		// Lighting
+		vec3 viewDir = normalize(-vViewPosition.xyz);
+		vec3 worldNormal = normalize(normal);
+		vec3 worldViewDir = normalize(cameraPosition - vWorldPosition);
+
+		// Fresnel effect
+		float fresnel = pow(1.0 - max(dot(worldNormal, worldViewDir), 0.0), 4.0);
+		fresnel = clamp(fresnel, 0.0, 1.0);
+
+		// Specular (Sun)
+		vec3 halfDir = normalize(sunDirection + worldViewDir);
+		float spec = pow(max(dot(worldNormal, halfDir), 0.0), 64.0); // Softer specular
+		vec3 specular = sunColor * spec;
+
+		// Environment Reflection (Equirectangular)
+		vec3 reflectDir = reflect(-worldViewDir, worldNormal);
+		vec2 envUv = equirectUv(reflectDir);
+
+		// Offset env UVs slightly by wave normal to "wobble" the reflection
+		envUv += normal.xy * 0.05;
+
+		vec3 reflection = texture2D(envMap, envUv).rgb * envMapIntensity;
+
+		// Mix final color
+		// Darken base water slightly for better contrast with foam/spec
+		vec3 baseWater = mix(sceneColor * waterColor * 1.2, waterColor * 0.8, 0.6);
+
+		// Apply reflection based on fresnel
+		vec3 finalColor = mix(baseWater, reflection, fresnel * 0.9 + 0.05);
+
+		// Add foam
+		finalColor = mix(finalColor, foamColor, foam);
+
+		// Add specular
+		finalColor += specular;
+
+		gl_FragColor = vec4(finalColor, 0.92);
+	}
+`;
