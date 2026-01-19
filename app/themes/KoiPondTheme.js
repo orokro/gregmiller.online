@@ -8,24 +8,84 @@
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
 
-// Vertex Shader
+// --- SHADERS ---
+
 const WATER_VERTEX_SHADER = `
+uniform float uTime;
+uniform float uSpeed;
+uniform float uGlobalScale;
+uniform float uWaveAmp;
+
 varying vec2 vUv;
 varying vec3 vWorldPosition;
 varying vec3 vViewPosition;
+varying float vElevation;
+
+// Psuedo-random
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+// Calculate wave height at a position
+float getWaveHeight(vec2 pos, float time) {
+    float height = 0.0;
+
+    // Base wave scaling (pixels -> radians)
+    vec2 p = pos * uGlobalScale;
+
+    // Sum of sines for rolling waves
+    // Wave 1
+    float t1 = time * uSpeed;
+    height += sin(p.x * 1.0 + t1) * 1.0;
+    height += sin(p.y * 0.8 + t1 * 1.1) * 1.0;
+
+    // Wave 2 (Detail)
+    float t2 = time * uSpeed * 1.5;
+    vec2 p2 = p * 2.5;
+    p2 = vec2(p2.x * 0.8 - p2.y * 0.6, p2.x * 0.6 + p2.y * 0.8); // Rotate
+    height += sin(p2.x + t2) * 0.4;
+    height += sin(p2.y + t2 * 1.2) * 0.4;
+
+    // Noise for fine ripples
+    float t3 = time * uSpeed * 0.5;
+    height += noise(p * 4.0 + t3) * 0.3;
+
+    return height * uWaveAmp;
+}
 
 void main() {
     vUv = uv;
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-    vWorldPosition = worldPosition.xyz;
-    vViewPosition = cameraPosition - worldPosition.xyz;
-    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+
+    // Get world position of the vertex
+    vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = modelPosition.xyz;
+
+    // Calculate elevation
+    float elevation = getWaveHeight(vWorldPosition.xy, uTime);
+    vElevation = elevation;
+
+    // Apply displacement along Z (towards camera)
+    modelPosition.z += elevation;
+
+    vViewPosition = cameraPosition - modelPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * modelPosition;
 }
 `;
 
-// Fragment Shader
 const WATER_FRAGMENT_SHADER = `
 uniform float uTime;
+uniform float uSpeed;
+uniform float uGlobalScale;
+uniform float uWaveAmp;
+
 uniform vec3 uColorShallow;
 uniform vec3 uColorDeep;
 uniform float uOpacity;
@@ -35,13 +95,14 @@ uniform vec3 uSunColor;
 varying vec2 vUv;
 varying vec3 vWorldPosition;
 varying vec3 vViewPosition;
+varying float vElevation;
 
-// Simple pseudo-random
+// Re-implement wave function for normal calculation
+// Needs to match vertex shader EXACTLY for consistent lighting
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-// 2D Noise
 float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
@@ -50,110 +111,103 @@ float noise(vec2 p) {
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-// FBM for water surface
-float fbm(vec2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    vec2 shift = vec2(100.0);
-    // Rotate to reduce axial bias
-    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50));
-    for (int i = 0; i < 4; ++i) {
-        v += a * noise(p);
-        p = rot * p * 2.0 + shift;
-        a *= 0.5;
-    }
-    return v;
+float getWaveHeight(vec2 pos, float time) {
+    float height = 0.0;
+    vec2 p = pos * uGlobalScale;
+
+    float t1 = time * uSpeed;
+    height += sin(p.x * 1.0 + t1) * 1.0;
+    height += sin(p.y * 0.8 + t1 * 1.1) * 1.0;
+
+    float t2 = time * uSpeed * 1.5;
+    vec2 p2 = p * 2.5;
+    p2 = vec2(p2.x * 0.8 - p2.y * 0.6, p2.x * 0.6 + p2.y * 0.8);
+    height += sin(p2.x + t2) * 0.4;
+    height += sin(p2.y + t2 * 1.2) * 0.4;
+
+    float t3 = time * uSpeed * 0.5;
+    height += noise(p * 4.0 + t3) * 0.3;
+
+    return height * uWaveAmp;
 }
 
 void main() {
-    // 1. Calculate Surface Height / Normal
-    // Slow gentle movement
-    vec2 uv = vUv * 8.0; // Scale ripples
-    vec2 move = vec2(uTime * 0.05, uTime * 0.02);
+    // 1. Calculate Normal analytically (finite difference)
+    float delta = 1.0; // Distance to sample neighbors (1 pixel unit approx)
+    vec2 p = vWorldPosition.xy;
 
-    float height = fbm(uv + move);
-    float h2 = fbm(uv + move + vec2(0.02, 0.0));
-    float h3 = fbm(uv + move + vec2(0.0, 0.02));
+    float hC = vElevation; // Center
+    float hR = getWaveHeight(p + vec2(delta, 0.0), uTime);
+    float hU = getWaveHeight(p + vec2(0.0, delta), uTime);
 
-    // Approximate normal from height field
-    vec3 normal = normalize(vec3(height - h2, 1.0, height - h3)); // Up is Y in tangent space?
-    // Actually let's just cheat and assume flat plane Z-up in world space for lighting
-    // We'll perturb the 'view' normal
+    // Tangents
+    vec3 tanX = normalize(vec3(delta, 0.0, hR - hC));
+    vec3 tanY = normalize(vec3(0.0, delta, hU - hC));
 
+    // Normal is cross product of tangents
+    vec3 normal = normalize(cross(tanX, tanY));
+
+    // 2. Lighting
     vec3 viewDir = normalize(vViewPosition);
     vec3 lightDir = normalize(uSunPosition);
-
-    // Perturb normal for lighting
-    // Since plane is flat facing camera (mostly), let's treat normal as mostly Z with some XY perturbation
-    vec3 N = normalize(vec3(normal.x * 0.5, normal.z * 0.5, 1.0)); // Tangent space normal
+    vec3 halfDir = normalize(lightDir + viewDir);
 
     // Specular (Blinn-Phong)
-    vec3 halfDir = normalize(lightDir + viewDir);
-    float NdotH = max(0.0, dot(N, halfDir));
-    float specular = pow(NdotH, 120.0); // Sharp highlights
+    float NdotH = max(0.0, dot(normal, halfDir));
+    float specular = pow(NdotH, 80.0); // Sharper highlights
 
-    // Fresnel-ish term for opacity/color
-    float viewAngle = max(0.0, dot(viewDir, N));
-    float fresnel = 0.1 + 0.9 * pow(1.0 - viewAngle, 3.0);
+    // Diffuse / Ambient
+    // Just a bit of directional shading
+    float diff = max(0.0, dot(normal, lightDir)) * 0.2 + 0.8;
 
-    // Color mixing
-    vec3 col = mix(uColorDeep, uColorShallow, height + fresnel * 0.5);
+    // 3. Fresnel & Opacity
+    float viewAngle = max(0.0, dot(viewDir, normal));
+    float fresnel = 0.05 + 0.95 * pow(1.0 - viewAngle, 4.0); // Reflective at angles
 
-    // Add sun reflection
-    col += uSunColor * specular * 0.8;
+    // 4. Color Mixing
+    // Mix based on height and fresnel
+    float heightFactor = smoothstep(-uWaveAmp, uWaveAmp, vElevation);
+    vec3 waterColor = mix(uColorDeep, uColorShallow, heightFactor * 0.6 + fresnel * 0.4);
 
-    // Fake "Distortion" via refraction edging (just visual style, not real refraction)
-    // Darken the 'troughs' of the waves slightly
-    col *= 0.9 + 0.1 * height;
+    // Add Specular
+    vec3 finalColor = waterColor + uSunColor * specular * 1.2;
 
-    // Output
-    // Increase opacity at glancing angles
-    float alpha = uOpacity + (1.0 - uOpacity) * fresnel;
+    // 5. Fake Distortion / Refraction Effect
+    // We can't actually distort the background, but we can modulate opacity
+    // to make the background 'shimmer' slightly.
+    // Higher opacity at crests, lower at troughs? Or strictly Fresnel based.
 
-    gl_FragColor = vec4(col, alpha);
+    // Let's use Fresnel for the main alpha logic
+    // Glancing angle = opaque (reflecting sky/env)
+    // Direct angle = transparent (seeing through)
+    float alpha = uOpacity + (0.95 - uOpacity) * fresnel;
 
-    // Fog logic (Optional - linear fog matching scene if needed, but let's stick to simple fade)
-    // float depth = gl_FragCoord.z / gl_FragCoord.w;
-    // float fogFactor = smoothstep(200.0, 1000.0, depth);
-    // gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.9), fogFactor * 0.5);
+    // Enhance alpha with wave height to give volume
+    alpha = clamp(alpha + vElevation * 0.01, 0.0, 1.0);
+
+    gl_FragColor = vec4(finalColor, alpha);
+
+    // Distance fog (simple linear fade if needed, but we'll skip for now as transparency handles it)
 }
 `;
 
 
 export class KoiPondTheme {
 
-	/**
-	 * Constructs the theme, initializing properties and default materials.
-	 */
 	constructor() {
-
-		// true when the theme is ready
 		this.isReady = false;
-
-		// store our lights
 		this.camLight = null;
 		this.rimLightL = null;
 		this.rimLightR = null;
 		this.fillLight = null;
 		this.backLight = null;
-
-		// reference to our water plane once it's created
 		this.waterPlane = null;
-
-		// build our materials once on load
 		this.buildMaterials();
-
-		// promise for loading the model
 		this._loadPromise = null;
 	}
 
-
-	/**
-	 * Builds materials used by the theme.
-	 */
 	buildMaterials() {
-
-		// Glass Material (kept as is, though maybe unused if we don't have glass boxes)
+		// Glass (Standard)
 		this.glassMaterial = new THREE.MeshPhysicalMaterial({
 			color: 0xffffff,
 			emissive: 0x00AABAE,
@@ -168,55 +222,41 @@ export class KoiPondTheme {
 			clearcoat: 1.0,
 			clearcoatRoughness: 0.02,
 			envMapIntensity: 20.5,
-			attenuationColor: new THREE.Color(0xfaffff),
-			attenuationDistance: 0.08,
 			side: THREE.DoubleSide
 		});
 
-		// Custom Water Shader Material
+		// Water (Shader)
 		this.waterMaterial = new THREE.ShaderMaterial({
 			vertexShader: WATER_VERTEX_SHADER,
 			fragmentShader: WATER_FRAGMENT_SHADER,
 			uniforms: {
 				uTime: { value: 0.0 },
-				uColorShallow: { value: new THREE.Color('#4FA8BB') }, // Light blue-teal
-				uColorDeep: { value: new THREE.Color('#205566') },    // Darker teal
-				uOpacity: { value: 0.55 }, // Transparency
-				uSunPosition: { value: new THREE.Vector3(100, 200, 200).normalize() },
+				uSpeed: { value: 1.0 },       // Animation speed
+				uGlobalScale: { value: 0.01 }, // Scale of ripples (approx 0.01-0.05)
+				uWaveAmp: { value: 10.0 },     // Amplitude of waves in World Units (pixels)
+
+				uColorShallow: { value: new THREE.Color('#68c3d4') },
+				uColorDeep: { value: new THREE.Color('#2d5e6e') },
+				// uColorDeep: { value: new THREE.Color('#68c3d4') },
+				uOpacity: { value: 0.7 },     // Base transparency (lower = clearer)
+				uSunPosition: { value: new THREE.Vector3(100, 500, 500).normalize() },
 				uSunColor: { value: new THREE.Color(0xffffff) },
 			},
 			transparent: true,
 			side: THREE.DoubleSide,
-			// depthWrite: false, // Usually good for water to avoid hiding things incorrectly, but we want it to sort properly
 		});
 
-		// Debug box materials
-		this.boxMaterial = new THREE.MeshBasicMaterial({
-			color: 0xff0000,
-			wireframe: true
-		});
-
-		this.customLineMaterial = new THREE.LineBasicMaterial({
-			color: 0x00ffff
-		});
+		this.boxMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+		this.customLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
 	}
 
-
-	/**
-	 * Builds the lighting setup for the theme.
-	 */
 	buildThemeLighting(manager) {
-
-		// set our environment map for this theme
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 0.65);
-
 		manager.enableMouseLight(false);
-
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;
 
-		// Main directional light
 		this.camLight = new THREE.DirectionalLight(0xffffff, 3.0);
 		this.camLight.position.set(-300, 500, 500);
 		this.camLight.castShadow = true;
@@ -224,7 +264,6 @@ export class KoiPondTheme {
 		manager.scene.add(this.camLight.target);
 		this.camLight.target.position.set(-500, 400, 0);
 
-		// Rim lights
 		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
 		this.rimLightL.position.set(-180, 10, 0);
 		manager.scene.add(this.rimLightL);
@@ -233,7 +272,6 @@ export class KoiPondTheme {
 		this.rimLightR.position.set(280, 50, 0);
 		manager.scene.add(this.rimLightR);
 
-		// Shadows
 		const d = 2500;
 		this.camLight.shadow.camera.left = -d;
 		this.camLight.shadow.camera.right = d;
@@ -252,111 +290,62 @@ export class KoiPondTheme {
 		manager.renderer.shadowMap.type = THREE.PCFShadowMap;
 	}
 
-
-	/**
-	 * Builds the animated water plane for the Koi pond
-	 */
 	buildWater(manager) {
-
-		// Create Geometry & water mesh
-		const geometry = new THREE.PlaneGeometry(10, 10);
+		// High segment count for vertex displacement
+		const geometry = new THREE.PlaneGeometry(10, 10, 256, 256);
 		this.waterPlane = new THREE.Mesh(geometry, this.waterMaterial);
 
-		// Get reference to the center empty of the main frame
 		const data = manager.getRegisteredElementByName('main_frame_ref');
-		if (!data)
-			return;
+		if (!data) return;
 
 		data.empties.center.add(this.waterPlane);
 
-		// Position
-		this.waterPlane.position.x = 0;
-		this.waterPlane.position.y = 0;
-		this.waterPlane.position.z = -70; // Behind content, in front of background
+		this.waterPlane.position.set(0, 0, -30);
 
-		// Scale huge to cover screen
-		const scale = 2000;
-		this.waterPlane.scale.set(scale, scale, 10);
+		// Scale to cover screen (geometry is 10x10, so 200 scale = 2000 units)
+		const scale = 250;
+		this.waterPlane.scale.set(scale, scale, 1);
 	}
 
-
-	/**
-	 * Init
-	 */
 	init(manager) {
-
 		manager.setFrameMode('active');
 
-		// Background
-		const bgTexture = manager.loadPBR('rocky-rugged-terrain', true, false, false, {});
-		manager.setBackground(bgTexture, 200, 0.5, true);
 
-		// Lighting
+		// set the background texture for our built-in bg plane
+		const bgTexture = manager.loadPBR('bg_graph_paper', true, false, false, {});
+		manager.setBackground(bgTexture, 100, 1, true);
+
+		// const bgTexture = manager.loadPBR('rocky-rugged-terrain', true, false, false, {});
+		// manager.setBackground(bgTexture, 200, 0.5, true;
+
 		this.buildThemeLighting(manager);
-
-		// Water
-		setTimeout(() => {
-			this.buildWater(manager);
-		}, 500);
-
-		// Load Model
+		setTimeout(() => { this.buildWater(manager); }, 500);
 		this._loadPromise = this._loadModel(manager);
 	}
 
-
-	/**
-	 * Cleanup
-	 */
 	destroy(manager) {
 		if (this.camLight) {
 			manager.scene.remove(this.camLight);
 			manager.scene.remove(this.camLight.target);
 			this.camLight = null;
 		}
-		if (this.rimLightL) {
-			manager.scene.remove(this.rimLightL);
-			this.rimLightL = null;
-		}
-		if (this.rimLightR) {
-			manager.scene.remove(this.rimLightR);
-			this.rimLightR = null;
-		}
-		if (this.fillLight) {
-			manager.scene.remove(this.fillLight);
-			this.fillLight = null;
-		}
-		if (this.backLight) {
-			manager.scene.remove(this.backLight);
-			this.backLight = null;
-		}
-
+		if (this.rimLightL) { manager.scene.remove(this.rimLightL); this.rimLightL = null; }
+		if (this.rimLightR) { manager.scene.remove(this.rimLightR); this.rimLightR = null; }
+		if (this.fillLight) { manager.scene.remove(this.fillLight); this.fillLight = null; }
+		if (this.backLight) { manager.scene.remove(this.backLight); this.backLight = null; }
 		this.isReady = false;
 	}
 
-
-	/**
-	 * Load Model
-	 */
 	async _loadModel(manager) {
-		// Placeholder for model loading logic
-		// const [gltfScene] = await manager.assetsReady(['/models/glass_slice.glb']);
 		this.isReady = true;
 	}
 
-
-	/**
-	 * Build Box
-	 */
 	buildBox(manager, data) {
 		const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
 		cube.name = "debug_cube";
 		data.empties.center.add(cube);
 	}
 
-
-	/**
-	 * Update Box
-	 */
 	updateBox(manager, data, rect) {
 		const cube = data.empties.center.getObjectByName("debug_cube");
 		if (cube) {
@@ -366,20 +355,12 @@ export class KoiPondTheme {
 		}
 	}
 
-
-	/**
-	 * Build Custom Box
-	 */
 	buildCustomBox(manager, data) {
 		const lines = new THREE.LineSegments(this.customEdgesGeometry, this.customLineMaterial);
 		lines.name = "debug_custom_outline";
 		data.empties.center.add(lines);
 	}
 
-
-	/**
-	 * Update Custom Box
-	 */
 	updateCustomBox(manager, data, rect) {
 		const lines = data.empties.center.getObjectByName("debug_custom_outline");
 		if (lines) {
@@ -389,16 +370,10 @@ export class KoiPondTheme {
 		}
 	}
 
-
-	/**
-	 * Animation Tick
-	 */
 	onTick(manager, time) {
-		// Animate water
 		if (this.waterMaterial && this.waterMaterial.uniforms) {
-			// Convert time to seconds
-			this.waterMaterial.uniforms.uTime.value = time * 0.01; // * 0.001;
+			// Slow down time passing to shader for gentle waves
+			this.waterMaterial.uniforms.uTime.value = time * 0.001;
 		}
 	}
-
 }
