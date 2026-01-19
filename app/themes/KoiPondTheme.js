@@ -7,20 +7,120 @@
 
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
-import { Object3D } from 'three';
+
+// Vertex Shader
+const WATER_VERTEX_SHADER = `
+varying vec2 vUv;
+varying vec3 vWorldPosition;
+varying vec3 vViewPosition;
+
+void main() {
+    vUv = uv;
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    vViewPosition = cameraPosition - worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+}
+`;
+
+// Fragment Shader
+const WATER_FRAGMENT_SHADER = `
+uniform float uTime;
+uniform vec3 uColorShallow;
+uniform vec3 uColorDeep;
+uniform float uOpacity;
+uniform vec3 uSunPosition;
+uniform vec3 uSunColor;
+
+varying vec2 vUv;
+varying vec3 vWorldPosition;
+varying vec3 vViewPosition;
+
+// Simple pseudo-random
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+// 2D Noise
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+// FBM for water surface
+float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    vec2 shift = vec2(100.0);
+    // Rotate to reduce axial bias
+    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50));
+    for (int i = 0; i < 4; ++i) {
+        v += a * noise(p);
+        p = rot * p * 2.0 + shift;
+        a *= 0.5;
+    }
+    return v;
+}
+
+void main() {
+    // 1. Calculate Surface Height / Normal
+    // Slow gentle movement
+    vec2 uv = vUv * 8.0; // Scale ripples
+    vec2 move = vec2(uTime * 0.05, uTime * 0.02);
+
+    float height = fbm(uv + move);
+    float h2 = fbm(uv + move + vec2(0.02, 0.0));
+    float h3 = fbm(uv + move + vec2(0.0, 0.02));
+
+    // Approximate normal from height field
+    vec3 normal = normalize(vec3(height - h2, 1.0, height - h3)); // Up is Y in tangent space?
+    // Actually let's just cheat and assume flat plane Z-up in world space for lighting
+    // We'll perturb the 'view' normal
+
+    vec3 viewDir = normalize(vViewPosition);
+    vec3 lightDir = normalize(uSunPosition);
+
+    // Perturb normal for lighting
+    // Since plane is flat facing camera (mostly), let's treat normal as mostly Z with some XY perturbation
+    vec3 N = normalize(vec3(normal.x * 0.5, normal.z * 0.5, 1.0)); // Tangent space normal
+
+    // Specular (Blinn-Phong)
+    vec3 halfDir = normalize(lightDir + viewDir);
+    float NdotH = max(0.0, dot(N, halfDir));
+    float specular = pow(NdotH, 120.0); // Sharp highlights
+
+    // Fresnel-ish term for opacity/color
+    float viewAngle = max(0.0, dot(viewDir, N));
+    float fresnel = 0.1 + 0.9 * pow(1.0 - viewAngle, 3.0);
+
+    // Color mixing
+    vec3 col = mix(uColorDeep, uColorShallow, height + fresnel * 0.5);
+
+    // Add sun reflection
+    col += uSunColor * specular * 0.8;
+
+    // Fake "Distortion" via refraction edging (just visual style, not real refraction)
+    // Darken the 'troughs' of the waves slightly
+    col *= 0.9 + 0.1 * height;
+
+    // Output
+    // Increase opacity at glancing angles
+    float alpha = uOpacity + (1.0 - uOpacity) * fresnel;
+
+    gl_FragColor = vec4(col, alpha);
+
+    // Fog logic (Optional - linear fog matching scene if needed, but let's stick to simple fade)
+    // float depth = gl_FragCoord.z / gl_FragCoord.w;
+    // float fogFactor = smoothstep(200.0, 1000.0, depth);
+    // gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.9), fogFactor * 0.5);
+}
+`;
+
 
 export class KoiPondTheme {
-
-	// static theme colors for UI elements, etc. (not used by theme code directly)
-	static themeColors = {
-		primaryColor: '#4da83bff',
-		secondaryColor: '#30a6aaff',
-		accentColor: '#b0ec6b',
-		bgAccent1: '#eaf8ffff',
-		bgAccent2: '#d9e3f0ff',
-		colorScroll: '#ffffff',
-	};
-
 
 	/**
 	 * Constructs the theme, initializing properties and default materials.
@@ -43,77 +143,59 @@ export class KoiPondTheme {
 		// build our materials once on load
 		this.buildMaterials();
 
-		// promise for loading the model, so we don't try to build boxes before it's ready
+		// promise for loading the model
 		this._loadPromise = null;
 	}
 
 
 	/**
-	 * Builds materials used by the theme, such as the glass material. This is called once during initialization.
+	 * Builds materials used by the theme.
 	 */
 	buildMaterials() {
 
-		// make our glass material
+		// Glass Material (kept as is, though maybe unused if we don't have glass boxes)
 		this.glassMaterial = new THREE.MeshPhysicalMaterial({
 			color: 0xffffff,
 			emissive: 0x00AABAE,
 			emissiveIntensity: 0.15,
-
 			transmission: 1.0,
 			transparent: true,
 			opacity: 1.0,
-
 			ior: 1.45,
 			thickness: 0.6,
-
 			roughness: 0.05,
 			metalness: 0.1,
-
 			clearcoat: 1.0,
 			clearcoatRoughness: 0.02,
-
 			envMapIntensity: 20.5,
-
 			attenuationColor: new THREE.Color(0xfaffff),
 			attenuationDistance: 0.08,
-
 			side: THREE.DoubleSide
 		});
 
-		// make our water material
-		this.waterMaterial = new THREE.MeshPhysicalMaterial({
-			color: 0xffffff,
-			emissive: 0x00AABAE,
-			emissiveIntensity: 0.15,
-
-			transmission: 1.0,
+		// Custom Water Shader Material
+		this.waterMaterial = new THREE.ShaderMaterial({
+			vertexShader: WATER_VERTEX_SHADER,
+			fragmentShader: WATER_FRAGMENT_SHADER,
+			uniforms: {
+				uTime: { value: 0.0 },
+				uColorShallow: { value: new THREE.Color('#4FA8BB') }, // Light blue-teal
+				uColorDeep: { value: new THREE.Color('#205566') },    // Darker teal
+				uOpacity: { value: 0.55 }, // Transparency
+				uSunPosition: { value: new THREE.Vector3(100, 200, 200).normalize() },
+				uSunColor: { value: new THREE.Color(0xffffff) },
+			},
 			transparent: true,
-			opacity: 1.0,
-
-			ior: 1.45,
-			thickness: 0.6,
-
-			roughness: 0.05,
-			metalness: 0.1,
-
-			clearcoat: 1.0,
-			clearcoatRoughness: 0.02,
-
-			envMapIntensity: 20.5,
-
-			attenuationColor: new THREE.Color(0xfaffff),
-			attenuationDistance: 0.08,
-
-			side: THREE.DoubleSide
+			side: THREE.DoubleSide,
+			// depthWrite: false, // Usually good for water to avoid hiding things incorrectly, but we want it to sort properly
 		});
 
-		// Prepare reusable materials/geometries
+		// Debug box materials
 		this.boxMaterial = new THREE.MeshBasicMaterial({
 			color: 0xff0000,
 			wireframe: true
 		});
 
-		// box line material
 		this.customLineMaterial = new THREE.LineBasicMaterial({
 			color: 0x00ffff
 		});
@@ -121,24 +203,20 @@ export class KoiPondTheme {
 
 
 	/**
-	 * Builds the lighting setup for the theme, including environment maps and scene lights. Called during initialization.
-	 *
-	 * @param {ThreeManager} manager - ThreeManager instance
+	 * Builds the lighting setup for the theme.
 	 */
 	buildThemeLighting(manager) {
 
 		// set our environment map for this theme
 		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 0.65);
 
-		// enable or disable the mouse-light feature
 		manager.enableMouseLight(false);
 
-		// configure scene lighting
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;
 
-		// Add a directional light as main shadow caster
+		// Main directional light
 		this.camLight = new THREE.DirectionalLight(0xffffff, 3.0);
 		this.camLight.position.set(-300, 500, 500);
 		this.camLight.castShadow = true;
@@ -146,7 +224,7 @@ export class KoiPondTheme {
 		manager.scene.add(this.camLight.target);
 		this.camLight.target.position.set(-500, 400, 0);
 
-		// Add some rim lights to make the glass pop more
+		// Rim lights
 		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
 		this.rimLightL.position.set(-180, 10, 0);
 		manager.scene.add(this.rimLightL);
@@ -155,35 +233,28 @@ export class KoiPondTheme {
 		this.rimLightR.position.set(280, 50, 0);
 		manager.scene.add(this.rimLightR);
 
-		// --- SHADOW CONFIGURATION ---
+		// Shadows
 		const d = 2500;
 		this.camLight.shadow.camera.left = -d;
 		this.camLight.shadow.camera.right = d;
 		this.camLight.shadow.camera.top = d;
 		this.camLight.shadow.camera.bottom = -d;
-
 		this.camLight.shadow.camera.near = 1;
 		this.camLight.shadow.camera.far = 5000;
-
-		this.camLight.shadow.bias = 0; // Reset bias
+		this.camLight.shadow.bias = 0;
 		this.camLight.shadow.mapSize.width = 2048 * 2;
 		this.camLight.shadow.mapSize.height = 2048 * 2;
-
-		// Reduce shadow acne without needing a bias
 		this.camLight.shadow.normalBias = 0.05;
 		this.camLight.shadow.radius = 4;
 		this.camLight.shadow.needsUpdate = true;
 
-		// Ensure renderer settings are correct
 		manager.renderer.shadowMap.enabled = true;
-		manager.renderer.shadowMap.type = THREE.PCFShadowMap; // THREE.PCFSoftShadowMap;
+		manager.renderer.shadowMap.type = THREE.PCFShadowMap;
 	}
 
 
 	/**
 	 * Builds the animated water plane for the Koi pond
-	 *
-	 * @param {ThreeManager} manager - reference to the ThreeManager instance
 	 */
 	buildWater(manager) {
 
@@ -191,72 +262,57 @@ export class KoiPondTheme {
 		const geometry = new THREE.PlaneGeometry(10, 10);
 		this.waterPlane = new THREE.Mesh(geometry, this.waterMaterial);
 
-		// get reference to the plane that covers the screen (not the background plane)
-		// get the registered element data for the background cover component or GTFO if doesn't exist
+		// Get reference to the center empty of the main frame
 		const data = manager.getRegisteredElementByName('main_frame_ref');
 		if (!data)
 			return;
 
-		// add the plane to our center empty
 		data.empties.center.add(this.waterPlane);
 
-		// rotate it flat like a pond, and position it deeper into the scene
-		// this.waterPlane.rotation.x = -Math.PI / 2;
+		// Position
 		this.waterPlane.position.x = 0;
 		this.waterPlane.position.y = 0;
-		this.waterPlane.position.z = -70;
+		this.waterPlane.position.z = -70; // Behind content, in front of background
 
-		// scale the plane big enough to cover the whole screen, even on large monitors
+		// Scale huge to cover screen
 		const scale = 2000;
 		this.waterPlane.scale.set(scale, scale, 10);
-
-		// console.clear();
-		// console.log(data);
-
 	}
 
 
 	/**
-	 * Called by ThemeManager when the theme is initialized. Sets up environment, lighting, and starts loading the model.
-	 *
-	 * @param {ThreeManager} manager - The ThreeManager Instance
+	 * Init
 	 */
 	init(manager) {
 
-		// this theme will render actively with a rAF loop, so set the frame mode to 'active' (instead of 'demand' or 'manual')
 		manager.setFrameMode('active');
 
-		// set the background texture for our built-in bg plane
+		// Background
 		const bgTexture = manager.loadPBR('rocky-rugged-terrain', true, false, false, {});
 		manager.setBackground(bgTexture, 200, 0.5, true);
 
-		// set up our lighting
+		// Lighting
 		this.buildThemeLighting(manager);
 
-		// build our water layer
+		// Water
 		setTimeout(() => {
 			this.buildWater(manager);
 		}, 500);
 
-		// load our glass slice model used for boxes
+		// Load Model
 		this._loadPromise = this._loadModel(manager);
 	}
 
 
 	/**
-	 * Cleans up theme before another one is loaded
-	 *
-	 * @param {ThreeManager} manager - ThreeManager instance reference
+	 * Cleanup
 	 */
 	destroy(manager) {
-
-		// clean lights
 		if (this.camLight) {
 			manager.scene.remove(this.camLight);
 			manager.scene.remove(this.camLight.target);
 			this.camLight = null;
 		}
-
 		if (this.rimLightL) {
 			manager.scene.remove(this.rimLightL);
 			this.rimLightL = null;
@@ -274,64 +330,24 @@ export class KoiPondTheme {
 			this.backLight = null;
 		}
 
-		// clear and reset references
 		this.isReady = false;
-		this._didCopyMaps = false;
 	}
 
 
 	/**
-	 * Loads the glass slice model used for boxes
-	 *
-	 * @param {ThreeManager} manager - ThreeManager instances
+	 * Load Model
 	 */
 	async _loadModel(manager) {
-
-		// load the GLB model using our ThreeManager's asset loading system, which will cache it for future use and ensure it's loaded before we try to build boxes with it
+		// Placeholder for model loading logic
 		// const [gltfScene] = await manager.assetsReady(['/models/glass_slice.glb']);
-
-		// // if we got nothing, GTFO
-		// if (!gltfScene) {
-		// 	console.error("GlassTheme2: Failed to load model.");
-		// 	return;
-		// }
-
-		// // Our slice model contains objects with these names
-		// const names = [
-		// 	'Top_Left', 'Top', 'Top_Right',
-		// 	'Left', 'Center', 'Right',
-		// 	'Bottom_Left', 'Bottom', 'Bottom_Right'
-		// ];
-
-		// // enable the shadow casting/receiving for the whole model, since we'll be cloning pieces of it to make our boxes, and we want them all to cast/receive shadows. We can be more selective if we want later, but this is easier.
-		// manager.setShadows(gltfScene, true);
-
-		// we have everything we need to start building boxes
 		this.isReady = true;
-
-		// calling this on all our registered elements will cause them to rebuild with our new glass slices
-		// we just loaded & processed above
-		// manager.registeredElements.forEach((data) => {
-		// 	manager.buildRegisteredElement(data, false);
-		// });
-
-		// // trigger relayout & rerender just to prevent any misalignment or glitches
-		// manager.onResize();
-		// manager.requestRender();
 	}
 
 
-
 	/**
-	 * Called by the ThreeManager when a box needs to be built
-	 *
-	 * @param {ThreeManager} manager - reference to our ThreeManager instance
-	 * @param {Object} data - info about the box we're building from the ThreeManagers registered element system
+	 * Build Box
 	 */
 	buildBox(manager, data) {
-
-		// Add a wireframe cube to the center
-		// We'll scale it in updateBox
 		const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
 		cube.name = "debug_cube";
 		data.empties.center.add(cube);
@@ -339,41 +355,22 @@ export class KoiPondTheme {
 
 
 	/**
-	 * Updates a box when the themes scroll/resize/reflow events occur and the box's dimensions may have changed
-	 *
-	 * @param {ThreeManager} manager - ThreeManager reference
-	 * @param {Object} data - info about the box we're updating from the ThreeManagers registered element system
-	 * @param {Object} rect - info about the size and position of the element
+	 * Update Box
 	 */
 	updateBox(manager, data, rect) {
-
-		// Resize the center cube to match the div size
 		const cube = data.empties.center.getObjectByName("debug_cube");
-
 		if (cube) {
-			const depth = 100; // Arbitrary depth for the debug box
-
-			// 1. Scale
+			const depth = 100;
 			cube.scale.set(rect.width, rect.height, depth);
-
-			// 2. Position Shift
-			// By default, a box is centered at (0,0,0).
-			// We want the front face to be at Z = 0.
-			// Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
-			// We need to move it back by depth/2 so it extends from 0 to -depth.
 			cube.position.z = -depth / 2;
 		}
 	}
 
 
 	/**
-	 * Called by the ThreeManager when a custom box needs to be built
-	 * @param {ThreeManager} manager - reference to our ThreeManager instance
-	 * @param {Object} data - info about the custom box we're building from the ThreeManagers registered element system
+	 * Build Custom Box
 	 */
 	buildCustomBox(manager, data) {
-
-		// A simple cyan wireframe outline (no corner cubes)
 		const lines = new THREE.LineSegments(this.customEdgesGeometry, this.customLineMaterial);
 		lines.name = "debug_custom_outline";
 		data.empties.center.add(lines);
@@ -381,21 +378,12 @@ export class KoiPondTheme {
 
 
 	/**
-	 * Updates a custom box when the themes scroll/resize/reflow events occur and the box's dimensions may have changed
-	 *
-	 * @param {ThreeManager} manager - ThreeManager reference
-	 * @param {Object} data - info about the custom box we're updating from the ThreeManagers registered element system
-	 * @param {Object} rect - info about the size and position of the element
+	 * Update Custom Box
 	 */
 	updateCustomBox(manager, data, rect) {
-
 		const lines = data.empties.center.getObjectByName("debug_custom_outline");
-
 		if (lines) {
-
-			// Keep it thinner than the normal debug box so it's visually distinct
-			const depth = this.customDepth;
-
+			const depth = this.customDepth || 50;
 			lines.scale.set(rect.width, rect.height, depth);
 			lines.position.z = -depth / 2;
 		}
@@ -403,15 +391,14 @@ export class KoiPondTheme {
 
 
 	/**
-	 * Used for frame adjustments on themes that are "active" (rendered in a rAF loop).
-	 * This is where you would put any per-frame animation code for your theme, such as animating the water in our koi pond.
-	 * If your theme doesn't need per-frame updates, you can just leave this empty.
-	 *
-	 * @param {ThreeManager} manager - reference to our ThreeManager instance
-	 * @param {Number} time - current performance.now() timestamp
+	 * Animation Tick
 	 */
 	onTick(manager, time) {
-
+		// Animate water
+		if (this.waterMaterial && this.waterMaterial.uniforms) {
+			// Convert time to seconds
+			this.waterMaterial.uniforms.uTime.value = time * 0.01; // * 0.001;
+		}
 	}
 
 }
