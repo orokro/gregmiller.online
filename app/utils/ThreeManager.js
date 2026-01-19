@@ -190,8 +190,8 @@ export class ThreeManager {
 		// 7. Load Default Theme
 		// this.setTheme(GlassTheme);
 		setTimeout(() => {
-			// setTheme("KoiPondTheme");
-			setTheme("GlassTheme");
+			setTheme("KoiPondTheme");
+			// setTheme("GlassTheme");
 		}, 1000);
 
 		// 8. Force initial layout update
