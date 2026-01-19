@@ -1,15 +1,16 @@
 /*
-	KoiPondTheme.js
-	---------------
+	TemplateTheme.js
+	----------------
 
-	Makes a koi pond!
+	Not a theme intended to be implemented, but a copy-and-pastable base template
+	for building other themes on tp of.
 */
 
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
 import { Object3D } from 'three';
 
-export class KoiPondTheme {
+export class TemplateTheme {
 
 	// static theme colors for UI elements, etc. (not used by theme code directly)
 	static themeColors = {
@@ -76,6 +77,7 @@ export class KoiPondTheme {
 
 			side: THREE.DoubleSide
 		});
+
 
 		// Prepare reusable materials/geometries
 		this.boxMaterial = new THREE.MeshBasicMaterial({
@@ -157,12 +159,13 @@ export class KoiPondTheme {
 	 */
 	init(manager) {
 
-		// this theme will render actively with a rAF loop, so set the frame mode to 'active' (instead of 'demand' or 'manual')
-		manager.setFrameMode('active');
+		// this theme doesn't need to be rendered every frame, so we can set the frame mode to 'lazy'
+		// to only render when necessary (like on scroll/resize/reflow or when registered elements update)
+		manager.setFrameMode('lazy');
 
 		// set the background texture for our built-in bg plane
-		const bgTexture = manager.loadPBR('rocky-rugged-terrain', true, false, false, {});
-		manager.setBackground(bgTexture, 200, 0.5, true);
+		const bgTexture = manager.loadPBR('bg_graph_paper', true, false, false, {});
+		manager.setBackground(bgTexture, 100, 1, true);
 
 		// set up our lighting
 		this.buildThemeLighting(manager);
@@ -234,6 +237,8 @@ export class KoiPondTheme {
 
 		// // enable the shadow casting/receiving for the whole model, since we'll be cloning pieces of it to make our boxes, and we want them all to cast/receive shadows. We can be more selective if we want later, but this is easier.
 		// manager.setShadows(gltfScene, true);
+
+
 
 		// we have everything we need to start building boxes
 		this.isReady = true;
