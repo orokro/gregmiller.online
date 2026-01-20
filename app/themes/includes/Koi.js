@@ -1,12 +1,20 @@
-// app/themes/includes/Koi.js
+/*
+	Koi.js
+	------
 
+	Defines the Koi class used in the Koi Pond theme.
+*/
+
+// Three
 import * as THREE from 'three';
+import { KoiSystem } from './KoiSystem';
 
 // used for our koi states
 const KOI_STATE = {
 	IDLE: 'idle',
 	SWIMMING: 'swimming',
-	SURFACING: 'surfacing'
+	SURFACING: 'surfacing',
+	DIVING: 'diving'
 };
 
 const TAU = Math.PI * 2;
@@ -15,6 +23,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// animation easing (cubic ease-in-out) helper
 const easeInOut = (t) => {
 	t = clamp(t, 0, 1);
 	return t < 0.5
@@ -36,11 +45,22 @@ const angleTo = (x1, y1, x2, y2) => {
 	return Math.atan2(dx, -dy);
 };
 
+// main money
 export class Koi extends THREE.Object3D {
 
+	/**
+	 * Constructor
+	 *
+	 * @param {KoiSystem} koiSystem - instance of our KoiSystem
+	 * @param {ThreeManager} manager - reference to our ThreeManager instance
+	 * @param {Object} options - options for the koi
+	 */
 	constructor(koiSystem, manager, options = {}) {
+
+		// Three.Object3D constructor
 		super();
 
+		// save our refs
 		this.koiSystem = koiSystem;
 		this.manager = manager;
 		this.options = options;
@@ -59,18 +79,22 @@ export class Koi extends THREE.Object3D {
 		this.minCreepSpeed = options.minCreepSpeed ?? rand(10, 16);
 
 		this.speed = 0;
-		this.yaw = 0;		// heading in XY plane (applied to rotation.z)
+		this.yaw = 0;
 		this.yawVel = 0;
 
+		// where the fish wants to head too
 		this.target = new THREE.Vector3(0, 0, -150);
 
-		// surfacing
+		// surfacing animation logic
 		this.surfacePhase = 0; // 0 up+forward, 1 pause, 2 down+forward
 		this.surfaceT = 0;
 		this.surfaceUpTime = rand(1.4, 2.1);
 		this.surfacePauseTime = rand(0.25, 0.55);
 		this.surfaceDownTime = rand(1.0, 1.7);
-		this.surfacePitchMax = THREE.MathUtils.degToRad(50);
+		this.surfacePitchMax = THREE.MathUtils.degToRad(-50);
+
+		// diving uses the same logic as surfacing except pitch
+		this.divingPitchMax = THREE.MathUtils.degToRad(40);
 
 		// timers
 		this.state = KOI_STATE.IDLE;
@@ -82,15 +106,13 @@ export class Koi extends THREE.Object3D {
 		this.idleTurnT = 0;
 		this.idleTurnDuration = rand(3.5, 7.0);
 
-		// IMPORTANT:
-		// Your GLB child is already rotated so that parent yaw=0 faces "up" on screen.
-		// So math should NOT apply any extra offset.
-		this.headingOffset = 0; // Math.PI;
+		// Adjustment for fish facing direction vs movement direction
+		this.headingOffset = 0;
 
 		// scratch forward vector (avoid allocs)
 		this._fwd = new THREE.Vector2();
 
-		// arrival bookkeeping
+		// arrival bookkeeping (when the fish gets really close floating point jitter can prevent it from "arriving")
 		this._stuckTimer = 0;
 		this._lastDist = Infinity;
 
@@ -106,12 +128,11 @@ export class Koi extends THREE.Object3D {
 		this.surfaceAnimationSpeed = 0.75;
 
 		// animation state
-		// animation runtime
 		this.mixer = null;
 		this.swimAction = null;
 		this._lastAnimState = null;
 
-
+		// load our koi model
 		this._loadModel(manager);
 
 		// start with a gentle random heading in [-PI, PI]
@@ -124,15 +145,23 @@ export class Koi extends THREE.Object3D {
 		this.rotation.order = 'ZXY';
 	}
 
+
+	/**
+	 * Clean up the Koi by removing it from the scene and disposing of any resources.
+	 */
 	destroy() {
+
+		// remove koi / target from scene
 		this.koiSystem.backgroundCenter.remove(this.koiTarget);
 
+		// dispose of axis helper and koi target
 		this.axisHelper.geometry.dispose();
 		this.axisHelper.material.dispose();
 		this.koiTarget.remove(this.axisHelper);
 		this.axisHelper = null;
 		this.koiTarget = null;
 
+		// dispose of koi fish and animations
 		if (this.mixer) {
 			this.mixer.stopAllAction();
 			this.mixer = null;
@@ -140,18 +169,28 @@ export class Koi extends THREE.Object3D {
 		}
 	}
 
+
+	/**
+	 * Loads our Koi model and sets up animations.
+	 *
+	 * @param {ThreeManager} manager - the ThreeManager instance
+	 */
 	async _loadModel(manager){
 
+		// use our ThreeManagers asset system to load the model
 		const [gltfScene] = await manager.assetsReady(['/models/koi_fish.glb']);
 
+		// GTFO if we failed
 		if (!gltfScene) {
 			console.error("Koi: Failed to load model.");
 			return;
 		}
 
+		// we'll break the mesh out of the gltfScene for our own use
 		this.koiFish = gltfScene.children[0];
 		this.add(this.koiFish);
 
+		// scale it up to a reasonable size
 		const scale = 50;
 		this.koiFish.scale.set(scale, scale, scale);
 
@@ -173,6 +212,7 @@ export class Koi extends THREE.Object3D {
 		// if your GLB only has one, this is perfect. If it has multiple, we’ll still start with the first.
 		const clip = clips[0];
 
+		// set up the swim action
 		this.swimAction = this.mixer.clipAction(clip);
 		this.swimAction.setLoop(THREE.LoopRepeat, Infinity);
 		this.swimAction.play();
@@ -181,14 +221,30 @@ export class Koi extends THREE.Object3D {
 		this._applyAnimationSpeed();
 	}
 
+
+	/**
+	 * Our fish uses a state machine, so here we pick another random state to enter.
+	 */
 	_pickNextState() {
+
 		const r = Math.random();
-		if (r < 0.40) this._enterSwimming();
-		else if (r < 0.75) this._enterIdle();
-		else this._enterSurfacing();
+		if (r < 0.40)
+			this._enterSwimming();
+		else if (r < 0.75)
+			this._enterIdle();
+		else if (r < 0.875)
+			this._enterDiving();
+		else
+			this._enterSurfacing();
 	}
 
+
+	/**
+	 * Enter the idle state
+	 */
 	_enterIdle() {
+
+		// set up idle state
 		this.state = KOI_STATE.IDLE;
 		this.stateTimer = 0;
 		this.stateDuration = rand(5, 10);
@@ -199,7 +255,13 @@ export class Koi extends THREE.Object3D {
 		this.idleTurnDuration = rand(3.5, 7.0);
 	}
 
+
+	/**
+	 * Enter the swimming state
+	 */
 	_enterSwimming() {
+
+		// set up swimming state
 		this.state = KOI_STATE.SWIMMING;
 		this.stateTimer = 0;
 
@@ -211,7 +273,13 @@ export class Koi extends THREE.Object3D {
 		this._lastDist = Infinity;
 	}
 
+
+	/**
+	 * Enter the surfacing state
+	 */
 	_enterSurfacing() {
+
+		// set up surfacing state
 		this.state = KOI_STATE.SURFACING;
 		this.stateTimer = 0;
 
@@ -236,15 +304,60 @@ export class Koi extends THREE.Object3D {
 		this._lastDist = Infinity;
 	}
 
+
+	/**
+	 * Enter the diving state
+	 */
+	_enterDiving() {
+
+		// set up diving state
+		this.state = KOI_STATE.DIVING;
+		this.stateTimer = 0;
+
+		this.surfacePhase = 0;
+		this.surfaceT = 0;
+		this.surfaceUpTime = rand(1.4, 2.1);
+		this.surfacePauseTime = rand(0.25, 0.55);
+		this.surfaceDownTime = rand(1.0, 1.7);
+
+		const bounds = this.koiSystem.getViewportBoundsInBackground(120);
+
+		const f = this._forward2D();
+		const dist = rand(240, 420);
+
+		const tx = clamp(this.position.x + f.x * dist, bounds.minX, bounds.maxX);
+		const ty = clamp(this.position.y + f.y * dist, bounds.minY, bounds.maxY);
+
+		this.target.set(tx, ty, this.position.z);
+		this.koiTarget.position.copy(this.target);
+
+		this._stuckTimer = 0;
+		this._lastDist = Infinity;
+	}
+
+
+	/**
+	 * Gets the forward vector in 2D space based on current yaw.
+	 *
+	 * @returns {THREE.Vector2} - forward vector in 2D space
+	 */
 	_forward2D() {
-		// Match 2D demo: yaw=0 faces "up" (-Y)
+
+		// yaw=0 faces "up" (-Y)
 		const a = this.yaw + this.headingOffset;
 		this._fwd.set(Math.sin(a), -Math.cos(a));
 		return this._fwd;
 	}
 
+
+	/**
+	 * Updates the steering to head toward the target.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 */
 	_updateSteering(dt) {
-		// Match 2D demo: desired heading uses atan2(dx, -dy)
+
+		// desired heading uses atan2(dx, -dy)
 		const desiredYaw = angleTo(
 			this.position.x,
 			this.position.y,
@@ -269,6 +382,13 @@ export class Koi extends THREE.Object3D {
 		this.rotation.z = this.yaw;
 	}
 
+
+	/**
+	 * Updates the speed to approach the desired speed.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 * @param {Number} desiredSpeed - desired speed to approach
+	 */
 	_updateSpeed(dt, desiredSpeed) {
 		if (this.speed < desiredSpeed) {
 			this.speed = Math.min(desiredSpeed, this.speed + this.accel * dt);
@@ -277,6 +397,14 @@ export class Koi extends THREE.Object3D {
 		}
 	}
 
+
+	/**
+	 * Updates the arrival behavior toward the target.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 * @param {Number} speedScale - scales the max speed for this arrive call
+	 * @returns {Boolean} - true if arrived at target
+	 */
 	_updateArrive(dt, speedScale = 1) {
 
 		const dx = this.target.x - this.position.x;
@@ -331,6 +459,12 @@ export class Koi extends THREE.Object3D {
 		return false;
 	}
 
+
+	/**
+	 * Update the koi when in the idle state.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 */
 	_updateIdle(dt) {
 
 		this.stateTimer += dt;
@@ -357,7 +491,14 @@ export class Koi extends THREE.Object3D {
 		}
 	}
 
+
+	/**
+	 * Update the koi when in the swimming state.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 */
 	_updateSwimming(dt) {
+
 		const arrived = this._updateArrive(dt, 1.0);
 
 		this.rotation.x = lerp(this.rotation.x, 0, 1 - Math.pow(0.001, dt));
@@ -367,6 +508,12 @@ export class Koi extends THREE.Object3D {
 		}
 	}
 
+
+	/**
+	 * Update the koi when in the surfacing state.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 */
 	_updateSurfacing(dt) {
 
 		if (this.surfacePhase === 0) {
@@ -425,6 +572,74 @@ export class Koi extends THREE.Object3D {
 		}
 	}
 
+
+	/**
+	 * Update the koi when in the diving state.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 */
+	_updateDiving(dt) {
+
+		if (this.surfacePhase === 0) {
+
+			this.surfaceT += dt / this.surfaceUpTime;
+			const t = easeInOut(this.surfaceT);
+
+			const arrived = this._updateArrive(dt, 1.0);
+
+			this.rotation.x = lerp(0, this.divingPitchMax, t);
+
+			if (arrived || this.surfaceT >= 1) {
+				this.surfacePhase = 1;
+				this.surfaceT = 0;
+			}
+
+		} else if (this.surfacePhase === 1) {
+
+			this.surfaceT += dt / this.surfacePauseTime;
+			this._updateSpeed(dt, 0);
+			this.rotation.x = lerp(this.rotation.x, this.divingPitchMax, 1 - Math.pow(0.001, dt));
+
+			if (this.surfaceT >= 1) {
+
+				const bounds = this.koiSystem.getViewportBoundsInBackground(120);
+
+				const f = this._forward2D();
+				const dist = rand(220, 380);
+
+				const tx = clamp(this.position.x + f.x * dist, bounds.minX, bounds.maxX);
+				const ty = clamp(this.position.y + f.y * dist, bounds.minY, bounds.maxY);
+
+				this.target.set(tx, ty, this.position.z);
+				this.koiTarget.position.copy(this.target);
+
+				this.surfacePhase = 2;
+				this.surfaceT = 0;
+
+				this._stuckTimer = 0;
+				this._lastDist = Infinity;
+			}
+
+		} else {
+
+			this.surfaceT += dt / this.surfaceDownTime;
+			const t = easeInOut(this.surfaceT);
+
+			const arrived = this._updateArrive(dt, 1.0);
+
+			this.rotation.x = lerp(this.divingPitchMax, 0, t);
+
+			if (arrived || this.surfaceT >= 1) {
+				this.rotation.x = 0;
+				this._pickNextState();
+			}
+		}
+	}
+
+
+	/**
+	 * Applies the correct animation speed based on the current state.
+	 */
 	_applyAnimationSpeed(){
 
 		if (!this.swimAction)
@@ -439,12 +654,27 @@ export class Koi extends THREE.Object3D {
 		else if (this.state === KOI_STATE.SURFACING)
 			this.swimAction.timeScale = this.surfaceAnimationSpeed;
 
+		else if (this.state === KOI_STATE.DIVING)
+			this.swimAction.timeScale = this.surfaceAnimationSpeed;
+
 	}
 
+
+	/**
+	 * Update the koi, based on its current state.
+	 *
+	 * @param {Number} dt - delta time in seconds
+	 */
 	update(dt) {
-		if (this.state === KOI_STATE.IDLE) this._updateIdle(dt);
-		else if (this.state === KOI_STATE.SWIMMING) this._updateSwimming(dt);
-		else if (this.state === KOI_STATE.SURFACING) this._updateSurfacing(dt);
+
+		if (this.state === KOI_STATE.IDLE)
+			this._updateIdle(dt);
+		else if (this.state === KOI_STATE.SWIMMING)
+			this._updateSwimming(dt);
+		else if (this.state === KOI_STATE.SURFACING)
+			this._updateSurfacing(dt);
+		else if (this.state === KOI_STATE.DIVING)
+			this._updateDiving(dt);
 
 		// animation tick
 		if (this.mixer) {
