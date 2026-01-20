@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
 import { Object3D } from 'three';
+import { LilyGroup } from './includes/LilyGroup';
 
 // our app
 import { KoiSystem } from './includes/KoiSystem';
@@ -48,6 +49,9 @@ export class KoiPondTheme {
 
 		// our koi system once we're ready to initialize it
 		this.koiSystem = null;
+
+		// store our extra models on this
+		this.models = {};
 
 		// build our materials once on load
 		this.buildMaterials();
@@ -273,7 +277,7 @@ export class KoiPondTheme {
 		}, 500);
 
 		// load our glass slice model used for boxes
-		this._loadPromise = this._loadModel(manager);
+		this._loadPromise = this._loadModels(manager);
 	}
 
 
@@ -336,6 +340,21 @@ export class KoiPondTheme {
 			this.waterPlane.parent.remove(this.waterPlane);
 			this.waterPlane = null;
 		}
+
+		// clean lilies
+		// calling this on all our registered elements will cause them to rebuild with our new glass slices
+		// we just loaded & processed above
+		manager.registeredElements.forEach((data) => {
+
+			// if there's a lily group, destroy it
+			if(data.lilyGroup){
+				data.lilyGroup.destroy();
+				data.empties.center.remove(data.lilyGroup);
+				data.lilyGroup = null;
+				delete data.lilyGroup;
+			}
+		});
+
 	}
 
 
@@ -344,41 +363,44 @@ export class KoiPondTheme {
 	 *
 	 * @param {ThreeManager} manager - ThreeManager instances
 	 */
-	async _loadModel(manager) {
+	async _loadModels(manager) {
 
 		// load the GLB model using our ThreeManager's asset loading system, which will cache it for future use and ensure it's loaded before we try to build boxes with it
-		// const [gltfScene] = await manager.assetsReady(['/models/glass_slice.glb']);
+		const [lilyPad, lilyFlower, pondRock] = await manager.assetsReady([
+			'/models/Lily_Pad.glb',
+			'/models/Lily_Flower.glb',
+			'/models/Pond_Rock.glb',
+		]);
 
-		// // if we got nothing, GTFO
-		// if (!gltfScene) {
-		// 	console.error("GlassTheme2: Failed to load model.");
-		// 	return;
-		// }
+		// if we got nothing, GTFO
+		if (!lilyPad || !lilyFlower || !pondRock) {
+			console.error("KoiPondTheme: Failed to load models.");
+			return;
+		}
 
-		// // Our slice model contains objects with these names
-		// const names = [
-		// 	'Top_Left', 'Top', 'Top_Right',
-		// 	'Left', 'Center', 'Right',
-		// 	'Bottom_Left', 'Bottom', 'Bottom_Right'
-		// ];
+		// break out the models from their scenes & save them
+		this.models = {};
+		this.models.lily_pad = lilyPad.children[0];
+		this.models.lily_flower = lilyFlower.children[0];
+		this.models.pond_rock = pondRock.children[0];
 
-		// // enable the shadow casting/receiving for the whole model, since we'll be cloning pieces of it to make our boxes, and we want them all to cast/receive shadows. We can be more selective if we want later, but this is easier.
-		// manager.setShadows(gltfScene, true);
+		// enable the shadow casting/receiving for the whole model, since we'll be cloning pieces of it to make our boxes, and we want them all to cast/receive shadows. We can be more selective if we want later, but this is easier.
+		manager.setShadows(this.models.lily_pad, true);
+		manager.setShadows(this.models.pond_rock, true);
 
 		// we have everything we need to start building boxes
 		this.isReady = true;
 
 		// calling this on all our registered elements will cause them to rebuild with our new glass slices
 		// we just loaded & processed above
-		// manager.registeredElements.forEach((data) => {
-		// 	manager.buildRegisteredElement(data, false);
-		// });
+		manager.registeredElements.forEach((data) => {
+			manager.buildRegisteredElement(data, false);
+		});
 
-		// // trigger relayout & rerender just to prevent any misalignment or glitches
-		// manager.onResize();
-		// manager.requestRender();
+		// trigger relayout & rerender just to prevent any misalignment or glitches
+		manager.onResize();
+		manager.requestRender();
 	}
-
 
 
 	/**
@@ -389,11 +411,26 @@ export class KoiPondTheme {
 	 */
 	buildBox(manager, data) {
 
-		// Add a wireframe cube to the center
-		// We'll scale it in updateBox
-		const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
-		cube.name = "debug_cube";
-		data.empties.center.add(cube);
+		// gtfo if not ready yet
+		if (!this.isReady)
+			return;
+
+		if(!data.lilyGroup){
+			data.lilyGroup = new LilyGroup(manager, this.models);
+			data.empties.center.add(data.lilyGroup);
+			data.lilyGroup.buildLilyGroup(data);
+		}else
+		{
+			data.lilyGroup.updateLilyGroup(data);
+		}
+
+		// // Add a wireframe cube to the center
+		// // We'll scale it in updateBox
+		// const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
+		// cube.name = "debug_cube";
+		// data.empties.center.add(cube);
+
+
 	}
 
 
@@ -406,22 +443,35 @@ export class KoiPondTheme {
 	 */
 	updateBox(manager, data, rect) {
 
-		// Resize the center cube to match the div size
-		const cube = data.empties.center.getObjectByName("debug_cube");
+		// gtfo if not ready yet
+		if (!this.isReady)
+			return;
 
-		if (cube) {
-			const depth = 100; // Arbitrary depth for the debug box
-
-			// 1. Scale
-			cube.scale.set(rect.width, rect.height, depth);
-
-			// 2. Position Shift
-			// By default, a box is centered at (0,0,0).
-			// We want the front face to be at Z = 0.
-			// Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
-			// We need to move it back by depth/2 so it extends from 0 to -depth.
-			cube.position.z = -depth / 2;
+		if(!data.lilyGroup){
+			data.lilyGroup = new LilyGroup(manager, this.models);
+			data.empties.center.add(data.lilyGroup);
+			data.lilyGroup.buildLilyGroup(data);
+		}else
+		{
+			data.lilyGroup.updateLilyGroup(data);
 		}
+
+		// // Resize the center cube to match the div size
+		// const cube = data.empties.center.getObjectByName("debug_cube");
+
+		// if (cube) {
+		// 	const depth = 100; // Arbitrary depth for the debug box
+
+		// 	// 1. Scale
+		// 	cube.scale.set(rect.width, rect.height, depth);
+
+		// 	// 2. Position Shift
+		// 	// By default, a box is centered at (0,0,0).
+		// 	// We want the front face to be at Z = 0.
+		// 	// Since the box is 'depth' thick, it extends from +depth/2 to -depth/2.
+		// 	// We need to move it back by depth/2 so it extends from 0 to -depth.
+		// 	cube.position.z = -depth / 2;
+		// }
 	}
 
 
@@ -567,17 +617,11 @@ const fragmentShader = `
 	uniform float waveIntensity2;
 	uniform float waveSpeed2;
 
-					uniform float distortIntensity;
-
-					uniform float waterDirX;
-
-					uniform float waterDirY;
-
-					uniform float scrollY;
-
-
-
-					uniform sampler2D envMap;
+	uniform float distortIntensity;
+	uniform float waterDirX;
+	uniform float waterDirY;
+	uniform float scrollY;
+	uniform sampler2D envMap;
 
 
 	uniform float envMapIntensity;

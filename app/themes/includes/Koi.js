@@ -119,7 +119,7 @@ export class Koi extends THREE.Object3D {
 		// target debug
 		this.axisHelper = new THREE.AxesHelper(100);
 		this.koiTarget = new THREE.Group();
-		this.koiTarget.add(this.axisHelper);
+		// this.koiTarget.add(this.axisHelper);
 		this.koiSystem.backgroundCenter.add(this.koiTarget);
 
 		// animation speeds (hook up to your mixer/actions if you add them)
@@ -157,7 +157,7 @@ export class Koi extends THREE.Object3D {
 		// dispose of axis helper and koi target
 		this.axisHelper.geometry.dispose();
 		this.axisHelper.material.dispose();
-		this.koiTarget.remove(this.axisHelper);
+		// this.koiTarget.remove(this.axisHelper);
 		this.axisHelper = null;
 		this.koiTarget = null;
 
