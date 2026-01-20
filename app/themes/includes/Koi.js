@@ -85,7 +85,7 @@ export class Koi extends THREE.Object3D {
 		// IMPORTANT:
 		// Your GLB child is already rotated so that parent yaw=0 faces "up" on screen.
 		// So math should NOT apply any extra offset.
-		this.headingOffset = Math.PI;
+		this.headingOffset = 0; // Math.PI;
 
 		// scratch forward vector (avoid allocs)
 		this._fwd = new THREE.Vector2();
@@ -104,6 +104,13 @@ export class Koi extends THREE.Object3D {
 		this.swimAnimationSpeed = 1;
 		this.idleAnimationSpeed = 0.5;
 		this.surfaceAnimationSpeed = 0.75;
+
+		// animation state
+		// animation runtime
+		this.mixer = null;
+		this.swimAction = null;
+		this._lastAnimState = null;
+
 
 		this._loadModel(manager);
 
@@ -125,9 +132,16 @@ export class Koi extends THREE.Object3D {
 		this.koiTarget.remove(this.axisHelper);
 		this.axisHelper = null;
 		this.koiTarget = null;
+
+		if (this.mixer) {
+			this.mixer.stopAllAction();
+			this.mixer = null;
+			this.swimAction = null;
+		}
 	}
 
-	async _loadModel(manager) {
+	async _loadModel(manager){
+
 		const [gltfScene] = await manager.assetsReady(['/models/koi_fish.glb']);
 
 		if (!gltfScene) {
@@ -141,9 +155,30 @@ export class Koi extends THREE.Object3D {
 		const scale = 50;
 		this.koiFish.scale.set(scale, scale, scale);
 
-		// you’ve already oriented the child so parent yaw=0 is “up”
+		// keep your existing “face up” orientation
 		this.koiFish.rotation.x = 0;
 		this.koiFish.rotation.z = -Math.PI / 2;
+
+		// ----- animations -----
+		const clips = gltfScene.animations || [];
+		if (!clips.length) {
+			console.warn("Koi: No animations found on gltfScene.animations (check ThreeManager fix).");
+			return;
+		}
+
+		// mixer on the fish root (the animated hierarchy is under this.koiFish)
+		this.mixer = new THREE.AnimationMixer(this.koiFish);
+
+		// pick a clip:
+		// if your GLB only has one, this is perfect. If it has multiple, we’ll still start with the first.
+		const clip = clips[0];
+
+		this.swimAction = this.mixer.clipAction(clip);
+		this.swimAction.setLoop(THREE.LoopRepeat, Infinity);
+		this.swimAction.play();
+
+		// start at correct speed for whatever state we’re currently in
+		this._applyAnimationSpeed();
 	}
 
 	_pickNextState() {
@@ -390,9 +425,37 @@ export class Koi extends THREE.Object3D {
 		}
 	}
 
+	_applyAnimationSpeed(){
+
+		if (!this.swimAction)
+			return;
+
+		if (this.state === KOI_STATE.SWIMMING)
+			this.swimAction.timeScale = this.swimAnimationSpeed;
+
+		else if (this.state === KOI_STATE.IDLE)
+			this.swimAction.timeScale = this.idleAnimationSpeed;
+
+		else if (this.state === KOI_STATE.SURFACING)
+			this.swimAction.timeScale = this.surfaceAnimationSpeed;
+
+	}
+
 	update(dt) {
 		if (this.state === KOI_STATE.IDLE) this._updateIdle(dt);
 		else if (this.state === KOI_STATE.SWIMMING) this._updateSwimming(dt);
 		else if (this.state === KOI_STATE.SURFACING) this._updateSurfacing(dt);
+
+		// animation tick
+		if (this.mixer) {
+
+			// only adjust timeScale when state changes (cheap + avoids jitter)
+			if (this._lastAnimState !== this.state) {
+				this._lastAnimState = this.state;
+				this._applyAnimationSpeed();
+			}
+
+			this.mixer.update(dt);
+		}
 	}
 }

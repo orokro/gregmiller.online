@@ -691,9 +691,10 @@ export class ThreeManager {
 				if (ext === 'glb' || ext === 'gltf') {
 
 					new GLTFLoader().load(url, (gltf) => {
-						this.assets.set(url, gltf.scene);
+						// Store full GLTF object to keep animations
+						this.assets.set(url, gltf);
 						this.loadingPromises.delete(url);
-						resolve(gltf.scene);
+						resolve(gltf);
 					}, undefined, reject);
 
 				} else if (['jpg', 'png', 'webp'].includes(ext)) {
@@ -723,6 +724,16 @@ export class ThreeManager {
 		// return clones of the assets to prevent accidental mutations (especially important for textures)
 		return urls.map(url => {
 			const asset = this.assets.get(url);
+
+			// Handle GLTF objects (Duck typing: has scene & animations)
+			if (asset.scene) {
+				const clone = asset.scene.clone(true);
+				// Attach animations to the scene so consumers can find them
+				clone.animations = asset.animations || [];
+				return clone;
+			}
+
+			// Handle Textures or generic Object3Ds
 			return asset.isTexture ? asset.clone() : asset.clone(true);
 		});
 	}
