@@ -473,8 +473,9 @@ export class ThreeManager {
 			this.buildRegisteredElement(data);
 		});
 
+		// make sure everything is positioned correctly for the new theme
 		this.requestRender();
-		this.onResize(); // make sure everything is positioned correctly for the new theme
+		this.onResize();
 	}
 
 
@@ -1367,34 +1368,6 @@ export class ThreeManager {
 		}
 
 		// Transform can change on scroll/pan
-		this.canvas.style.transform = `translate3d(${offX}px, ${offY}px, 0)`;
-	}
-
-	updateCanvasLayout_old() {
-
-		// Get the viewport size and offsets. On desktop, offsets will be 0 and size will match the window. On mobile, this accounts for zoom/pan.
-		let vW = document.documentElement.clientWidth || window.innerWidth;
-		let vH = document.documentElement.clientHeight || window.innerHeight;
-		let offX = 0;
-		let offY = 0;
-
-		// If Visual Viewport API is available, use it to get the actual viewport size and offsets (important for iOS zoom/pan)
-		if (window.visualViewport) {
-			vW = window.visualViewport.width;
-			vH = window.visualViewport.height;
-			offX = window.visualViewport.offsetLeft;
-			offY = window.visualViewport.offsetTop;
-		}
-
-		this.width = vW;
-		this.height = vH;
-
-		// Update the renderer size to match the viewport
-		this.renderer.setSize(vW, vH);
-
-		// Position the canvas to match the viewport, including any visual viewport offsets
-		this.canvas.style.width = `${vW}px`;
-		this.canvas.style.height = `${vH}px`;
 		this.canvas.style.transform = `translate3d(${offX}px, ${offY}px, 0)`;
 	}
 

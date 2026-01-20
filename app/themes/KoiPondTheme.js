@@ -417,12 +417,14 @@ export class KoiPondTheme {
 
 		if(!data.lilyGroup){
 			data.lilyGroup = new LilyGroup(manager, this.models);
-			data.empties.center.add(data.lilyGroup);
 			data.lilyGroup.buildLilyGroup(data);
 		}else
 		{
 			data.lilyGroup.updateLilyGroup(data);
 		}
+
+		// ensure it's added to the scene (in case it was removed by manager cleanup during rebuild)
+		data.empties.center.add(data.lilyGroup);
 
 		// // Add a wireframe cube to the center
 		// // We'll scale it in updateBox
@@ -449,12 +451,14 @@ export class KoiPondTheme {
 
 		if(!data.lilyGroup){
 			data.lilyGroup = new LilyGroup(manager, this.models);
-			data.empties.center.add(data.lilyGroup);
 			data.lilyGroup.buildLilyGroup(data);
 		}else
 		{
 			data.lilyGroup.updateLilyGroup(data);
 		}
+
+		// ensure it's added to the scene (in case it was removed by manager cleanup during rebuild)
+		data.empties.center.add(data.lilyGroup);
 
 		// // Resize the center cube to match the div size
 		// const cube = data.empties.center.getObjectByName("debug_cube");

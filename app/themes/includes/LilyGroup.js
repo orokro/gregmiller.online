@@ -53,6 +53,23 @@ class Random {
 }
 
 
+function deepCloneMeshResources(root){
+
+	root.traverse((obj) => {
+		if (!obj.isMesh) return;
+
+		if (obj.geometry) obj.geometry = obj.geometry.clone();
+
+		if (Array.isArray(obj.material)){
+			obj.material = obj.material.map((m) => m.clone());
+		}else if (obj.material){
+			obj.material = obj.material.clone();
+		}
+	});
+	return root;
+}
+
+
 // main money
 export class LilyGroup extends THREE.Object3D {
 
@@ -93,12 +110,21 @@ export class LilyGroup extends THREE.Object3D {
 	/**
 	 * Clears all lilies from the group
 	 */
-	clearLilies() {
-
-		for (let lily of this.lilies) {
+	clearLilies(){
+		for (const lily of this.lilies){
 			this.remove(lily);
-			lily.geometry.dispose();
-			lily.material.dispose();
+
+			lily.traverse((obj) => {
+				if (!obj.isMesh) return;
+
+				obj.geometry?.dispose?.();
+
+				if (Array.isArray(obj.material)){
+					for (const m of obj.material) m?.dispose?.();
+				}else{
+					obj.material?.dispose?.();
+				}
+			});
 		}
 		this.lilies = [];
 	}
@@ -331,15 +357,13 @@ export class LilyGroup extends THREE.Object3D {
 		for (const def of lilyDefs) {
 
 			// clone a lilly
-			const lily = this.models.lily_pad.clone();
+			const lily = deepCloneMeshResources(this.models.lily_pad.clone(true));
 			this.add(lily);
-			lily.position.set(def.x, def.y, -65 + def.depth * 20); // slight Z offset per depth to avoid z-fighting
+			lily.position.set(def.x, def.y, -65 + def.depth * 20);
 			const radius = def.pixelRadius * 2;
 			lily.scale.set(radius, radius, radius);
 			lily.rotation.x = Math.PI / 2;
 			lily.rotation.y = THREE.MathUtils.degToRad(def.rotation);
-			// lily.rotation.set(-Math.PI / 2, 0, THREE.MathUtils.degToRad(def.rotation));
-			this.add(lily);
 			this.lilies.push(lily);
 
 		}// next def
