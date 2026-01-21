@@ -187,26 +187,22 @@ onBeforeUnmount(() => {
 			<h1><span>Contact</span></h1>
 			<div class="white-box">
 
-				<!-- note: I copied and pasted this from my 2010 site, lol, still uses tables.
-					welp, they do work in 2026, so yolo -->
-				<table class="contactDetails" width="100%" border="0" cellspacing="0" cellpadding="5">
-					<tr>
-						<td height="24" align="right" valign="top"><strong>Call:</strong></td>
-						<td valign="top" class="contactTD">(4ዐ𝟪) 𝟪ᒿ੧-ዐl𝟪б</td>
-					</tr>
-					<tr>
-						<td height="22" align="right" valign="top"><strong>Email:</strong></td>
-						<td valign="top" class="contactTD">hypurban86@gmail.com</td>
-					</tr>
-					<tr>
-						<td align="right" valign="top"><strong>Secondary Email:</strong></td>
-						<td valign="top" class="contactTD">gmills4reals@gmail.com</td>
-					</tr>
-					<tr>
-						<td align="right" valign="top"><strong>Chat:</strong></td>
-						<td valign="top" class="contactTD">Feel free to try the live chat widget<br/>in the bottom right corner of the page.</td>
-					</tr>
-				</table>
+				<!-- Modern Grid Layout -->
+				<div class="contact-grid">
+					
+					<div class="label">Call:</div>
+					<div class="value">(4ዐ𝟪) 𝟪ᒿ੧-ዐl𝟪б</div>
+
+					<div class="label">Email:</div>
+					<div class="value">hypurban86@gmail.com</div>
+
+					<div class="label">Secondary Email:</div>
+					<div class="value">gmills4reals@gmail.com</div>
+
+					<div class="label">Chat:</div>
+					<div class="value">Feel free to try the live chat widget<br/>in the bottom right corner of the page.</div>
+
+				</div>
 
 			</div>
 
@@ -259,8 +255,46 @@ onBeforeUnmount(() => {
 </template>
 <style lang="scss" scoped>
 
-table, tr, td {
+// Responsive Contact Grid
+.contact-grid {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 1rem 2rem;
+	align-items: baseline;
+	text-align: left;
+	width: 100%;
 	color: var(--color-text);
+	
+	.label {
+		font-weight: bold;
+		text-align: right;
+	}
+
+	.value {
+		text-align: left;
+		word-break: break-word; // Prevent overflow
+		min-width: 0; // Allow flex/grid item to shrink below content size
+	}
+
+	// Stack columns on small screens
+	@media (max-width: 550px) {
+		grid-template-columns: 1fr;
+		gap: 0.5rem;
+		
+		.label {
+			text-align: left;
+			margin-top: 1rem;
+			
+			// Remove top margin for the first item
+			&:first-child {
+				margin-top: 0;
+			}
+		}
+
+		.value {
+			margin-bottom: 0.5rem;
+		}
+	}
 }
 
 // list of social media icons
