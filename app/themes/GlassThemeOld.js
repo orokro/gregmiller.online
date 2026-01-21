@@ -254,4 +254,25 @@ export class GlassThemeOld {
 
 		transform('Center', 0, 0, innerW, innerH);
 	}
+
+
+
+	/**
+	 * Called when the window is resized.
+	 */
+	onResize(){
+
+	}
+
+
+	/**
+	 * Called when the page is scrolled.
+	 *
+	 * @param {number} scrollX - The current horizontal scroll position.
+	 * @param {number} scrollY - The current vertical scroll position.
+	 */
+	onScroll(scrollX, scrollY){
+
+	}
+
 }

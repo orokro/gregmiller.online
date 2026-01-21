@@ -209,6 +209,25 @@ export class DebugTheme {
 
 
 	/**
+	 * Called when the window is resized.
+	 */
+	onResize(){
+
+	}
+
+
+	/**
+	 * Called when the page is scrolled.
+	 *
+	 * @param {number} scrollX - The current horizontal scroll position.
+	 * @param {number} scrollY - The current vertical scroll position.
+	 */
+	onScroll(scrollX, scrollY){
+
+	}
+
+
+	/**
 	 * Called per frame (only if manager.frameMode === 'active').
 	 *
 	 * @param {ThreeManager} manager - The ThreeManager instance.

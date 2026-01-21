@@ -174,6 +174,7 @@ export class ThreeManager {
 
 		// Make sure onResize is called at least once to set initial sizes and FOV
 		this.resizeObserver = new ResizeObserver((entries) => {
+
 			let needsGlobalUpdate = false;
 			for (const entry of entries) {
 				needsGlobalUpdate = true;
@@ -217,6 +218,7 @@ export class ThreeManager {
 		this.useDefaultBgPlane = enabled;
 
 		if (enabled) {
+
 			// If we haven't built it yet, build it now
 			if (!this.bgPlane) {
 				this.setupBackground();
@@ -230,6 +232,7 @@ export class ThreeManager {
 				}
 			}
 		} else {
+
 			// Just hide it if it exists
 			if (this.bgPlane) {
 				this.bgPlane.visible = false;
@@ -1170,6 +1173,7 @@ export class ThreeManager {
 	 * @return {Function} - the wrapped update function
 	 */
 	_getDefaultCustomUpdate(data, rect) {
+
 		return () => {
 			if (this.currentTheme && typeof this.currentTheme.updateCustomBox === 'function') {
 				this.currentTheme.updateCustomBox(this, data, rect);
@@ -1242,6 +1246,7 @@ export class ThreeManager {
 
 		// Regular Container3D always uses theme buildBox
 		if (data.type === 'box') {
+
 			if (this.currentTheme && typeof this.currentTheme.buildBox === 'function') {
 				this.currentTheme.buildBox(this, data);
 			}
@@ -1253,6 +1258,7 @@ export class ThreeManager {
 
 			// theme default build (no-op if theme doesn't implement it)
 			const defaultBuild = () => {
+
 				if (this.currentTheme && typeof this.currentTheme.buildCustomBox === 'function') {
 					this.currentTheme.buildCustomBox(this, data);
 				}
@@ -1398,6 +1404,10 @@ export class ThreeManager {
 			}
 		}
 
+		if (this.currentTheme) {
+			this.currentTheme.onResize();
+		}
+
 		this.registeredElements.forEach((_, id) => this.updateElementPosition(id));
 		this.requestRender();
 	}
@@ -1438,6 +1448,11 @@ export class ThreeManager {
 			this.bgPlane.material.map.offset.y = -totalScrollY / worldUnitScale;
 			this.bgPlane.material.map.offset.x = totalScrollX / worldUnitScale;
 		}
+
+		if (this.currentTheme) {
+			this.currentTheme.onScroll(this.scrollX, this.scrollY);
+		}
+
 
 		this.registeredElements.forEach((_, id) => this.updateElementPosition(id));
 		this.requestRender();

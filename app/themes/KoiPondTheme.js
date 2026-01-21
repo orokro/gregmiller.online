@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
 import { Object3D } from 'three';
 import { LilyGroup } from './includes/LilyGroup';
+import { PondElements } from './includes/PondElements';
 
 // our app
 import { KoiSystem } from './includes/KoiSystem';
@@ -49,6 +50,9 @@ export class KoiPondTheme {
 
 		// our koi system once we're ready to initialize it
 		this.koiSystem = null;
+
+		// our pond elements on the sides
+		this.pondElements = null;
 
 		// store our extra models on this
 		this.models = {};
@@ -93,41 +97,42 @@ export class KoiPondTheme {
 			side: THREE.DoubleSide
 		});
 
-		        // make our water material
-				this.waterMaterial = new THREE.ShaderMaterial({
-					uniforms: {
-						foamColor: { value: new THREE.Color(0xEFEFEF) },
-						waterColor: { value: new THREE.Color(0x00ABAE) },
-						blendDepth: { value: 30.0 },
-						tDepth: { value: null },
-						tDiffuse: { value: null },
-						cameraNear: { value: 0.1 },
-						cameraFar: { value: 10000.0 },
-						time: { value: 0 },
+		// make our water material
+		this.waterMaterial = new THREE.ShaderMaterial({
+			uniforms: {
+				foamColor: { value: new THREE.Color(0xEFEFEF) },
+				waterColor: { value: new THREE.Color(0x00ABAE) },
+				blendDepth: { value: 30.0 },
+				tDepth: { value: null },
+				tDiffuse: { value: null },
+				cameraNear: { value: 0.1 },
+				cameraFar: { value: 10000.0 },
+				time: { value: 0 },
 
-						// Primary Wave
-						waveSize: { value: 0.00015 },
-						waveIntensity: { value: 2 }, //12.5 },
-						waveSpeed: { value: 0.001 },
+				// Primary Wave
+				waveSize: { value: 0.00015 },
+				waveIntensity: { value: 2 }, //12.5 },
+				waveSpeed: { value: 0.001 },
 
-						// Secondary Wave (Break up pattern)
-						waveSize2: { value: 0.00002 },
-						waveIntensity2: { value: 6.0 },
-						waveSpeed2: { value: 0.0007 },
+				// Secondary Wave (Break up pattern)
+				waveSize2: { value: 0.00002 },
+				waveIntensity2: { value: 6.0 },
+				waveSpeed2: { value: 0.0007 },
 
-						distortIntensity: { value: 20.0 },
-						waterDirX: { value: 1.0 },
-						waterDirY: { value: 1.0 },
-						scrollY: { value: 0.0 },
-						envMap: { value: null },
-						envMapIntensity: { value: 0.1 },
-						sunColor: { value: new THREE.Color(0xAAAAAA) },
-											},
-					vertexShader,
-					fragmentShader,
-					transparent: true,
-					depthWrite: false
-				});
+				distortIntensity: { value: 20.0 },
+				waterDirX: { value: 1.0 },
+				waterDirY: { value: 1.0 },
+				scrollY: { value: 0.0 },
+				envMap: { value: null },
+				envMapIntensity: { value: 0.1 },
+				sunColor: { value: new THREE.Color(0xAAAAAA) },
+									},
+			vertexShader,
+			fragmentShader,
+			transparent: true,
+			depthWrite: false
+		});
+
 		// Prepare reusable materials/geometries
 		this.boxMaterial = new THREE.MeshBasicMaterial({
 			color: 0xff0000,
@@ -273,11 +278,10 @@ export class KoiPondTheme {
 
 			// initialize our koi system
 			this.koiSystem = new KoiSystem(manager);
-
 		}, 500);
 
 		// load our glass slice model used for boxes
-		this._loadPromise = this._loadModels(manager);
+		this._loadModels(manager);
 	}
 
 
@@ -341,6 +345,12 @@ export class KoiPondTheme {
 			this.waterPlane = null;
 		}
 
+		// clean pond elements
+		if (this.pondElements) {
+			this.pondElements.destroy();
+			this.pondElements = null;
+		}
+
 		// clean lilies
 		// calling this on all our registered elements will cause them to rebuild with our new glass slices
 		// we just loaded & processed above
@@ -396,6 +406,10 @@ export class KoiPondTheme {
 		manager.registeredElements.forEach((data) => {
 			manager.buildRegisteredElement(data, false);
 		});
+
+		// initialize our pond elements on the sides
+		const empties = manager.getRegisteredElementByName('app-cover-bg').empties;
+		this.pondElements = new PondElements(empties, this.models.pond_rock, this.models.lily_flower, "rocks");
 
 		// trigger relayout & rerender just to prevent any misalignment or glitches
 		manager.onResize();
@@ -512,6 +526,30 @@ export class KoiPondTheme {
 			lines.scale.set(rect.width, rect.height, depth);
 			lines.position.z = -depth / 2;
 		}
+	}
+
+
+	/**
+	 * Called when the window is resized.
+	 */
+	onResize(){
+
+		// make sure pond elements reposition themselves
+		if (this.pondElements) {
+			this.pondElements.update();
+		}
+
+	}
+
+
+	/**
+	 * Called when the page is scrolled.
+	 *
+	 * @param {number} scrollX - The current horizontal scroll position.
+	 * @param {number} scrollY - The current vertical scroll position.
+	 */
+	onScroll(scrollX, scrollY){
+
 	}
 
 

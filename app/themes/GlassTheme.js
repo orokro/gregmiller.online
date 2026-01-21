@@ -701,6 +701,25 @@ export class GlassTheme {
 
 
 	/**
+	 * Called when the window is resized.
+	 */
+	onResize(){
+
+	}
+
+
+	/**
+	 * Called when the page is scrolled.
+	 *
+	 * @param {number} scrollX - The current horizontal scroll position.
+	 * @param {number} scrollY - The current vertical scroll position.
+	 */
+	onScroll(scrollX, scrollY){
+
+	}
+
+
+	/**
 	 * Used for frame adjustments on themes that are "active" (rendered in a rAF loop).
 	 * This is where you would put any per-frame animation code for your theme, such as animating the water in our koi pond.
 	 * If your theme doesn't need per-frame updates, you can just leave this empty.
