@@ -101,7 +101,7 @@ export class KoiPondTheme {
 		this.waterMaterial = new THREE.ShaderMaterial({
 			uniforms: {
 				foamColor: { value: new THREE.Color(0xEFEFEF) },
-				waterColor: { value: new THREE.Color(0x00ABAE) },
+				waterColor: { value: new THREE.Color(0x88AAAA) },
 				blendDepth: { value: 30.0 },
 				tDepth: { value: null },
 				tDiffuse: { value: null },
