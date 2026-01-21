@@ -72,6 +72,7 @@ let material = null;
 let localMaterial = null; // Track the locally created material to dispose safely
 
 let textures = {}; // Store refs to dispose later
+let buildId = 0; // Track build versions to prevent race conditions
 
 
 // --- Helper: Perspective Correction ---
@@ -131,6 +132,9 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	if (!rebuildCustom)
 		return;
 
+	// Increment build ID to invalidate any previous pending builds
+	const myId = ++buildId;
+
 	// 1. Prepare asset list
 	const mapKeys = [
 		{ key: 'map', url: src.value },
@@ -141,6 +145,10 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 
 	const urls = mapKeys.map(i => i.url);
 	const assets = await threeManager.assetsReady(urls);
+
+	// If a new build started while we were loading, abort this one
+	if (myId !== buildId)
+		return;
 
 	// 2. Process loaded textures
 	const loadedMaps = {};
@@ -198,6 +206,9 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	// 8. Add to Scene
 	customRoot.empties.center.add(mesh);
 
+	// 9. Sync with current manager state (in case theme changed while we were loading)
+	update(null, customRoot, threeManager);
+
 	threeManager.requestRender();
 }
 
@@ -250,6 +261,9 @@ function update(defaultUpdate, customRoot, threeManager) {
 
 
 function destroy(customRoot, threeManager) {
+
+	// Cancel any pending builds
+	buildId++;
 
 	const center = customRoot.empties.center;
 
