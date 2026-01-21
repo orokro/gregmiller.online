@@ -35,7 +35,7 @@ export class KoiPondTheme {
 		contentHeaderTextColor: '#FFFFFF',
 		contentHeaderBGColor: 'rgba(54, 150, 102, 0.8)',
 		contentBoxBGColor: 'rgba(54, 150, 102, 0.8)',
-		contentBoxBGBlur: '10px',
+		contentBoxBGBlur: '5px',
 		tagBoxColor: '#83da4aff',
 		tagBoxHoverColor: '#FFFFFF',
 		tagTextColor: '#FFFFFF',
@@ -249,10 +249,6 @@ export class KoiPondTheme {
 		// scale the plane big enough to cover the whole screen, even on large monitors
 		const scale = 2000;
 		this.waterPlane.scale.set(scale, scale, 10);
-
-		// console.clear();
-		// console.log(data);
-
 	}
 
 
@@ -282,16 +278,6 @@ export class KoiPondTheme {
 		this.diffuseTarget = new THREE.WebGLRenderTarget(manager.width, manager.height, {
 			format: THREE.RGBAFormat,
 		});
-
-		// build our water layer / koi
-		setTimeout(() => {
-
-			// builds the animated water layer
-			this.buildWater(manager);
-
-			// initialize our koi system
-			this.koiSystem = new KoiSystem(manager);
-		}, 500);
 
 		// load our glass slice model used for boxes
 		this._loadModels(manager);
@@ -423,6 +409,12 @@ export class KoiPondTheme {
 		// initialize our pond elements on the sides
 		const empties = manager.getRegisteredElementByName('app-cover-bg').empties;
 		this.pondElements = new PondElements(empties, this.models.pond_rock, this.models.lily_flower, "rocks");
+
+		// init our fish
+		this.koiSystem = new KoiSystem(manager);
+
+		// builds the animated water layer
+		this.buildWater(manager);
 
 		// trigger relayout & rerender just to prevent any misalignment or glitches
 		manager.onResize();
