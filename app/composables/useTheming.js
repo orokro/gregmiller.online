@@ -20,27 +20,19 @@ import { KoiPondTheme } from '../themes/KoiPondTheme';
 // our current theme
 const currentTheme = shallowRef(null);
 
-// define our theme default colors
-const primaryColor = '#00ABAE';
-const secondaryColor = '#7561AA';
-const accentColor = '#b0ec6bff';
-const bgAccent1 = '#E1EEF5';
-const bgAccent2 = '#EFF4F7';
-const textColor = '#3a414bff';
-const hoverColor = '#FFFFFF';
-const scrollColor =  '#FFFFFF';
-
-// create a reactive theme object
-const themeColors = ref({
-	primaryColor,
-	secondaryColor,
-	accentColor,
-	bgAccent1,
-	bgAccent2,
-	textColor,
-	hoverColor,
-	scrollColor
-});
+// get object with default theme colors
+function getThemeColorsDefaults() {
+	return {
+		primaryColor: '#00ABAE',
+		secondaryColor: '#7561AA',
+		accentColor: '#b0ec6bff',
+		bgAccent1: '#E1EEF5',
+		bgAccent2: '#EFF4F7',
+		textColor: '#3a414bff',
+		hoverColor: '#FFFFFF',
+		scrollColor:  '#FFFFFF',
+	}
+}
 
 // get object with defaults for current theme
 function getThemeDefaults() {
@@ -56,6 +48,9 @@ function getThemeDefaults() {
 		tagTextHoverColor: themeColors.value.hoverColor,
 	};
 }
+
+// create a reactive theme object
+const themeColors = ref(getThemeColorsDefaults());
 
 // other CSS vars not specifically colors
 const themeStyles = ref(getThemeDefaults());
@@ -127,7 +122,8 @@ const setTheme = (theme) => {
 	currentTheme.value = themeEntry;
 
 	// make sure CSS vars are updated
-	setThemeColors(currentTheme.value.themeClass.themeColors || {});
+	const themeColors = { ...getThemeColorsDefaults(), ...currentTheme.value.themeClass.themeColors };
+	setThemeColors(themeColors);
 
 	// mix in defaults if theme doesn't provide all styles
 	const themeSettings = {...getThemeDefaults(), ...currentTheme.value.themeClass.themeStyles};

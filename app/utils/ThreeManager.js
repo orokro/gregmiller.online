@@ -428,9 +428,6 @@ export class ThreeManager {
 		if (!data)
 			return;
 
-		console.log(material);
-		console.log('setBackground called with data:', data);
-
 		// Set configuration on the data object so the component can read it
 		data.bgConfig = this.currentBgConfig;
 
