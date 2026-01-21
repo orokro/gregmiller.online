@@ -193,6 +193,15 @@ const commands = computed(() => ({
 		log(`Debug vars: ${keys.length ? keys.join(', ') : '(none)'}`);
 	},
 
+	commands: () => {
+		const cmdKeys = Object.keys(commands.value);
+		const varKeys = Object.keys(debugVars.value || {});
+		log(`Available commands: ${cmdKeys.join(', ')}`);
+		if (varKeys.length > 0) {
+			log(`Available debug vars: ${varKeys.join(', ')}`);
+		}
+	},
+
 }));
 
 const runCommand = (rawLine) => {
