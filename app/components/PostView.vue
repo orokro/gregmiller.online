@@ -111,33 +111,36 @@ const processedContent = computed(() => {
 			}
 
 			margin-bottom: 10px;
-			border-bottom: 2px solid var(--color-secondary);
+			border-bottom: 2px solid var(--tag-box-color);
 			.tags {
 				text-align: center;
 
 				.tag-link {
 					text-decoration: none;
-					color: var(--color-hover);
+					color: var(--tag-text-color);
 					&:hover {
 						text-decoration: underline;
+						color: var(--tag-text-hover-color);
 					}
 
 					// make pill shaped
 					div {
 						display: inline-block;
 
-						background-color: var(--color-secondary);
+						background-color: var(--tag-box-color);
 						padding: 0.2rem 0.5rem;
 						border-radius: 9999px;
 
 						margin: 0px 3px 6px 3px;
 						&:hover {
-							background-color: var(--color-primary);
-
+							background-color: var(--tag-box-hover-color);
+							color: var(--tag-text-hover-color);
 							text-decoration: none;
 						}
-					}
-				}
+
+					}// div
+
+				}// .tag-link
 
 			}// .tags
 

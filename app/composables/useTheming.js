@@ -42,6 +42,26 @@ const themeColors = ref({
 	scrollColor
 });
 
+// get object with defaults for current theme
+function getThemeDefaults() {
+	return {
+		contentFrameShadow: 'inset 0px 0px 20px 5px rgba(0, 0, 0, 1.25)',
+		contentHeaderTextColor: themeColors.value.primaryColor,
+		contentHeaderBGColor: 'rgba(255, 255, 255, 0.8)',
+		contentBoxBGColor: 'rgba(255, 255, 255, 0.8)',
+		contentBoxBGBlur: '0px',
+		tagBoxColor: themeColors.value.secondaryColor,
+		tagBoxHoverColor: themeColors.value.primaryColor,
+		tagTextColor: themeColors.value.hoverColor,
+		tagTextHoverColor: themeColors.value.hoverColor,
+	};
+}
+
+// other CSS vars not specifically colors
+const themeStyles = ref(getThemeDefaults());
+
+
+
 // make computed CSS vars string based on theme
 const themeCSSVars = computed(() => {
 	return `
@@ -53,6 +73,15 @@ const themeCSSVars = computed(() => {
 		--color-text: ${themeColors.value.textColor};
 		--color-hover: ${themeColors.value.hoverColor};
 		--color-scroll: ${themeColors.value.scrollColor};
+		--content-frame-shadow: ${themeStyles.value.contentFrameShadow};
+		--content-header-text-color: ${themeStyles.value.contentHeaderTextColor};
+		--content-header-bg-color: ${themeStyles.value.contentHeaderBGColor};
+		--content-box-bg-color: ${themeStyles.value.contentBoxBGColor};
+		--content-box-bg-blur: ${themeStyles.value.contentBoxBGBlur};
+		--tag-box-color: ${themeStyles.value.tagBoxColor};
+		--tag-box-hover-color: ${themeStyles.value.tagBoxHoverColor};
+		--tag-text-color: ${themeStyles.value.tagTextColor};
+		--tag-text-hover-color: ${themeStyles.value.tagTextHoverColor};
 	`;
 });
 
@@ -97,8 +126,12 @@ const setTheme = (theme) => {
 	// save current theme
 	currentTheme.value = themeEntry;
 
-	// update our colors from the theme's default colors (if it has any)
+	// make sure CSS vars are updated
 	setThemeColors(currentTheme.value.themeClass.themeColors || {});
+
+	// mix in defaults if theme doesn't provide all styles
+	const themeSettings = {...getThemeDefaults(), ...currentTheme.value.themeClass.themeStyles};
+	setThemeStyles(themeSettings);
 
 	// tell ThreeManager to switch themes (calls init/unload on themes as needed)
 	const { getThree } = useThree();
@@ -118,6 +151,16 @@ const setTheme = (theme) => {
 const setThemeColors = (newTheme) => {
 	themeColors.value = { ...themeColors.value, ...newTheme };
 };
+
+
+/**
+ * Set additional theme styles (non-color CSS vars)
+ *
+ * @param {Object} newStyles - object containing theme style properties
+ */
+const setThemeStyles = (newStyles) => {
+	themeStyles.value = { ...themeStyles.value, ...newStyles };
+}
 
 
 // add our initial themes

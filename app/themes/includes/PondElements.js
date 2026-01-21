@@ -117,10 +117,11 @@ export class PondElements {
 	destroy() {
 
 		for (const entry of this._spawned.values()) {
-			if (entry && entry.obj) {
+
+			if (entry && entry.obj)
 				if (entry.obj.parent) entry.obj.parent.remove(entry.obj);
-			}
-		}
+
+		}// next entry
 
 		this._spawned.clear();
 
@@ -130,7 +131,6 @@ export class PondElements {
 		this.flowerModel = null;
 		this._sideParent = null;
 	}
-
 
 
 	/**
@@ -147,6 +147,7 @@ export class PondElements {
 		const height = this._measureColumnHeight();
 
 		if (!force && this._lastHeight !== null) {
+
 			// Small tolerance so tiny float jitter doesn't thrash the layout
 			const eps = 0.0001;
 			if (Math.abs(height - this._lastHeight) < eps)
@@ -162,7 +163,6 @@ export class PondElements {
 		this._lastHeight = height;
 		return true;
 	}
-
 
 
 	/**
@@ -187,7 +187,6 @@ export class PondElements {
 
 		return height;
 	}
-
 
 
 	/**
@@ -227,7 +226,6 @@ export class PondElements {
 
 		return plan;
 	}
-
 
 
 	/**
@@ -380,7 +378,6 @@ export class PondElements {
 	}
 
 
-
 	/**
 	 * Gets X ranges for spawn regions (local space of TL/TR empties).
 	 *
@@ -400,7 +397,6 @@ export class PondElements {
 		if (type === "rock") return { min: -w / 2, max: 0 };
 		return { min: -w, max: -w / 2 };
 	}
-
 
 
 	/**
@@ -432,15 +428,16 @@ export class PondElements {
 		applyItems(plan.rightColumnItems);
 
 		for (const [id, entry] of this._spawned.entries()) {
+
 			if (!desired.has(id)) {
 				if (entry && entry.obj && entry.obj.parent)
 					entry.obj.parent.remove(entry.obj);
 
 				this._spawned.delete(id);
 			}
-		}
-	}
 
+		}// next [id, entry]
+	}
 
 
 	/**
@@ -463,7 +460,6 @@ export class PondElements {
 	}
 
 
-
 	/**
 	 * Applies transform values from a plan item to an object.
 	 *
@@ -482,7 +478,6 @@ export class PondElements {
 	}
 
 
-
 	/**
 	 * Deep clones a model hierarchy. Geometry/materials remain shared (intentionally).
 	 *
@@ -499,7 +494,6 @@ export class PondElements {
 
 		return clone;
 	}
-
 
 
 	/**
@@ -541,9 +535,9 @@ export class PondElements {
 
 			const orderedBones = skeleton.bones.map((b) => bones[b.name]).filter(Boolean);
 			skinnedMesh.bind(new THREE.Skeleton(orderedBones, skeleton.boneInverses), skinnedMesh.bindMatrix);
-		}
-	}
 
+		}// next name
+	}
 
 
 	/**
@@ -557,7 +551,6 @@ export class PondElements {
 		const seed = this._hashStringToUint32(seedStr);
 		return this._mulberry32(seed);
 	}
-
 
 
 	/**
@@ -580,7 +573,6 @@ export class PondElements {
 	}
 
 
-
 	/**
 	 * Mulberry32 PRNG.
 	 *
@@ -598,7 +590,6 @@ export class PondElements {
 	}
 
 
-
 	/**
 	 * Returns a random float in [min, max).
 	 *
@@ -613,7 +604,6 @@ export class PondElements {
 	}
 
 
-
 	/**
 	 * Biases a [0,1) value toward 1.0 (max).
 	 *
@@ -626,7 +616,6 @@ export class PondElements {
 		const u = 1 - t;
 		return 1 - (u * u);
 	}
-
 
 
 	/**

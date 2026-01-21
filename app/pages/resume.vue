@@ -385,14 +385,6 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 </template>
 <style lang="scss" scoped>
 
-	.white-box {
-		background: rgba(255, 255, 255, 0.8);
-		border-radius: 3px;
-		padding: 2rem;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-
-	}// .white-box
-
 	.flex-grid {
 		display: flex;
 		flex-wrap: wrap;

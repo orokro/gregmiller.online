@@ -8,7 +8,6 @@
 // three
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
-import { Object3D } from 'three';
 import { LilyGroup } from './includes/LilyGroup';
 import { PondElements } from './includes/PondElements';
 
@@ -27,6 +26,20 @@ export class KoiPondTheme {
 		bgAccent1: '#eaf8ffff',
 		bgAccent2: '#d9e3f0ff',
 		colorScroll: '#ffffff',
+		textColor: '#ffffff',
+	};
+
+	// other CSS vars not specifically colors
+	static themeStyles = {
+		contentFrameShadow: 'inset 0px 0px 20px 5px rgba(0, 0, 0, 1.25)',
+		contentHeaderTextColor: '#FFFFFF',
+		contentHeaderBGColor: 'rgba(54, 150, 102, 0.8)',
+		contentBoxBGColor: 'rgba(54, 150, 102, 0.8)',
+		contentBoxBGBlur: '10px',
+		tagBoxColor: '#83da4aff',
+		tagBoxHoverColor: '#FFFFFF',
+		tagTextColor: '#FFFFFF',
+		tagTextHoverColor: '#83da4aff',
 	};
 
 

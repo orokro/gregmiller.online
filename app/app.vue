@@ -255,6 +255,7 @@ body {
 	text-align: center;
 	font-family: sans-serif;
 
+	min-height: 100vh;
 	// for debug
 	// border: 1px solid red;
 
@@ -264,28 +265,34 @@ body {
 		font-family: "Alumni Sans Pinstripe", sans-serif;
 		font-weight: bolder;
 		letter-spacing: 1px;
-		color: var(--color-secondary);
+		color: var(--content-header-text-color);
 		span {
 			display: inline-block;
 			padding: 0em 1em;
-			background: rgba(255, 255, 255, 0.8);
+			background: var(--content-header-bg-color);
 			border-radius: 40px;
 
 			// inset border
 			// box-shadow: inset 0 0 0 1px #ddd;
+
+			// backdrop blur
+		backdrop-filter: blur(var(--content-box-bg-blur, 10px));
 		}
 	}
 
 	h3 {
 		margin-bottom: 2rem;
-		color: var(--color-secondary);
+		color: var(--content-header-text-color);
 	}
 
 	.white-box {
-		background: rgba(255, 255, 255, 0.8);
+		background: var(--content-box-bg-color);
 		border-radius: 3px;
 		padding: 2rem;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+		// backdrop blur
+		backdrop-filter: blur(var(--content-box-bg-blur, 10px));
 
 		// opacity: 0;
 		// pointer-events: none;
@@ -306,7 +313,6 @@ body {
 		padding-right: 0px;
 		justify-content: center;
 	}
-
 
 }// .static-page
 

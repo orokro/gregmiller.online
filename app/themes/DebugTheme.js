@@ -22,6 +22,13 @@ export class DebugTheme {
 		scrollColor:  '#FFFFFF',
 	};
 
+	// other CSS vars not specifically colors
+	static themeStyles = {
+		contentFrameShadow: 'inset 0px 0px 20px 5px rgba(0, 0, 0, 0.3)',
+		contentHeaderBGColor: 'rgba(255, 255, 255, 0.8)',
+		contentBoxBGColor: 'rgba(255, 255, 255, 0.8)',
+	};
+
 
 	/**
 	 * Constructor

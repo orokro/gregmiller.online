@@ -259,6 +259,10 @@ onBeforeUnmount(() => {
 </template>
 <style lang="scss" scoped>
 
+table, tr, td {
+	color: var(--color-text);
+}
+
 // list of social media icons
 .icon-list {
 
@@ -286,29 +290,5 @@ onBeforeUnmount(() => {
 	}// :deep .icon-row
 
 }// .icon-list
-
-h1 {
-	padding-top: 15px;
-	margin-bottom: 15px;
-
-	color: var(--color-secondary);
-	span {
-		display: inline-block;
-		padding: 0em 1em;
-		background: rgba(255, 255, 255, 0.8);
-		border-radius: 40px;
-
-		// inset border
-		// box-shadow: inset 0 0 0 1px #ddd;
-	}// span
-
-}// h1
-
-h3 {
-	margin-bottom: 2rem;
-	color: var(--color-secondary);
-
-}// h3
-
 
 </style>
