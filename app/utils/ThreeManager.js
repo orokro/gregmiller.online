@@ -189,13 +189,15 @@ export class ThreeManager {
 		this.isOk = true;
 
 		// 7. Load Default Theme
+		setTheme("KoiPondTheme");
 		// this.setTheme(GlassTheme);
-		setTimeout(() => {
-			setTheme("KoiPondTheme");
-			// setTheme("GlassTheme");
-		}, 1000);
+		// setTimeout(() => {
+		// 	setTheme("KoiPondTheme");
+		// 	// setTheme("GlassTheme");
+		// }, 1);
 
 		// 8. Force initial layout update
+		this.onScroll();
 		this.onResize();
 
 		// 9. Start Loop
@@ -426,6 +428,9 @@ export class ThreeManager {
 		if (!data)
 			return;
 
+		console.log(material);
+		console.log('setBackground called with data:', data);
+
 		// Set configuration on the data object so the component can read it
 		data.bgConfig = this.currentBgConfig;
 
@@ -479,6 +484,7 @@ export class ThreeManager {
 		// make sure everything is positioned correctly for the new theme
 		this.requestRender();
 		this.onResize();
+		this.onScroll();
 	}
 
 
@@ -1554,7 +1560,6 @@ export class ThreeManager {
 
 			return;
 		}
-
 
 
 		// get the corners to measure
