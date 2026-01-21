@@ -4,8 +4,10 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDeviceContext } from '~/composables/useDeviceContext';
 import { useDebugging } from '~/composables/useDebugging';
+import { useThree } from '~/composables/useThree';
 
 const { isMobile, has3DCapability, detectedIsMobile, detectedHas3D, forcedIsMobile, forcedHas3D, setMobileOverride, set3DOverride, refresh } = useDeviceContext();
+const { getThree } = useThree();
 const { debugVars, logEntries, log, clearLog, setDebugVar } = useDebugging();
 
 const isOpen = ref(false);
@@ -146,6 +148,32 @@ const commands = computed(() => ({
 		}
 
 		log(describe3DStatus());
+	},
+
+	mouselight: async (...args) => {
+		const manager = await getThree();
+		if (!manager) {
+			log("ThreeManager not available.");
+			return;
+		}
+
+		// If no args, toggle
+		if (args.length < 1) {
+			const newState = !manager.mouseLightEnabled;
+			manager.enableMouseLight(newState);
+			log(`Mouse light toggled ${newState ? 'ON' : 'OFF'}.`);
+			return;
+		}
+
+		const v = args[0];
+		if (v !== true && v !== false) {
+			log(`mouselight expects true/false (or nothing to toggle). Example: mouselight true`);
+			log(`Current status: ${manager.mouseLightEnabled ? 'ON' : 'OFF'}`);
+			return;
+		}
+
+		manager.enableMouseLight(v);
+		log(`Mouse light set to ${v ? 'ON' : 'OFF'}.`);
 	},
 
 	cls: () => {
