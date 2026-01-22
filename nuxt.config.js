@@ -15,7 +15,9 @@ export default defineNuxtConfig({
 	runtimeConfig: {
 		message: '',
 		flickrApiKey: '',
-		flickrName: ''
+		flickrName: '',
+		adminPassword: '',
+		adminCookieSecret: '',
 	},
 
 	vite: {

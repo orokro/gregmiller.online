@@ -11,6 +11,12 @@
 // vue
 import { computed } from 'vue';
 
+// components
+import Container3D from './Container3D.vue';
+import FlickrGallery from './FlickrGallery.vue';
+import Spacer3D from './Spacer3D.vue';
+
+
 // props
 const props = defineProps({
 
@@ -92,11 +98,11 @@ const processedContent = computed(() => {
 		</div>
 	</Container3D>
 
+	<Spacer3D v-if="post.flickrSetId"/>
 	<Container3D
 		v-if="post.flickrSetId"
 		class="container"
 	>
-
 		<h1><span>{{ post.title }}</span></h1>
 
 		<div class="white-box text">

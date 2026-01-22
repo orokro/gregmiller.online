@@ -189,7 +189,8 @@ export class ThreeManager {
 		this.isOk = true;
 
 		// 7. Load Default Theme
-		setTheme("KoiPondTheme");
+		// setTheme("KoiPondTheme");
+		setTheme('GlassTheme');
 		// this.setTheme(GlassTheme);
 		// setTimeout(() => {
 		// 	setTheme("KoiPondTheme");
