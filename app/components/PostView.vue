@@ -92,6 +92,18 @@ const processedContent = computed(() => {
 		</div>
 	</Container3D>
 
+	<Container3D
+		v-if="post.flickrSetId"
+		class="container"
+	>
+
+		<h1><span>{{ post.title }}</span></h1>
+
+		<div class="white-box text">
+			<FlickrGallery :set-id="post.flickrSetId" />
+		</div>
+	</Container3D>
+
 </template>
 <style lang="scss" scoped>
 
