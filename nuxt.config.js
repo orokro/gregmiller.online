@@ -12,6 +12,12 @@ export default defineNuxtConfig({
 		}
 	},
 
+	runtimeConfig: {
+		message: '',
+		flickrApiKey: '',
+		flickrName: ''
+	},
+
 	vite: {
 		css: {
 			preprocessorOptions: {

@@ -26,6 +26,12 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 const src = 'https://embed.tawk.to/696897a9726a11197a5f8a3a/1jf090s2n'
 
 
+const config = useRuntimeConfig()
+
+if (process.server) {
+	console.log('SSR ENV TEST:', config.message, config.flickrApiKey);
+}
+
 /**
  * Dynamically injects the Tawk.to script into the page if it hasn't been loaded already.
  * This allows us to load the live chat widget only on the contact page, rather than site-wide.
@@ -189,7 +195,7 @@ onBeforeUnmount(() => {
 
 				<!-- Modern Grid Layout -->
 				<div class="contact-grid">
-					
+
 					<div class="label">Call:</div>
 					<div class="value">(4ዐ𝟪) 𝟪ᒿ੧-ዐl𝟪б</div>
 
@@ -264,7 +270,7 @@ onBeforeUnmount(() => {
 	text-align: left;
 	width: 100%;
 	color: var(--color-text);
-	
+
 	.label {
 		font-weight: bold;
 		text-align: right;
@@ -280,11 +286,11 @@ onBeforeUnmount(() => {
 	@media (max-width: 550px) {
 		grid-template-columns: 1fr;
 		gap: 0.5rem;
-		
+
 		.label {
 			text-align: left;
 			margin-top: 1rem;
-			
+
 			// Remove top margin for the first item
 			&:first-child {
 				margin-top: 0;
