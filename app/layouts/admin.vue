@@ -6,12 +6,13 @@
 -->
 <script setup>
 
-definePageMeta({
-	layout: 'admin',
-	middleware: ['admin'],
-});
+const route = useRoute();
 
 const err = ref('');
+
+const showLogout = computed(() => {
+	return route.path !== '/gm-admin/login';
+});
 
 async function logout() {
 	err.value = '';
@@ -27,43 +28,67 @@ async function logout() {
 </script>
 <template>
 
-	<div class="card">
-		<h1>Hello, admin.</h1>
+	<div class="admin-shell">
 
-		<div class="row">
-			<button type="button" @click="logout">Logout</button>
-		</div>
+		<header class="admin-topbar">
+			<div class="brand">
+				<NuxtLink to="/gm-admin">GM Admin</NuxtLink>
+			</div>
+
+			<div class="actions">
+				<button v-if="showLogout" type="button" class="btn" @click="logout">
+					Log out
+				</button>
+			</div>
+		</header>
+
+		<main class="admin-main">
+			<slot />
+		</main>
 
 		<p v-if="err" class="err">{{ err }}</p>
+
 	</div>
 
 </template>
 <style scoped>
 
-.card{
-	background: rgba(255,255,255,0.06);
-	border: 1px solid rgba(255,255,255,0.10);
-	border-radius: 14px;
+.admin-shell{
+	min-height: 100vh;
 	padding: 18px;
 }
 
-h1{
-	margin: 0 0 14px 0;
-	font-size: 18px;
-}
-
-.row{
+.admin-topbar{
 	display: flex;
-	gap: 10px;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+
+	margin-bottom: 18px;
+	padding: 12px 14px;
+
+	background: rgba(255,255,255,0.06);
+	border: 1px solid rgba(255,255,255,0.10);
+	border-radius: 14px;
 }
 
-button{
+.brand a{
+	color: rgba(255,255,255,0.92);
+	text-decoration: none;
+	font-weight: 700;
+}
+
+.btn{
 	padding: 10px 12px;
 	border-radius: 10px;
 	border: 0;
 	background: rgba(255,255,255,0.16);
 	color: rgba(255,255,255,0.92);
 	cursor: pointer;
+}
+
+.admin-main{
+	max-width: 900px;
 }
 
 .err{
