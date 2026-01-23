@@ -1,6 +1,6 @@
-import { Post } from '../../models/Post.js';
-import { connectDb } from '../../utils/db.js';
-import { requireAdmin } from '../../utils/requireAdmin.js';
+import { Post } from '../../../models/Post.js';
+import { connectDb } from '../../../utils/db.js';
+import { requireAdmin } from '../../../utils/requireAdmin.js';
 
 const ALLOWED_FIELDS = new Set([
 	'title',

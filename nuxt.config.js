@@ -12,6 +12,11 @@ export default defineNuxtConfig({
 		}
 	},
 
+	routeRules: {
+		'/gm-admin/**': { ssr: false },
+	},
+
+
 	runtimeConfig: {
 		message: '',
 		flickrApiKey: '',
