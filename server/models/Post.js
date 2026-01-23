@@ -19,7 +19,10 @@ const schema = new mongoose.Schema({
 	featuredImage: String, // e.g., "/wp-content/uploads/2012/05/pic.jpg"
 	nextGenGallery: [{
 		caption: String
-	}]
+	}],
+	status: { type: String, default: 'published' }, // 'draft' | 'published' | 'private'
+	updatedAt: { type: Date, default: Date.now },
+	publishedAt: { type: Date, default: null },
 });
 
 // Text index for real search
