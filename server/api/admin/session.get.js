@@ -1,7 +1,15 @@
+/*
+	session.get.js
+	--------------
+
+	API endpoint to check if the admin session is valid.
+*/
+
 import { getCookie } from 'h3';
 import { verifyAdminToken } from '../../utils/adminSession.js';
 
 export default defineEventHandler((event) => {
+
 	const { adminCookieSecret } = useRuntimeConfig();
 	const token = getCookie(event, 'gm_admin');
 

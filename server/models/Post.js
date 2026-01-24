@@ -4,6 +4,7 @@
 	This file defines the Mongoose model for our blog posts.
 */
 
+// imports
 import mongoose from 'mongoose';
 
 // Define the schema for a blog post

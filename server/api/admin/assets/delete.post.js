@@ -1,8 +1,20 @@
+/*
+	admin/assets/delete.post.js
+	---------------------------
+
+	API endpoint to delete a file or directory in the assets folder.
+
+	params:
+		path (string) - the file or directory path relative to the assets root
+*/
+
+// imports
 import fs from 'node:fs/promises';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe } from '../../../utils/assetsRoot.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 
 	const root = getAssetsRoot();

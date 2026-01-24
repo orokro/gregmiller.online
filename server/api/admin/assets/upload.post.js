@@ -1,9 +1,23 @@
+/*
+	admin/assets/upload.post.js
+	---------------------------
+
+	API endpoint to upload one or more asset files to a specified directory.
+
+	params:
+		path (string, form field) - the relative directory path to upload files to
+		file (file, form field) - one or more files to upload
+*/
+
+// imports
+import { readMultipartFormData } from '../../../utils/multipart.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRoot.js';
 
 function sanitizeFilename(name) {
+
 	return String(name || 'file')
 		.replace(/\\/g, '/')
 		.split('/')
@@ -13,6 +27,7 @@ function sanitizeFilename(name) {
 }
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 
 	const root = getAssetsRoot();

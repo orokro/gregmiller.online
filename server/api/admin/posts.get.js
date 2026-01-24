@@ -1,8 +1,22 @@
+/*
+	admin/posts.get.js
+	------------------
+
+	API endpoint to retrieve a list of blog posts for admin purposes.
+
+	Query params are:
+	- q (string, optional) - search query
+	- limit (number, optional) - max number of posts to return (default 200, max 500)
+	- skip (number, optional) - number of posts to skip (default 0)
+*/
+
+// imports
 import { Post } from '../../models/Post.js';
 import { connectDb } from '../../utils/db.js';
 import { requireAdmin } from '../../utils/requireAdmin.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

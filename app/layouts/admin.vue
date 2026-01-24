@@ -5,7 +5,6 @@
 	Admin layout shell
 -->
 <script setup>
-
 const route = useRoute();
 
 const err = ref('');
@@ -18,21 +17,20 @@ async function logout() {
 	err.value = '';
 
 	try {
-		await $fetch('/api/admin/logout', { method: 'POST' });
+		await $fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
 		await navigateTo('/gm-admin/login');
-	} catch (e) {
+	} catch {
 		err.value = 'Logout failed';
 	}
 }
-
 </script>
-<template>
 
+<template>
 	<div class="admin-shell">
 
-		<header class="admin-topbar">
+		<header class="topbar">
 			<div class="brand">
-				<NuxtLink to="/gm-admin">GM Admin</NuxtLink>
+				<NuxtLink to="/gm-admin" class="brand-link">GM Admin</NuxtLink>
 			</div>
 
 			<div class="actions">
@@ -42,58 +40,87 @@ async function logout() {
 			</div>
 		</header>
 
-		<main class="admin-main">
+		<main class="main">
 			<slot />
 		</main>
 
-		<p v-if="err" class="err">{{ err }}</p>
+		<div v-if="err" class="toast">
+			{{ err }}
+		</div>
 
 	</div>
-
 </template>
-<style scoped>
+
+<style scoped lang="scss">
+$primary: #00ABAE;
+$bg: #f6f8fb;
+$text: #101828;
+$border: rgba(16, 24, 40, 0.12);
+$shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 .admin-shell{
-	min-height: 100vh;
-	padding: 18px;
+	height: 100vh;
+	overflow: hidden;
+	background: $bg;
+	color: $text;
 }
 
-.admin-topbar{
+.topbar{
+	height: 56px;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
 
-	margin-bottom: 18px;
-	padding: 12px 14px;
+	padding: 0 16px;
 
-	background: rgba(255,255,255,0.06);
-	border: 1px solid rgba(255,255,255,0.10);
-	border-radius: 14px;
+	background: #fff;
+	border-bottom: 1px solid $border;
+	box-shadow: $shadow;
 }
 
-.brand a{
-	color: rgba(255,255,255,0.92);
+.brand-link{
 	text-decoration: none;
-	font-weight: 700;
+	font-weight: 800;
+	letter-spacing: 0.3px;
+	color: $primary;
+}
+
+.actions{
+	display: flex;
+	gap: 10px;
+	align-items: center;
 }
 
 .btn{
-	padding: 10px 12px;
-	border-radius: 10px;
-	border: 0;
-	background: rgba(255,255,255,0.16);
-	color: rgba(255,255,255,0.92);
+	padding: 8px 12px;
+	border-radius: 12px;
+	border: 1px solid rgba($primary, 0.35);
+	background: #fff;
+	color: $text;
 	cursor: pointer;
+
+	&:hover{
+		box-shadow: 0 0 0 3px rgba($primary, 0.10);
+	}
 }
 
-.admin-main{
-	max-width: 900px;
+.main{
+	height: calc(100vh - 56px);
+	overflow: hidden;
+	padding: 14px 16px;
 }
 
-.err{
-	margin-top: 12px;
-	opacity: 0.9;
-}
+.toast{
+	position: fixed;
+	right: 16px;
+	bottom: 16px;
 
+	background: rgba(16, 24, 40, 0.90);
+	color: #fff;
+
+	padding: 10px 12px;
+	border-radius: 12px;
+	max-width: 360px;
+}
 </style>

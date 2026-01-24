@@ -1,3 +1,14 @@
+/*
+	admin/login.post.js
+	-------------------
+
+	API endpoint to log in the admin user by setting a session cookie.
+
+	Post params are:
+	- password (string)
+*/
+
+// imports
 import { readBody, setCookie, createError } from 'h3';
 import { signAdminToken } from '../../utils/adminSession.js';
 
@@ -6,7 +17,6 @@ export default defineEventHandler(async (event) => {
 	const { adminPassword, adminCookieSecret } = useRuntimeConfig();
 	if (!adminPassword || !adminCookieSecret)
 		throw createError({ statusCode: 500, statusMessage: 'Missing admin runtimeConfig' });
-
 
 	const body = await readBody(event);
 	const password = body?.password || '';

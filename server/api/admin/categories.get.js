@@ -1,8 +1,17 @@
+/*
+	admin/categories.get.js
+	-----------------------
+
+	API endpoint to retrieve a list of all unique blog post categories for admin purposes.
+*/
+
+// imports
 import { Post } from '../../models/Post.js';
 import { connectDb } from '../../utils/db.js';
 import { requireAdmin } from '../../utils/requireAdmin.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

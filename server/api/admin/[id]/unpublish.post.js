@@ -1,8 +1,21 @@
+/*
+	admin/[id]/unpublish.post.js
+	----------------------------
+
+	API endpoint to unpublish a specific blog post by ID, changing its status to 'draft'.
+
+	params:
+		- id (string) - the ID of the blog post to unpublish
+
+*/
+
+// imports
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

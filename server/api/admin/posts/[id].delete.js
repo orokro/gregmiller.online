@@ -1,8 +1,19 @@
+/*
+	admin/posts/[id].delete.js
+	--------------------------
+
+	API endpoint to delete a specific blog post by ID.
+
+	param: id (string) - the ID of the blog post to delete
+*/
+
+// imports
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

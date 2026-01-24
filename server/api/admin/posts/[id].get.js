@@ -1,3 +1,13 @@
+/*
+	admin/posts/[id].get.js
+	-----------------------
+
+	API endpoint to retrieve a specific blog post by ID for admin purposes.
+
+	param: id (string) - the ID of the blog post to retrieve
+*/
+
+// imports
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';

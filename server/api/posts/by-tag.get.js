@@ -3,13 +3,26 @@
 	-------------
 	Fetch *all* posts that contain a given tag string.
 	Intended for tag pages that render large thumbnail grids.
+
+	Query params:
+	- tag (string, required) - the tag to filter by
+	- limit (number, optional) - max number of posts to return (default 5000, max 5000)
+
+	Returns:
+	- tag (string) - the tag queried
+	- count (number) - number of posts returned
+	- posts (array) - array of post objects with excerpt
 */
 
+// imports
 import { Post } from '../../models/Post';
 import { connectDb } from '../../utils/db';
 
 function makeExcerpt(html, maxLen = 180) {
-	if (!html) return '';
+
+	if (!html)
+		return '';
+
 	return html
 		.replace(/<[^>]*>/g, '')	// strip tags
 		.replace(/\s+/g, ' ')

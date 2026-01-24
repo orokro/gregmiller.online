@@ -1,15 +1,29 @@
 /*
 	by-category.get.js
 	------------------
+
 	Fetch *all* posts that contain a given category string.
 	Intended for category pages that render large thumbnail grids.
+
+	Query params:
+	- category (string, required) - the category to filter by
+	- limit (number, optional) - max number of posts to return (default 5000, max 5000)
+
+	Returns:
+	- category (string) - the category queried
+	- count (number) - number of posts returned
+	- posts (array) - array of post objects with excerpt
 */
 
+// imports
 import { Post } from '../../models/Post';
 import { connectDb } from '../../utils/db';
 
 function makeExcerpt(html, maxLen = 180) {
-	if (!html) return '';
+
+	if (!html)
+		return '';
+
 	return html
 		.replace(/<[^>]*>/g, '')	// strip tags
 		.replace(/\s+/g, ' ')

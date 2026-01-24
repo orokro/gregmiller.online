@@ -1,3 +1,21 @@
+/*
+	admin/posts.post.js
+	-------------------
+
+	API endpoint to create a new blog post.
+
+	Post params are:
+	- title (string)
+	- slug (string, optional)
+	- content (string)
+	- date (ISO string, optional)
+	- tags (array of strings, optional)
+	- categories (array of strings, optional)
+	- flickrSetId (string, optional)
+	- featuredImage (string, optional)
+*/
+
+// imports
 import { Post } from '../../models/Post.js';
 import { connectDb } from '../../utils/db.js';
 import { requireAdmin } from '../../utils/requireAdmin.js';
@@ -11,6 +29,7 @@ function slugify(s) {
 }
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

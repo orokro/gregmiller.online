@@ -1,9 +1,22 @@
+/*
+	admin/assets/mkdir.post.js
+	--------------------------
+
+	API endpoint to create a new directory in the assets folder.
+
+	params:
+		path (string) - the parent directory path relative to the assets root
+		name (string) - the name of the new directory to create
+*/
+
+// imports
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe } from '../../../utils/assetsRoot.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 
 	const root = getAssetsRoot();

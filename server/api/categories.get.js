@@ -3,7 +3,12 @@
 	-----------------
 
 	API endpoint to get all distinct categories from the posts collection.
+
+	Returns:
+	- categories (array) - sorted array of unique category strings
 */
+
+// imports
 import { Post } from '../models/Post';
 import { connectDb } from '../utils/db';
 

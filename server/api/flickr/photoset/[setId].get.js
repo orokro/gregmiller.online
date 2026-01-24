@@ -1,11 +1,17 @@
 /*
-	[setId].get.js
-	--------------
+	flickr/photoset/[setId].get.js
+	------------------------------
 
 	API endpoint to get Flickr photoset (album) info and photos by setId.
+
+	Params:
+	- setId (string): The ID of the Flickr photoset to retrieve.
+
+	Returns:
+	- Object containing photoset info and an array of photos.
 */
 
-// h3 helpers
+// imports
 import { defineEventHandler, getRouterParam, createError } from 'h3';
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;

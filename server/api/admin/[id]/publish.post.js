@@ -1,8 +1,20 @@
+/*
+	admin/[id]/publish.post.js
+	--------------------------
+
+	API endpoint to publish a specific blog post by ID, changing its status to 'published'.
+
+	params:
+		- id (string) - the ID of the blog post to publish
+*/
+
+// imports
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

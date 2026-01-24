@@ -1,3 +1,24 @@
+/*
+	admin/posts/[id].put.js
+	-----------------------
+
+	API endpoint to update an existing blog post by ID.
+
+	Put params are any of:
+	- title (string)
+	- slug (string)
+	- content (string)
+	- date (ISO string)
+	- tags (array of strings)
+	- categories (array of strings)
+	- flickrSetId (string, or empty string to clear)
+	- featuredImage (string)
+	- status (string: 'draft' or 'published')
+*/
+
+// imports
+import { getRouterParam, createError } from 'h3';
+
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
@@ -15,6 +36,7 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 	await connectDb();
 

@@ -3,8 +3,22 @@
 	----------------
 
 	Get the homepage post lists for the "Any" category and each of the requested categories.
+
+	Post params:
+	- title (string)
+	- slug (string)
+	- featuredImage (string)
+	- date (ISO string)
+
+	Request body params:
+	- categories (array of strings) - list of category names to get posts for
+	- count (number, optional) - number of posts to return per category (default 5)
+
+	Returns:
+	- Object with keys for "any" and each requested category, each containing an array of post objects.
 */
 
+// imports
 import { Post } from '../../models/Post';
 
 export default defineEventHandler(async (event) => {
@@ -57,4 +71,5 @@ export default defineEventHandler(async (event) => {
 	// 5. Return the result object directly
 	// Shape: { "any": [...], "Urban Ex": [...], "Art": [...] }
 	return results;
+
 });

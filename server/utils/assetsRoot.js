@@ -1,7 +1,22 @@
+/*
+	server/utils/assetsRoot.js
+	--------------------------
+
+	Utility functions to manage the assets root directory and safe path resolution.
+
+	It provides functions to get the assets root directory, resolve user-provided paths safely,
+	and convert paths to public URLs.
+
+	It works by ensuring that any user-provided paths are sanitized and resolved within the designated assets root directory,
+	preventing directory traversal attacks.
+*/
+
+// imports
 import path from 'node:path';
 import { createError } from 'h3';
 
 export function getAssetsRoot() {
+
 	const { uploadRoot } = useRuntimeConfig();
 
 	// Default to <project>/public/wp-content
@@ -13,6 +28,7 @@ export function getAssetsRoot() {
 }
 
 export function resolveSafe(root, userPath) {
+
 	const cleaned = String(userPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
 	const abs = path.resolve(root, cleaned);
 

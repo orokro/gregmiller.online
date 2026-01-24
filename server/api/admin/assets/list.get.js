@@ -1,9 +1,21 @@
+/*
+	admin/assets/list.get.js
+	------------------------
+
+	API endpoint to list assets (files and directories) under the assets root for admin purposes.
+
+	params:
+		path (string) - the directory path relative to the assets root to list
+*/
+
+// imports
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRoot.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 
 	const root = getAssetsRoot();

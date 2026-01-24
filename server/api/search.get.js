@@ -9,6 +9,7 @@
 	- category: string (optional)
 */
 
+// imports
 import { Post } from '../models/Post';
 import { connectDb } from '../utils/db';
 

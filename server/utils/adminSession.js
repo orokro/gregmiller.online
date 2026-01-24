@@ -1,3 +1,21 @@
+/*
+	server/utils/adminSession.js
+	----------------------------
+
+	Utility functions to sign and verify admin session tokens.
+
+	It works by creating a token that includes a timestamp and a HMAC-SHA256 signature.
+	The token is structured as: "<timestamp>.<signature>"
+
+	The signature is generated using a secret key and the timestamp.
+
+	To verify the token, we check that:
+	1. The token is well-formed.
+	2. The timestamp is within the allowed max age.
+	3. The signature matches the expected value for the given timestamp and secret.
+*/
+
+// imports
 import crypto from 'node:crypto';
 
 export function signAdminToken(secret) {

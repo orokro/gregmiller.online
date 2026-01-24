@@ -1,9 +1,22 @@
+/*
+	admin/assets/rename.post.js
+	---------------------------
+
+	API endpoint to rename an asset file.
+
+	params:
+		from (string, body) - the current relative path of the asset file
+		toName (string, body) - the new name for the asset file
+*/
+
+// imports
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe } from '../../../utils/assetsRoot.js';
 
 export default defineEventHandler(async (event) => {
+
 	requireAdmin(event);
 
 	const root = getAssetsRoot();
