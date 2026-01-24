@@ -288,7 +288,7 @@ body {
 	.white-box {
 		background: var(--content-box-bg-color);
 		border-radius: 3px;
-		padding: 2rem;
+		padding: 1rem;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
 		// backdrop blur

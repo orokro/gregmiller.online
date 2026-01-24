@@ -11,11 +11,16 @@ definePageMeta({
 	middleware: ['admin'],
 });
 
+// refs
 const password = ref('');
 const err = ref('');
 const isSubmitting = ref(false);
 
+/**
+ * Handle the login form submission
+ */
 async function login() {
+
 	err.value = '';
 	isSubmitting.value = true;
 
@@ -29,8 +34,10 @@ async function login() {
 
 		password.value = '';
 		await navigateTo('/gm-admin');
+
 	} catch (e) {
 		err.value = 'Login failed';
+
 	} finally {
 		isSubmitting.value = false;
 	}
@@ -40,6 +47,7 @@ async function login() {
 <template>
 
 	<div class="card">
+
 		<h1>Admin Login</h1>
 
 		<form @submit.prevent="login">
@@ -59,56 +67,83 @@ async function login() {
 
 			<p v-if="err" class="err">{{ err }}</p>
 		</form>
+
 	</div>
 
 </template>
-<style scoped>
+<style lang="scss" scoped>
 
+// main card
 .card{
+
+	// box settings
 	background: rgba(255,255,255,0.06);
 	border: 1px solid rgba(255,255,255,0.10);
 	border-radius: 14px;
 	padding: 18px;
-}
 
-h1{
-	margin: 0 0 14px 0;
-	font-size: 18px;
-}
+	h1{
+		margin: 0 0 14px 0;
+		font-size: 18px;
+	}
 
-label span{
-	display: block;
-	margin-bottom: 6px;
-	opacity: 0.9;
-}
+	label {
 
-input{
-	width: 100%;
-	padding: 10px 12px;
-	border-radius: 10px;
-	border: 1px solid rgba(255,255,255,0.16);
-	background: rgba(0,0,0,0.25);
-	color: rgba(255,255,255,0.92);
-	outline: none;
-}
+		span{
+			display: block;
+			margin-bottom: 6px;
+			opacity: 0.9;
 
-button{
-	margin-top: 12px;
-	padding: 10px 12px;
-	border-radius: 10px;
-	border: 0;
-	background: rgba(255,255,255,0.16);
-	color: rgba(255,255,255,0.92);
-	cursor: pointer;
-}
+		}// span
 
-button:disabled{
-	opacity: 0.6;
-	cursor: default;
-}
+	}// label
 
-.err{
-	margin-top: 12px;
-	opacity: 0.9;
-}
+	input{
+
+		// box settings
+		width: 100%;
+		padding: 10px 12px;
+		border-radius: 10px;
+		border: 1px solid rgba(255,255,255,0.16);
+		background: rgba(0,0,0,0.25);
+		outline: none;
+
+		// text settings
+		color: rgba(255,255,255,0.92);
+
+	}// input
+
+	// submit button
+	button{
+
+		// box settings
+		margin-top: 12px;
+		padding: 10px 12px;
+		border-radius: 10px;
+		border: 0;
+		background: rgba(255,255,255,0.16);
+
+		// text settings
+		color: rgba(255,255,255,0.92);
+
+		// look so clickable
+		cursor: pointer;
+
+		&:disabled{
+			opacity: 0.6;
+			cursor: default;
+
+		}// &:disabled
+
+	}// button
+
+	// error message
+	.err{
+
+		margin-top: 12px;
+		opacity: 0.9;
+	}// .err
+
+}// .card
+
 </style>

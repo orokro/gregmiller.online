@@ -2,17 +2,30 @@
 	admin.vue
 	---------
 
-	Admin layout shell
+	Admin layout shell.
+
+	This will be the root theme / styles for admin pages.
+
+	This is used now that app.vue has the <NuxtLayout> wrapper.
 -->
 <script setup>
+
 const route = useRoute();
 
 const err = ref('');
 
+
+/**
+ * Whether to show the logout button
+ */
 const showLogout = computed(() => {
 	return route.path !== '/gm-admin/login';
 });
 
+
+/**
+ * Log out the current admin user
+ */
 async function logout() {
 	err.value = '';
 
@@ -23,12 +36,14 @@ async function logout() {
 		err.value = 'Logout failed';
 	}
 }
-</script>
 
+</script>
 <template>
+
 	<div class="admin-shell">
 
 		<header class="topbar">
+
 			<div class="brand">
 				<NuxtLink to="/gm-admin" class="brand-link">GM Admin</NuxtLink>
 			</div>
@@ -38,6 +53,7 @@ async function logout() {
 					Log out
 				</button>
 			</div>
+
 		</header>
 
 		<main class="main">
@@ -49,9 +65,10 @@ async function logout() {
 		</div>
 
 	</div>
-</template>
 
+</template>
 <style scoped lang="scss">
+
 $primary: #00ABAE;
 $bg: #f6f8fb;
 $text: #101828;
@@ -59,68 +76,105 @@ $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 .admin-shell{
+
+	// box settings
 	height: 100vh;
 	overflow: hidden;
 	background: $bg;
+
+	// text settings
 	color: $text;
-}
 
-.topbar{
-	height: 56px;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
+	// bar a long the top
+	.topbar{
 
-	padding: 0 16px;
+		// box settings
+		height: 56px;
+		padding: 0 16px;
+		background: #fff;
+		border-bottom: 1px solid $border;
+		box-shadow: $shadow;
 
-	background: #fff;
-	border-bottom: 1px solid $border;
-	box-shadow: $shadow;
-}
+		// layout
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 
-.brand-link{
-	text-decoration: none;
-	font-weight: 800;
-	letter-spacing: 0.3px;
-	color: $primary;
-}
+		// title link
+		.brand-link{
 
-.actions{
-	display: flex;
-	gap: 10px;
-	align-items: center;
-}
+			// text settings
+			text-decoration: none;
+			font-weight: 800;
+			letter-spacing: 0.3px;
+			color: $primary;
 
-.btn{
-	padding: 8px 12px;
-	border-radius: 12px;
-	border: 1px solid rgba($primary, 0.35);
-	background: #fff;
-	color: $text;
-	cursor: pointer;
+		}// .brand-link
 
-	&:hover{
-		box-shadow: 0 0 0 3px rgba($primary, 0.10);
-	}
-}
+		// just a container for action buttons
+		.actions{
 
-.main{
-	height: calc(100vh - 56px);
-	overflow: hidden;
-	padding: 14px 16px;
-}
+			// layout
+			display: flex;
+			gap: 10px;
+			align-items: center;
 
-.toast{
-	position: fixed;
-	right: 16px;
-	bottom: 16px;
+			// buttons in the actions area
+			.btn{
 
-	background: rgba(16, 24, 40, 0.90);
-	color: #fff;
+				// box settings
+				padding: 8px 12px;
+				border-radius: 12px;
+				border: 1px solid rgba($primary, 0.35);
+				background: #fff;
 
-	padding: 10px 12px;
-	border-radius: 12px;
-	max-width: 360px;
-}
+				// text settings
+				color: $text;
+
+				// look so clickable
+				cursor: pointer;
+
+				&:hover{
+					box-shadow: 0 0 0 3px rgba($primary, 0.10);
+				}
+
+			}// .btn
+
+		}// .actions
+
+	}// .topbar
+
+
+	// main content area
+	.main{
+
+		// box settings
+		height: calc(100vh - 56px);
+		overflow: hidden;
+		padding: 14px 16px;
+
+	}// .main
+
+	// notification toast
+	.toast{
+
+		// position
+		position: fixed;
+		right: 16px;
+		bottom: 16px;
+
+		// box settings
+		background: rgba(16, 24, 40, 0.90);
+		padding: 10px 12px;
+		border-radius: 12px;
+		max-width: 360px;
+
+		// text settings
+		color: #fff;
+
+	}// .toast
+
+}// .admin-shell
+
 </style>

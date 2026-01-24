@@ -4,279 +4,9 @@
 
 	Admin landing page
 -->
-<template>
-	<div class="admin">
-
-		<div class="grid">
-
-			<!-- LEFT: POSTS LIST -->
-			<aside class="left">
-				<div class="card">
-					<div class="row">
-						<input
-							v-model="postSearch"
-							class="input"
-							type="text"
-							placeholder="Search posts…"
-							@input="refreshPostsDebounced"
-						/>
-						<button class="btn" type="button" @click="createDraft">
-							New
-						</button>
-					</div>
-
-					<div class="list">
-						<button
-							v-for="p in filteredPosts"
-							:key="p._id"
-							type="button"
-							class="list-item"
-							:class="{ active: p._id === selectedId }"
-							@click="selectPost(p._id)"
-						>
-							<div class="li-title">{{ p.title || '(Untitled)' }}</div>
-							<div class="li-meta">
-								<span class="pill">{{ p.status || 'published' }}</span>
-								<span v-if="p.date" class="muted">{{ formatDate(p.date) }}</span>
-							</div>
-						</button>
-
-						<div v-if="!posts.length" class="empty">
-							No posts found.
-						</div>
-					</div>
-				</div>
-			</aside>
-
-			<!-- MAIN: EDITOR -->
-			<section class="main">
-				<div class="card">
-
-					<div class="header-row">
-						<h1 class="title">Post Editor</h1>
-						<div class="hint muted">
-							Click a post on the left to edit.
-						</div>
-					</div>
-
-					<div v-if="err" class="notice error">{{ err }}</div>
-					<div v-if="ok" class="notice ok">{{ ok }}</div>
-
-					<div v-if="loadingPost" class="status">
-						Loading selected post…
-					</div>
-
-					<div v-else-if="!post" class="status">
-						Select a post.
-					</div>
-
-					<div v-else class="editor">
-
-						<div class="top-grid">
-
-							<div class="fields">
-
-								<div class="field">
-									<label class="label">Post Title</label>
-									<input v-model="draft.title" class="input" type="text" />
-								</div>
-
-								<div class="row">
-									<div class="field">
-										<label class="label">Slug</label>
-										<input v-model="draft.slug" class="input" type="text" />
-									</div>
-
-									<div class="field">
-										<label class="label">Status</label>
-										<input class="input" type="text" :value="draft.status || 'published'" disabled />
-									</div>
-								</div>
-
-								<div class="row">
-									<div class="field">
-										<label class="label">Tags (comma separated)</label>
-										<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
-									</div>
-
-									<div class="field">
-										<label class="label">Category</label>
-										<input
-											v-model="categoryText"
-											class="input"
-											type="text"
-											list="categoryOptions"
-											placeholder="Type or pick…"
-										/>
-										<datalist id="categoryOptions">
-											<option v-for="c in categories" :key="c" :value="c" />
-										</datalist>
-									</div>
-								</div>
-
-								<div class="row wrap">
-									<button class="btn" type="button" @click="saveDraft" :disabled="saving">
-										{{ saving ? 'Saving…' : 'Save Draft' }}
-									</button>
-
-									<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
-										Preview
-									</button>
-
-									<button
-										v-if="(draft.status || 'published') !== 'published'"
-										class="btn primary"
-										type="button"
-										@click="publish"
-									>
-										Publish
-									</button>
-
-									<button
-										v-else
-										class="btn"
-										type="button"
-										@click="unpublish"
-									>
-										Unpublish
-									</button>
-
-									<button class="btn danger" type="button" @click="deletePost">
-										Delete
-									</button>
-
-									<span v-if="dirty" class="dirty">
-										● Unsaved changes
-									</span>
-								</div>
-
-							</div>
-
-							<!-- THUMBNAIL PICKER -->
-							<div class="thumb">
-								<div class="thumb-label">Featured Image</div>
-
-								<button class="thumb-box" type="button" @click="pickFeatured">
-									<img
-										v-if="draft.featuredImage"
-										:src="draft.featuredImage"
-										alt="Featured"
-									/>
-									<div v-else class="thumb-placeholder">
-										Pick thumbnail
-									</div>
-								</button>
-
-								<input
-									ref="featuredInputEl"
-									type="file"
-									accept="image/*"
-									class="hidden"
-									@change="onFeaturedPicked"
-								/>
-
-								<div v-if="draft.featuredImage" class="thumb-path muted">
-									{{ draft.featuredImage }}
-								</div>
-							</div>
-
-						</div>
-
-						<!-- EDITOR TABS -->
-						<div class="tabs">
-							<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
-								Rich Text
-							</button>
-							<button class="tab" :class="{ active: editorTab === 'html' }" type="button" @click="editorTab = 'html'">
-								Raw HTML
-							</button>
-						</div>
-
-						<div class="editor-body">
-							<textarea
-								v-model="draft.content"
-								class="textarea"
-								:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
-							/>
-						</div>
-
-					</div>
-				</div>
-
-				<!-- BOTTOM: ASSETS -->
-				<div class="card assets">
-					<div class="assets-head">
-						<h2 class="subtitle">Assets</h2>
-						<span class="muted">Served from <code>/wp-content/</code></span>
-					</div>
-
-					<div class="assets-top">
-						<div class="row wrap">
-							<button class="btn" type="button" @click="pickAssetsUpload">
-								Upload Assets
-							</button>
-
-							<input
-								v-model="assetsPath"
-								class="input"
-								type="text"
-								placeholder="Path under wp-content (e.g. new_uploads)"
-							/>
-
-							<button class="btn" type="button" @click="refreshAssets">
-								Refresh
-							</button>
-
-							<input
-								v-model="assetsSearch"
-								class="input"
-								type="text"
-								placeholder="Search in this folder…"
-							/>
-						</div>
-
-						<input
-							ref="assetsInputEl"
-							type="file"
-							multiple
-							class="hidden"
-							@change="onAssetsPicked"
-						/>
-					</div>
-
-					<div class="assets-list">
-						<div v-if="assetsLoading" class="status">Loading assets…</div>
-
-						<button
-							v-for="it in filteredAssets"
-							:key="it.path"
-							type="button"
-							class="asset-item"
-							@click="onAssetClick(it)"
-						>
-							<div class="asset-name">
-								<span class="pill" :class="{ dir: it.type === 'dir' }">
-									{{ it.type }}
-								</span>
-								<span>{{ it.name }}</span>
-							</div>
-
-							<div class="asset-meta muted">
-								<span v-if="it.type === 'file'">{{ it.url }}</span>
-								<span v-else>Open folder</span>
-							</div>
-						</button>
-					</div>
-				</div>
-
-			</section>
-
-		</div>
-
-	</div>
-</template>
-
 <script setup>
+
+// Page metadata
 definePageMeta({
 	layout: 'admin',
 	middleware: [ 'admin' ],
@@ -646,8 +376,282 @@ onMounted(async () => {
 		refreshAssets(),
 	]);
 });
+
 </script>
+<template>
+
+	<div class="admin">
+
+		<div class="grid">
+
+			<!-- LEFT: POSTS LIST -->
+			<aside class="left">
+				<div class="card">
+					<div class="row">
+						<input
+							v-model="postSearch"
+							class="input"
+							type="text"
+							placeholder="Search posts…"
+							@input="refreshPostsDebounced"
+						/>
+						<button class="btn" type="button" @click="createDraft">
+							New
+						</button>
+					</div>
+
+					<div class="list">
+						<button
+							v-for="p in filteredPosts"
+							:key="p._id"
+							type="button"
+							class="list-item"
+							:class="{ active: p._id === selectedId }"
+							@click="selectPost(p._id)"
+						>
+							<div class="li-title">{{ p.title || '(Untitled)' }}</div>
+							<div class="li-meta">
+								<span class="pill">{{ p.status || 'published' }}</span>
+								<span v-if="p.date" class="muted">{{ formatDate(p.date) }}</span>
+							</div>
+						</button>
+
+						<div v-if="!posts.length" class="empty">
+							No posts found.
+						</div>
+					</div>
+				</div>
+			</aside>
+
+			<!-- MAIN: EDITOR -->
+			<section class="main">
+				<div class="card">
+
+					<div class="header-row">
+						<h1 class="title">Post Editor</h1>
+						<div class="hint muted">
+							Click a post on the left to edit.
+						</div>
+					</div>
+
+					<div v-if="err" class="notice error">{{ err }}</div>
+					<div v-if="ok" class="notice ok">{{ ok }}</div>
+
+					<div v-if="loadingPost" class="status">
+						Loading selected post…
+					</div>
+
+					<div v-else-if="!post" class="status">
+						Select a post.
+					</div>
+
+					<div v-else class="editor">
+
+						<div class="top-grid">
+
+							<div class="fields">
+
+								<div class="field">
+									<label class="label">Post Title</label>
+									<input v-model="draft.title" class="input" type="text" />
+								</div>
+
+								<div class="row">
+									<div class="field">
+										<label class="label">Slug</label>
+										<input v-model="draft.slug" class="input" type="text" />
+									</div>
+
+									<div class="field">
+										<label class="label">Status</label>
+										<input class="input" type="text" :value="draft.status || 'published'" disabled />
+									</div>
+								</div>
+
+								<div class="row">
+									<div class="field">
+										<label class="label">Tags (comma separated)</label>
+										<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
+									</div>
+
+									<div class="field">
+										<label class="label">Category</label>
+										<input
+											v-model="categoryText"
+											class="input"
+											type="text"
+											list="categoryOptions"
+											placeholder="Type or pick…"
+										/>
+										<datalist id="categoryOptions">
+											<option v-for="c in categories" :key="c" :value="c" />
+										</datalist>
+									</div>
+								</div>
+
+								<div class="row wrap">
+									<button class="btn" type="button" @click="saveDraft" :disabled="saving">
+										{{ saving ? 'Saving…' : 'Save Draft' }}
+									</button>
+
+									<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
+										Preview
+									</button>
+
+									<button
+										v-if="(draft.status || 'published') !== 'published'"
+										class="btn primary"
+										type="button"
+										@click="publish"
+									>
+										Publish
+									</button>
+
+									<button
+										v-else
+										class="btn"
+										type="button"
+										@click="unpublish"
+									>
+										Unpublish
+									</button>
+
+									<button class="btn danger" type="button" @click="deletePost">
+										Delete
+									</button>
+
+									<span v-if="dirty" class="dirty">
+										● Unsaved changes
+									</span>
+								</div>
+
+							</div>
+
+							<!-- THUMBNAIL PICKER -->
+							<div class="thumb">
+								<div class="thumb-label">Featured Image</div>
+
+								<button class="thumb-box" type="button" @click="pickFeatured">
+									<img
+										v-if="draft.featuredImage"
+										:src="draft.featuredImage"
+										alt="Featured"
+									/>
+									<div v-else class="thumb-placeholder">
+										Pick thumbnail
+									</div>
+								</button>
+
+								<input
+									ref="featuredInputEl"
+									type="file"
+									accept="image/*"
+									class="hidden"
+									@change="onFeaturedPicked"
+								/>
+
+								<div v-if="draft.featuredImage" class="thumb-path muted">
+									{{ draft.featuredImage }}
+								</div>
+							</div>
+
+						</div>
+
+						<!-- EDITOR TABS -->
+						<div class="tabs">
+							<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
+								Rich Text
+							</button>
+							<button class="tab" :class="{ active: editorTab === 'html' }" type="button" @click="editorTab = 'html'">
+								Raw HTML
+							</button>
+						</div>
+
+						<div class="editor-body">
+							<textarea
+								v-model="draft.content"
+								class="textarea"
+								:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
+							/>
+						</div>
+
+					</div>
+				</div>
+
+				<!-- BOTTOM: ASSETS -->
+				<div class="card assets">
+					<div class="assets-head">
+						<h2 class="subtitle">Assets</h2>
+						<span class="muted">Served from <code>/wp-content/</code></span>
+					</div>
+
+					<div class="assets-top">
+						<div class="row wrap">
+							<button class="btn" type="button" @click="pickAssetsUpload">
+								Upload Assets
+							</button>
+
+							<input
+								v-model="assetsPath"
+								class="input"
+								type="text"
+								placeholder="Path under wp-content (e.g. new_uploads)"
+							/>
+
+							<button class="btn" type="button" @click="refreshAssets">
+								Refresh
+							</button>
+
+							<input
+								v-model="assetsSearch"
+								class="input"
+								type="text"
+								placeholder="Search in this folder…"
+							/>
+						</div>
+
+						<input
+							ref="assetsInputEl"
+							type="file"
+							multiple
+							class="hidden"
+							@change="onAssetsPicked"
+						/>
+					</div>
+
+					<div class="assets-list">
+						<div v-if="assetsLoading" class="status">Loading assets…</div>
+
+						<button
+							v-for="it in filteredAssets"
+							:key="it.path"
+							type="button"
+							class="asset-item"
+							@click="onAssetClick(it)"
+						>
+							<div class="asset-name">
+								<span class="pill" :class="{ dir: it.type === 'dir' }">
+									{{ it.type }}
+								</span>
+								<span>{{ it.name }}</span>
+							</div>
+
+							<div class="asset-meta muted">
+								<span v-if="it.type === 'file'">{{ it.url }}</span>
+								<span v-else>Open folder</span>
+							</div>
+						</button>
+					</div>
+				</div>
+
+			</section>
+
+		</div>
+
+	</div>
+</template>
 <style scoped lang="scss">
+
 $primary: #00ABAE;
 $secondary: #7561AA;
 $bg: #f6f8fb;
