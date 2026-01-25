@@ -44,6 +44,13 @@ export default defineEventHandler(async (event) => {
 
 		// "Any": The top 5 most recent posts regardless of category
 		any: [
+			{ $match: {
+				$or: [
+					{ status: 'published' },
+					{ status: { $exists: false } },
+					{ status: null },
+				]
+			}},
 			{ $sort: { date: -1 } },
 			{ $limit: count+1 },
 			{ $project: projection }
@@ -55,7 +62,14 @@ export default defineEventHandler(async (event) => {
 
 		// Using the category name as the key for the result
 		facetPipelines[category] = [
-			{ $match: { categories: category } }, // Filter by category
+			{ $match: {
+				categories: category,
+				$or: [
+					{ status: 'published' },
+					{ status: { $exists: false } },
+					{ status: null },
+				]
+			}}, // Filter by category
 			{ $sort: { date: -1 } },              // Sort newest first
 			{ $limit: count },                        // Take top posts as per count
 			{ $project: projection }              // Select only needed fields

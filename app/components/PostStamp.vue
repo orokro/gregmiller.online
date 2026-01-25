@@ -132,7 +132,7 @@ const displayTitle = computed(() => {
 		height: 150px;
 		border-radius: 4px;
 		background: rgba(0, 0, 0, 0.05);
-		// overflow: hidden;
+		overflow: hidden;
 		border: 3px solid white;
 		box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 
