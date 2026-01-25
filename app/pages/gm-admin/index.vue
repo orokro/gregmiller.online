@@ -11,6 +11,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 
 // components
 import AdminSidebar from '../../components/Admin/AdminSidebar.vue';
+import AssetBrowser from '../../components/Admin/AssetBrowser.vue';
 
 // Page metadata
 definePageMeta({
@@ -40,20 +41,23 @@ const dirty = ref(false);
 const ok = ref('');
 const err = ref('');
 
+// which editor tab is active
 const editorTab = ref('rich');
 
+// current list of categories
 const categories = ref([]);
+
+// current post tags
 const tagsText = ref('');
+
+// current category text
 const categoryText = ref('');
 
+// ref to our featured image file input
 const featuredInputEl = ref(null);
 
-const assetsPath = ref('');
-const assetsSearch = ref('');
-const assets = ref([]);
-const assetsLoading = ref(false);
-const assetsInputEl = ref(null);
-
+// our asset browser component ref
+const assetBrowserRef = ref(null);
 
 /**
  * Clear notices
@@ -62,15 +66,6 @@ function clearNotices() {
 	ok.value = '';
 	err.value = '';
 }
-
-
-
-
-const filteredAssets = computed(() => {
-	const q = assetsSearch.value.trim().toLowerCase();
-	if (!q) return assets.value;
-	return assets.value.filter(it => String(it.name || '').toLowerCase().includes(q));
-});
 
 
 /**
@@ -98,6 +93,7 @@ async function loadCategories() {
 	try {
 		const res = await $fetch('/api/admin/categories', { credentials: 'include' });
 		categories.value = Array.isArray(res) ? res : [];
+
 	} catch {
 		categories.value = [];
 	}
@@ -132,18 +128,6 @@ function computeDraftPayload() {
 
 	return payload;
 }
-
-
-/*
-	Automatically mark draft as dirty when relevant fields change
-*/
-watch([draft, tagsText, categoryText], () => {
-
-	if (!draft.value)
-		return;
-	dirty.value = true;
-
-}, { deep: true });
 
 
 /**
@@ -204,8 +188,8 @@ async function publish() {
 		draft.value = structuredClone(updated);
 		ok.value = 'Published';
 		await refreshPosts();
-	} catch (e) {
 
+	} catch (e) {
 		err.value = 'Publish failed';
 	}
 }
@@ -346,104 +330,13 @@ async function onFeaturedPicked(e) {
 			draft.value.featuredImage = saved.url;
 			ok.value = 'Thumbnail uploaded';
 			dirty.value = true;
+
 		} else {
 			err.value = 'Thumbnail upload failed';
 		}
 
 	} catch {
 		err.value = 'Thumbnail upload failed';
-	}
-}
-
-
-/**
- * Refresh the assets list from the server
- */
-async function refreshAssets() {
-
-	assetsLoading.value = true;
-
-	try {
-		const res = await $fetch('/api/admin/assets/list', {
-			query: { path: assetsPath.value.trim() },
-			credentials: 'include',
-		});
-
-		assets.value = Array.isArray(res?.items) ? res.items : [];
-
-	} catch {
-		assets.value = [];
-		err.value = 'Failed to load assets';
-
-	} finally {
-		assetsLoading.value = false;
-	}
-}
-
-
-/**
- * Open file picker to upload assets
- */
-function pickAssetsUpload() {
-
-	if (!assetsInputEl.value)
-		return;
-	assetsInputEl.value.value = '';
-	assetsInputEl.value.click();
-}
-
-
-/**
- * Handle when asset files are picked
- *
- * @param {Event} e - file input change event
- */
-async function onAssetsPicked(e) {
-
-	const files = Array.from(e.target.files || []);
-	if (!files.length)
-		return;
-
-	clearNotices();
-
-	try {
-		for (const f of files) {
-			const form = new FormData();
-			form.append('path', assetsPath.value.trim());
-			form.append('file', f, f.name);
-
-			await $fetch('/api/admin/assets/upload', {
-				method: 'POST',
-				body: form,
-				credentials: 'include',
-			});
-		}
-
-		ok.value = 'Uploaded';
-		await refreshAssets();
-
-	} catch {
-		err.value = 'Asset upload failed';
-	}
-}
-
-
-/**
- * Handle when an asset item is clicked
- *
- * @param it - clicked asset item
- */
-function onAssetClick(it) {
-
-	if (it.type === 'dir') {
-		assetsPath.value = it.path;
-		refreshAssets();
-		return;
-	}
-
-	if (it.url && navigator.clipboard?.writeText) {
-		navigator.clipboard.writeText(it.url);
-		ok.value = 'Copied URL';
 	}
 }
 
@@ -476,6 +369,18 @@ function onPostChanged(data) {
 }
 
 
+/*
+	Automatically mark draft as dirty when relevant fields change
+*/
+watch([draft, tagsText, categoryText], () => {
+
+	if (!draft.value)
+		return;
+	dirty.value = true;
+
+}, { deep: true });
+
+
 /**
  * When the component mounts, load initial data
  */
@@ -484,7 +389,7 @@ onMounted(async () => {
 	await Promise.all([
 		refreshPosts(),
 		loadCategories(),
-		refreshAssets(),
+		assetBrowserRef.value?.refreshAssets(),
 	]);
 });
 
@@ -659,71 +564,8 @@ onMounted(async () => {
 					</div>
 				</div>
 
-				<!-- BOTTOM: ASSETS -->
-				<div class="card assets">
-					<div class="assets-head">
-						<h2 class="subtitle">Assets</h2>
-						<span class="muted">Served from <code>/wp-content/</code></span>
-					</div>
-
-					<div class="assets-top">
-						<div class="row wrap">
-							<button class="btn" type="button" @click="pickAssetsUpload">
-								Upload Assets
-							</button>
-
-							<input
-								v-model="assetsPath"
-								class="input"
-								type="text"
-								placeholder="Path under wp-content (e.g. new_uploads)"
-							/>
-
-							<button class="btn" type="button" @click="refreshAssets">
-								Refresh
-							</button>
-
-							<input
-								v-model="assetsSearch"
-								class="input"
-								type="text"
-								placeholder="Search in this folder…"
-							/>
-						</div>
-
-						<input
-							ref="assetsInputEl"
-							type="file"
-							multiple
-							class="hidden"
-							@change="onAssetsPicked"
-						/>
-					</div>
-
-					<div class="assets-list">
-						<div v-if="assetsLoading" class="status">Loading assets…</div>
-
-						<button
-							v-for="it in filteredAssets"
-							:key="it.path"
-							type="button"
-							class="asset-item btn"
-							@click="onAssetClick(it)"
-						>
-							<div class="asset-name">
-								<span class="pill" :class="{ dir: it.type === 'dir' }">
-									{{ it.type }}
-								</span>
-								<span>{{ it.name }}</span>
-							</div>
-
-							<div class="asset-meta muted">
-								<span v-if="it.type === 'file'">{{ it.url }}</span>
-								<span v-else>Open folder</span>
-							</div>
-						</button>
-					</div>
-				</div>
+				<!-- ASSET BROWSER -->
+				<AssetBrowser ref="assetBrowserRef" />
 
 			</section>
 
@@ -770,8 +612,6 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 			overflow: hidden;
 			min-width: 0;
 		}// .card
-
-
 
 		/* ====== MAIN COLUMN ====== */
 		.main-column {
@@ -879,31 +719,6 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 	}// .editor
 
-	/* ====== ASSETS PANEL ====== */
-	.assets{
-		flex: 0 0 320px;
-		overflow: hidden;
-
-		.assets-top{
-			display: grid;
-			grid-template-columns: auto 1fr auto 1fr;
-			gap: 8px;
-			align-items: center;
-			margin-bottom: 10px;
-
-		}// .assets-top
-
-		.assets-list{
-			flex: 1;
-			overflow: auto;
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-			gap: 10px;
-			padding-right: 4px;
-
-		}// .assets-list
-
-	}// .assets
 
 }// .admin
 
