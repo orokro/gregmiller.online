@@ -19,12 +19,22 @@ definePageMeta({
 });
 
 
+// our total list of posts from the server
 const posts = ref([]);
 
+// current selected post data
 const post = ref(null);
+
+// current draft being edited
 const draft = ref(null);
+
+// true when loading a post
 const loadingPost = ref(false);
+
+// true when saving a post
 const saving = ref(false);
+
+// whether the draft has unsaved changes
 const dirty = ref(false);
 
 const ok = ref('');
@@ -45,7 +55,9 @@ const assetsLoading = ref(false);
 const assetsInputEl = ref(null);
 
 
-
+/**
+ * Clear notices
+ */
 function clearNotices() {
 	ok.value = '';
 	err.value = '';
@@ -60,23 +72,29 @@ const filteredAssets = computed(() => {
 	return assets.value.filter(it => String(it.name || '').toLowerCase().includes(q));
 });
 
+
+/**
+ * Refresh the list of posts from the server
+ */
 async function refreshPosts() {
+
 	try {
 		const res = await $fetch('/api/admin/posts', {
-			query: postSearch.value.trim() ? { q: postSearch.value.trim() } : undefined,
 			credentials: 'include',
 		});
 		posts.value = Array.isArray(res) ? res : [];
 
-		console.log(posts.value);
 	} catch (e) {
 		err.value = 'Failed to load posts list';
 	}
 }
 
 
-
+/**
+ * Load the list of categories from the server
+ */
 async function loadCategories() {
+
 	try {
 		const res = await $fetch('/api/admin/categories', { credentials: 'include' });
 		categories.value = Array.isArray(res) ? res : [];
@@ -86,8 +104,13 @@ async function loadCategories() {
 }
 
 
-
+/**
+ * Compute the payload to send to the server for saving the draft
+ *
+ * @returns payload object
+ */
 function computeDraftPayload() {
+
 	const payload = {
 		title: String(draft.value.title || ''),
 		slug: String(draft.value.slug || ''),
@@ -110,13 +133,26 @@ function computeDraftPayload() {
 	return payload;
 }
 
+
+/*
+	Automatically mark draft as dirty when relevant fields change
+*/
 watch([draft, tagsText, categoryText], () => {
-	if (!draft.value) return;
+
+	if (!draft.value)
+		return;
 	dirty.value = true;
+
 }, { deep: true });
 
+
+/**
+ * Save the current draft to the server
+ */
 async function saveDraft() {
-	if (!draft.value || !selectedId.value) return;
+
+	if (!draft.value || !selectedId.value)
+		return;
 
 	clearNotices();
 	saving.value = true;
@@ -139,15 +175,23 @@ async function saveDraft() {
 		dirty.value = false;
 		ok.value = 'Saved';
 		await refreshPosts();
+
 	} catch (e) {
 		err.value = 'Save failed';
+
 	} finally {
 		saving.value = false;
 	}
 }
 
+
+/**
+ * Publish the current draft
+ */
 async function publish() {
-	if (!selectedId.value) return;
+
+	if (!selectedId.value)
+		return;
 
 	clearNotices();
 
@@ -161,12 +205,19 @@ async function publish() {
 		ok.value = 'Published';
 		await refreshPosts();
 	} catch (e) {
+
 		err.value = 'Publish failed';
 	}
 }
 
+
+/**
+ * Unpublish the current post
+ */
 async function unpublish() {
-	if (!selectedId.value) return;
+
+	if (!selectedId.value)
+		return;
 
 	clearNotices();
 
@@ -179,18 +230,31 @@ async function unpublish() {
 		draft.value = structuredClone(updated);
 		ok.value = 'Unpublished';
 		await refreshPosts();
+
 	} catch (e) {
 		err.value = 'Unpublish failed';
 	}
 }
 
+
+/**
+ * Preview the current draft in a new tab
+ */
 function previewPost() {
-	if (!draft.value?.slug) return;
+
+	if (!draft.value?.slug)
+		return;
 	window.open(`/posts/${draft.value.slug}`, '_blank');
 }
 
+
+/**
+ * Delete the current post
+ */
 async function deletePost() {
-	if (!selectedId.value) return;
+
+	if (!selectedId.value)
+		return;
 
 	clearNotices();
 
@@ -210,12 +274,18 @@ async function deletePost() {
 		dirty.value = false;
 
 		await refreshPosts();
+
 	} catch (e) {
 		err.value = 'Delete failed';
 	}
 }
 
+
+/**
+ * Create a new draft post
+ */
 async function createDraft() {
+
 	clearNotices();
 
 	try {
@@ -228,20 +298,35 @@ async function createDraft() {
 		await refreshPosts();
 		await selectPost(created._id);
 		ok.value = 'Draft created';
+
 	} catch (e) {
 		err.value = 'Create failed';
 	}
 }
 
+
+/**
+ * Open file picker to select featured image
+ */
 function pickFeatured() {
-	if (!featuredInputEl.value) return;
+
+	if (!featuredInputEl.value)
+		return;
 	featuredInputEl.value.value = '';
 	featuredInputEl.value.click();
 }
 
+
+/**
+ * Handle when a featured image file is picked
+ *
+ * @param {Event} e - file input change event
+ */
 async function onFeaturedPicked(e) {
+
 	const file = e.target.files?.[0];
-	if (!file || !draft.value) return;
+	if (!file || !draft.value)
+		return;
 
 	clearNotices();
 
@@ -264,12 +349,18 @@ async function onFeaturedPicked(e) {
 		} else {
 			err.value = 'Thumbnail upload failed';
 		}
+
 	} catch {
 		err.value = 'Thumbnail upload failed';
 	}
 }
 
+
+/**
+ * Refresh the assets list from the server
+ */
 async function refreshAssets() {
+
 	assetsLoading.value = true;
 
 	try {
@@ -279,23 +370,39 @@ async function refreshAssets() {
 		});
 
 		assets.value = Array.isArray(res?.items) ? res.items : [];
+
 	} catch {
 		assets.value = [];
 		err.value = 'Failed to load assets';
+
 	} finally {
 		assetsLoading.value = false;
 	}
 }
 
+
+/**
+ * Open file picker to upload assets
+ */
 function pickAssetsUpload() {
-	if (!assetsInputEl.value) return;
+
+	if (!assetsInputEl.value)
+		return;
 	assetsInputEl.value.value = '';
 	assetsInputEl.value.click();
 }
 
+
+/**
+ * Handle when asset files are picked
+ *
+ * @param {Event} e - file input change event
+ */
 async function onAssetsPicked(e) {
+
 	const files = Array.from(e.target.files || []);
-	if (!files.length) return;
+	if (!files.length)
+		return;
 
 	clearNotices();
 
@@ -314,12 +421,20 @@ async function onAssetsPicked(e) {
 
 		ok.value = 'Uploaded';
 		await refreshAssets();
+
 	} catch {
 		err.value = 'Asset upload failed';
 	}
 }
 
+
+/**
+ * Handle when an asset item is clicked
+ *
+ * @param it - clicked asset item
+ */
 function onAssetClick(it) {
+
 	if (it.type === 'dir') {
 		assetsPath.value = it.path;
 		refreshAssets();
@@ -332,7 +447,40 @@ function onAssetClick(it) {
 	}
 }
 
+
+/**
+ * Handle when our side bar notifies us of a new post loading
+ */
+function onNewPostLoading() {
+
+	// reset notices and set loading state
+	clearNotices();
+	loadingPost.value = true;
+}
+
+
+/**
+ * Handle when our side bar notifies us of a post change
+ *
+ * @param {Object} data - post data from child component
+ */
+function onPostChanged(data) {
+
+	// update our refs
+	post.value = data.post;
+	draft.value = structuredClone(data.post);
+	tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
+	categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
+	dirty.value = false;
+	loadingPost.value = false;
+}
+
+
+/**
+ * When the component mounts, load initial data
+ */
 onMounted(async () => {
+
 	await Promise.all([
 		refreshPosts(),
 		loadCategories(),
@@ -351,19 +499,9 @@ onMounted(async () => {
 			<AdminSidebar
 				:posts="posts"
 				@refresh-posts="refreshPosts"
-				@new-post-loading="()=>{
-					clearNotices();
-					loadingPost.value = true;
-				}"
-				@postChanged="(data) => {
-
-					post.value = data.post;
-					draft.value = structuredClone(data.post);
-					tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
-					categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
-					dirty.value = false;
-					loadingPost.value = false;
-				}"
+				@create-draft="createDraft"
+				@new-post-loading="onNewPostLoading"
+				@postChanged="onPostChanged"
 			/>
 
 			<!-- MAIN: EDITOR -->

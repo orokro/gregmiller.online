@@ -36,12 +36,10 @@ let refreshPostsTimer = null;
 // get filtered posts from parent component
 const filteredPosts = computed(() => {
 
-	console.log(props.posts);
-
 	const q = postSearch.value.trim().toLowerCase();
 
-	if (!q) return
-		props.posts;
+	if (!q)
+		return props.posts;
 
 	return props.posts.filter(p => {
 		return String(p.title || '').toLowerCase().includes(q) || String(p.slug || '').toLowerCase().includes(q);
