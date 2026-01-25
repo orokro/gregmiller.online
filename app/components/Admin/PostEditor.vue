@@ -176,7 +176,7 @@ async function publish() {
 	clearNotices();
 
 	try {
-		const updated = await $fetch(`/api/admin/posts/${props.post._id}/publish`, {
+		const updated = await $fetch(`/api/admin/${props.post._id}/publish`, {
 			method: 'POST',
 			credentials: 'include',
 		});
@@ -206,7 +206,7 @@ async function unpublish() {
 	clearNotices();
 
 	try {
-		const updated = await $fetch(`/api/admin/posts/${props.post._id}/unpublish`, {
+		const updated = await $fetch(`/api/admin/${props.post._id}/unpublish`, {
 			method: 'POST',
 			credentials: 'include',
 		});
