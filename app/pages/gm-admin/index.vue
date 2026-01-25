@@ -385,7 +385,7 @@ onMounted(async () => {
 		<div class="grid">
 
 			<!-- LEFT: POSTS LIST -->
-			<aside class="left">
+			<aside class="left-column">
 				<div class="card">
 					<div class="row">
 						<input
@@ -405,7 +405,7 @@ onMounted(async () => {
 							v-for="p in filteredPosts"
 							:key="p._id"
 							type="button"
-							class="list-item"
+							class="list-item post-row"
 							:class="{ active: p._id === selectedId }"
 							@click="selectPost(p._id)"
 						>
@@ -424,7 +424,7 @@ onMounted(async () => {
 			</aside>
 
 			<!-- MAIN: EDITOR -->
-			<section class="main">
+			<section class="main-column">
 				<div class="card">
 
 					<div class="header-row">
@@ -626,7 +626,7 @@ onMounted(async () => {
 							v-for="it in filteredAssets"
 							:key="it.path"
 							type="button"
-							class="asset-item"
+							class="asset-item btn"
 							@click="onAssetClick(it)"
 						>
 							<div class="asset-name">
@@ -659,121 +659,219 @@ $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
+// main admin page wrapper
 .admin{
+
 	height: 100%;
 	overflow: hidden;
 	color: $text;
-}
 
-/* ====== MAIN GRID ====== */
+	/* ====== MAIN GRID ====== */
+	.grid {
 
-.grid{
-	height: 100%;
-	display: grid;
-	grid-template-columns: 340px 1fr;
-	gap: 14px;
-	align-items: stretch;
-	overflow: hidden;
-}
+		height: 100%;
+		display: grid;
+		grid-template-columns: 340px 1fr;
+		gap: 14px;
+		align-items: stretch;
+		overflow: hidden;
 
-/* ====== LEFT COLUMN ====== */
+		/* ====== CARDS ====== */
+		.card {
+			background: #fff;
+			border-radius: 16px;
+			border: 1px solid $border;
+			box-shadow: $shadow;
+			padding: 14px 16px;
 
-.left{
-	height: 100%;
-	overflow: hidden;
-}
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+			min-width: 0;
+		}// .card
 
-.left .row{
-	display: flex;
-	gap: 10px;
-	margin-bottom: 10px;
-}
+		/* ====== LEFT COLUMN ====== */
+		.left-column {
 
-.list{
-	flex: 1;
-	overflow: auto;
-	padding-right: 4px;
-	display: grid;
-	gap: 8px;
-}
+			height: 100%;
+			overflow: hidden;
 
-/* ====== MAIN COLUMN ====== */
+			// row in the left column
+			.row{
+				display: flex;
+				gap: 10px;
+				margin-bottom: 10px;
 
-.main{
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	gap: 14px;
-	overflow: hidden;
-	min-width: 0;
-}
+			}// .row
 
-/* ====== CARDS ====== */
+			.list{
+				flex: 1;
+				overflow: auto;
+				padding-right: 4px;
+				display: grid;
+				gap: 8px;
 
-.card{
-	background: #fff;
-	border-radius: 16px;
-	border: 1px solid $border;
-	box-shadow: $shadow;
-	padding: 14px 16px;
+				/* ====== POST LIST ====== */
+				.post-row{
+					padding: 8px 10px;
+					border-radius: 12px;
+					border: 1px solid $border;
+					background: #fff;
+					cursor: pointer;
+					transition: .15s;
 
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	min-width: 0;
-}
+					&:hover{
+						border-color: $primary;
+					}// &:hover
 
-/* ====== EDITOR ====== */
+					&.active{
+						border-color: $primary;
+						box-shadow: 0 0 0 3px rgba($primary, .12);
+					}// &.active
 
-.editor{
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	min-height: 0;
-	overflow: hidden;
-}
+				}// .post-row
 
-.editor-header{
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-}
+			}// .list
 
-.editor-title{
-	color: $primary;
-	font-weight: 800;
-	letter-spacing: .2px;
-}
 
-.top-grid{
-	display: grid;
-	grid-template-columns: 1fr 260px;
-	gap: 12px;
-	align-items: start;
-}
+		}// .left-column
 
-/* ====== FEATURED IMAGE ====== */
+		/* ====== MAIN COLUMN ====== */
+		.main-column {
 
-.thumb-box{
-	width: 100%;
-	aspect-ratio: 1 / 1;
-	border-radius: 14px;
-	border: 2px dashed rgba($primary, .4);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
-	background: rgba($primary, .05);
-	cursor: pointer;
-}
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			gap: 14px;
+			overflow: hidden;
+			min-width: 0;
 
-.thumb-box img{
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
-	background: #999;
-}
+		}// .main-column
+
+
+	}// .grid
+
+	/* ====== EDITOR ====== */
+	.editor{
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-height: 0;
+		overflow: hidden;
+
+		.top-grid{
+			display: grid;
+			grid-template-columns: 1fr 260px;
+			gap: 12px;
+			align-items: start;
+		}// .top-grid
+
+		/* ====== FEATURED IMAGE ====== */
+		.thumb-box{
+			width: 100%;
+			aspect-ratio: 1 / 1;
+			border-radius: 14px;
+			border: 2px dashed rgba($primary, .4);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			overflow: hidden;
+			background: rgba($primary, .05);
+			cursor: pointer;
+
+			img{
+				width: 100%;
+				height: 100%;
+				object-fit: contain;
+				background: #999;
+			}// img
+
+		}// .thumb-box
+
+		/* ====== EDITOR BODY ====== */
+		.editor-body{
+
+			flex: 1;
+			min-height: 0;
+			overflow: hidden;
+
+			.textarea{
+				width: 100%;
+				height: 100%;
+				min-height: 0;
+				resize: none;
+				border-radius: 12px;
+				padding: 12px;
+				font-family: monospace;
+				font-size: 13px;
+				line-height: 1.5;
+				border: 1px solid $border;
+				overflow: auto;
+
+				&:focus{
+					outline: none;
+					border-color: $primary;
+
+				}// &:focus
+
+			}// .textarea
+
+		}// .editor-body
+
+		/* ====== TABS ====== */
+		.tabs{
+			display: flex;
+			gap: 8px;
+
+			.tab{
+				padding: 6px 10px;
+				border-radius: 10px;
+				border: 1px solid $border;
+				cursor: pointer;
+				font-size: 13px;
+
+				&.active{
+					border-color: $secondary;
+					color: $secondary;
+					box-shadow: 0 0 0 3px rgba($secondary, .12);
+				}// &.active
+
+			}// .tab
+
+		} // .tabs
+
+	}// .editor
+
+	/* ====== ASSETS PANEL ====== */
+	.assets{
+		flex: 0 0 320px;
+		overflow: hidden;
+
+		.assets-top{
+			display: grid;
+			grid-template-columns: auto 1fr auto 1fr;
+			gap: 8px;
+			align-items: center;
+			margin-bottom: 10px;
+
+		}// .assets-top
+
+		.assets-list{
+			flex: 1;
+			overflow: auto;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+			gap: 10px;
+			padding-right: 4px;
+
+		}// .assets-list
+
+	}// .assets
+
+}// .admin
+
+
 
 /* ====== FORM CONTROLS ====== */
 
@@ -822,97 +920,18 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 	}
 }
 
-/* ====== POST LIST ====== */
 
-.post-row{
-	padding: 8px 10px;
-	border-radius: 12px;
-	border: 1px solid $border;
-	background: #fff;
-	cursor: pointer;
-	transition: .15s;
-}
 
-.post-row:hover{
-	border-color: $primary;
-}
 
-.post-row.active{
-	border-color: $primary;
-	box-shadow: 0 0 0 3px rgba($primary, .12);
-}
 
-/* ====== EDITOR BODY ====== */
 
-.editor-body{
-	flex: 1;
-	min-height: 0;
-	overflow: hidden;
-}
 
-.textarea{
-	width: 100%;
-	height: 100%;
-	min-height: 0;
-	resize: none;
-	border-radius: 12px;
-	padding: 12px;
-	font-family: monospace;
-	font-size: 13px;
-	line-height: 1.5;
-	border: 1px solid $border;
-	overflow: auto;
 
-	&:focus{
-		outline: none;
-		border-color: $primary;
-	}
-}
 
-/* ====== TABS ====== */
 
-.tabs{
-	display: flex;
-	gap: 8px;
-}
 
-.tab{
-	padding: 6px 10px;
-	border-radius: 10px;
-	border: 1px solid $border;
-	cursor: pointer;
-	font-size: 13px;
-}
 
-.tab.active{
-	border-color: $secondary;
-	color: $secondary;
-	box-shadow: 0 0 0 3px rgba($secondary, .12);
-}
 
-/* ====== ASSETS PANEL ====== */
-
-.assets{
-	flex: 0 0 320px;
-	overflow: hidden;
-}
-
-.assets-top{
-	display: grid;
-	grid-template-columns: auto 1fr auto 1fr;
-	gap: 8px;
-	align-items: center;
-	margin-bottom: 10px;
-}
-
-.assets-list{
-	flex: 1;
-	overflow: auto;
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-	gap: 10px;
-	padding-right: 4px;
-}
 
 /* ====== MOBILE ====== */
 
@@ -921,7 +940,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 		grid-template-columns: 1fr;
 	}
 
-	.left{
+	.left-column {
 		height: 260px;
 	}
 
