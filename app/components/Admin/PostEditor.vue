@@ -182,6 +182,10 @@ async function publish() {
 		});
 		emit('update', updated);
 		draft.value = structuredClone(toRaw(updated));
+
+		tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
+		categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
+
 		ok.value = 'Published';
 		emit('refresh');
 
@@ -208,6 +212,10 @@ async function unpublish() {
 		});
 		emit('update', updated);
 		draft.value = structuredClone(toRaw(updated));
+
+		tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
+		categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
+
 		ok.value = 'Unpublished';
 		emit('refresh');
 
@@ -309,7 +317,7 @@ watch(() => props.post, (newPost) => {
 	if (newPost) {
 		draft.value = structuredClone(toRaw(newPost));
 		tagsText.value = Array.isArray(newPost.tags) ? newPost.tags.join(', ') : '';
-		categoryText.value = newPost.category || '';
+		categoryText.value = (Array.isArray(newPost.categories) ? newPost.categories : [])[0] || '';
 		loadingPost.value = false;
 
 	} else {
