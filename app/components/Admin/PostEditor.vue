@@ -359,85 +359,69 @@ onMounted(async () => {
 
 		<div v-else class="editor">
 
-			<div class="top-grid">
+			<div class="post-edit-area">
 
-				<div class="fields">
-
-					<div class="field">
-						<label class="label">Post Title</label>
-						<input v-model="draft.title" class="input" type="text" />
-					</div>
-
-					<div class="row">
-						<div class="field">
-							<label class="label">Slug</label>
-							<input v-model="draft.slug" class="input" type="text" />
-						</div>
-
-						<div class="field">
-							<label class="label">Status</label>
-							<input class="input" type="text" :value="draft.status || 'published'" disabled />
-						</div>
-					</div>
-
-					<div class="row">
-						<div class="field">
-							<label class="label">Tags (comma separated)</label>
-							<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
-						</div>
-
-						<div class="field">
-							<label class="label">Category</label>
-							<input
-								v-model="categoryText"
-								class="input"
-								type="text"
-								list="categoryOptions"
-								placeholder="Type or pick…"
-							/>
-							<datalist id="categoryOptions">
-								<option v-for="c in categories" :key="c" :value="c" />
-							</datalist>
-						</div>
-					</div>
-
-					<div class="row wrap">
-						<button class="btn" type="button" @click="saveDraft" :disabled="saving">
-							{{ saving ? 'Saving…' : 'Save Draft' }}
-						</button>
-
-						<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
-							Preview
-						</button>
-
-						<button
-							v-if="(draft.status || 'published') !== 'published'"
-							class="btn primary"
-							type="button"
-							@click="publish"
-						>
-							Publish
-						</button>
-
-						<button
-							v-else
-							class="btn"
-							type="button"
-							@click="unpublish"
-						>
-							Unpublish
-						</button>
-
-						<button class="btn danger" type="button" @click="deletePost">
-							Delete
-						</button>
-
-						<span v-if="dirty" class="dirty">
-							● Unsaved changes
-						</span>
-					</div>
-
+				<!-- EDITOR TABS -->
+				<div class="tabs">
+					<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
+						Rich Text
+					</button>
+					<button class="tab" :class="{ active: editorTab === 'html' }" type="button" @click="editorTab = 'html'">
+						Raw HTML
+					</button>
 				</div>
+
+				<div class="editor-body">
+					<textarea
+						v-model="draft.content"
+						class="textarea"
+						:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
+					/>
+				</div>
+
+			</div>
+
+			<div class="post-buttons-area">
+
+				<div class="row wrap">
+					<button class="btn" type="button" @click="saveDraft" :disabled="saving">
+						{{ saving ? 'Saving…' : 'Save Draft' }}
+					</button>
+
+					<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
+						Preview
+					</button>
+
+					<button
+						v-if="(draft.status || 'published') !== 'published'"
+						class="btn primary"
+						type="button"
+						@click="publish"
+					>
+						Publish
+					</button>
+
+					<button
+						v-else
+						class="btn"
+						type="button"
+						@click="unpublish"
+					>
+						Unpublish
+					</button>
+
+					<button class="btn danger" type="button" @click="deletePost">
+						Delete
+					</button>
+
+					<span v-if="dirty" class="dirty">
+						● Unsaved changes
+					</span>
+				</div>
+
+			</div>
+
+			<div class="post-settings-area">
 
 				<!-- THUMBNAIL PICKER -->
 				<div class="thumb">
@@ -467,27 +451,60 @@ onMounted(async () => {
 					</div>
 				</div>
 
+				<div class="top-grid">
+
+					<div class="fields">
+
+						<div class="field">
+							<label class="label">Post Title</label>
+							<input v-model="draft.title" class="input" type="text" />
+						</div>
+
+						<div class="row">
+							<div class="field">
+								<label class="label">Slug</label>
+								<input v-model="draft.slug" class="input" type="text" />
+							</div>
+
+							<div class="field">
+								<label class="label">Status</label>
+								<input class="input" type="text" :value="draft.status || 'published'" disabled />
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="field">
+								<label class="label">Tags (comma separated)</label>
+								<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
+							</div>
+
+							<div class="field">
+								<label class="label">Category</label>
+								<input
+									v-model="categoryText"
+									class="input"
+									type="text"
+									list="categoryOptions"
+									placeholder="Type or pick…"
+								/>
+								<datalist id="categoryOptions">
+									<option v-for="c in categories" :key="c" :value="c" />
+								</datalist>
+							</div>
+						</div>
+
+					<!-- /fields -->
+					</div>
+
+				<!-- /top-grid -->
+				</div>
+
+			<!-- /post-settings-area -->
 			</div>
 
-			<!-- EDITOR TABS -->
-			<div class="tabs">
-				<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
-					Rich Text
-				</button>
-				<button class="tab" :class="{ active: editorTab === 'html' }" type="button" @click="editorTab = 'html'">
-					Raw HTML
-				</button>
-			</div>
-
-			<div class="editor-body">
-				<textarea
-					v-model="draft.content"
-					class="textarea"
-					:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
-				/>
-			</div>
-
+		<!-- /editor -->
 		</div>
+
 	</div>
 
 </template>
@@ -500,6 +517,9 @@ $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
+$post-settings-width: 280px;
+$buttons-area-height: 80px;
+
 .post-editor-wrapper{
 
 	// box settings
@@ -507,93 +527,128 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 	/* ====== EDITOR ====== */
 	.editor{
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		min-height: 0;
+
+		// box settings
+		position: relative;
 		overflow: hidden;
 
-		.top-grid{
-			display: grid;
-			grid-template-columns: 1fr 260px;
-			gap: 12px;
-			align-items: start;
-		}// .top-grid
+		// area with the main post editing textarea
+		.post-edit-area {
 
-		/* ====== FEATURED IMAGE ====== */
-		.thumb-box{
-			width: 100%;
-			aspect-ratio: 1 / 1;
-			border-radius: 14px;
-			border: 2px dashed rgba($primary, .4);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			overflow: hidden;
-			background: rgba($primary, .05);
-			cursor: pointer;
+			// fixed on left
+			position: absolute;
+			inset: 0px $post-settings-width $buttons-area-height 0px;
 
-			img{
-				width: 100%;
-				height: 100%;
-				object-fit: contain;
-				background: #999;
-			}// img
+			/* ====== TABS ====== */
+			.tabs {
 
-		}// .thumb-box
+				display: flex;
+				gap: 8px;
 
-		/* ====== EDITOR BODY ====== */
-		.editor-body{
+				.tab {
+					padding: 6px 10px;
+					border-radius: 10px;
+					border: 1px solid $border;
+					cursor: pointer;
+					font-size: 13px;
 
-			flex: 1;
-			min-height: 0;
-			overflow: hidden;
+					&.active {
+						border-color: $secondary;
+						color: $secondary;
+						box-shadow: 0 0 0 3px rgba($secondary, .12);
 
-			.textarea{
-				width: 100%;
-				height: 100%;
+					}// &.active
+
+				}// .tab
+
+			} // .tabs
+
+			/* ====== EDITOR BODY ====== */
+			.editor-body {
+
+				flex: 1;
 				min-height: 0;
-				resize: none;
-				border-radius: 12px;
-				padding: 12px;
-				font-family: monospace;
-				font-size: 13px;
-				line-height: 1.5;
-				border: 1px solid $border;
-				overflow: auto;
+				overflow: hidden;
 
-				&:focus{
-					outline: none;
-					border-color: $primary;
+				.textarea {
+					width: 100%;
+					height: 100%;
+					min-height: 0;
+					resize: none;
+					border-radius: 12px;
+					padding: 12px;
+					font-family: monospace;
+					font-size: 13px;
+					line-height: 1.5;
+					border: 1px solid $border;
+					overflow: auto;
 
-				}// &:focus
+					&:focus {
+						outline: none;
+						border-color: $primary;
 
-			}// .textarea
+					}// &:focus
 
-		}// .editor-body
+				}// .textarea
 
-		/* ====== TABS ====== */
-		.tabs{
-			display: flex;
-			gap: 8px;
+			}// .editor-body
 
-			.tab{
-				padding: 6px 10px;
-				border-radius: 10px;
-				border: 1px solid $border;
+		}// .post-edit-area
+
+		// area with post action buttons
+		.post-buttons-area {
+
+			// fixed on bottom left
+			position: absolute;
+			inset: auto $post-settings-width 0px 0px;
+			height: $buttons-area-height;
+
+			// box settings
+			border-top: 1px solid $border;
+
+		}// .post-buttons-area
+
+		// area with post settings like categories, tags, etc
+		.post-settings-area {
+
+			// fixed on right
+			position: absolute;
+			inset: 0px 0px 0px auto;
+			width: $post-settings-width;
+
+			// box settings
+			border-left: 3px solid $primary;
+
+			.top-grid{
+				display: grid;
+				grid-template-columns: 1fr 260px;
+				gap: 12px;
+				align-items: start;
+			}// .top-grid
+
+			/* ====== FEATURED IMAGE ====== */
+			.thumb-box {
+				width: 100%;
+				aspect-ratio: 1 / 1;
+				border-radius: 14px;
+				border: 2px dashed rgba($primary, .4);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				overflow: hidden;
+				background: rgba($primary, .05);
 				cursor: pointer;
-				font-size: 13px;
 
-				&.active{
-					border-color: $secondary;
-					color: $secondary;
-					box-shadow: 0 0 0 3px rgba($secondary, .12);
-				}// &.active
+				img{
+					width: 100%;
+					height: 100%;
+					object-fit: contain;
+					background: #999;
+				}// img
 
-			}// .tab
+			}// .thumb-box
 
-		} // .tabs
+		}// .post-settings-area
 
 	}// .editor
 
