@@ -17,7 +17,13 @@ export default defineEventHandler(async (event) => {
     await connectDb();
 
     // distinct categories
-    const categories = await Post.distinct('categories');
+    const categories = await Post.distinct('categories', {
+		$or: [
+			{ status: 'published' },
+			{ status: { $exists: false } },
+			{ status: null },
+		]
+	});
 
     // Filter out nulls/empty and sort
     return categories.filter(c => c).sort();

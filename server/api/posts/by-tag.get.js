@@ -66,7 +66,14 @@ export default defineEventHandler(async (event) => {
 		featuredImage: 1,
 	};
 
-	const posts = await Post.find({ tags: tag }, projection)
+	const posts = await Post.find({
+		tags: tag,
+		$or: [
+			{ status: 'published' },
+			{ status: { $exists: false } },
+			{ status: null },
+		]
+	}, projection)
 		.sort({ date: -1 })
 		.limit(limit)
 		.lean();

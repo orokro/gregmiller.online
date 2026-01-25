@@ -13,6 +13,7 @@
 
 // imports
 import { Post } from '../../models/Post';
+import { isAdmin } from '../../utils/isAdmin';
 
 export default defineEventHandler(async (event) => {
 
@@ -27,6 +28,18 @@ export default defineEventHandler(async (event) => {
 			statusCode: 404,
 			statusMessage: 'Post not found',
 		});
+	}
+
+	// Draft protection: if not published, only allow admin
+	if (post.status !== 'published') {
+		const admin = isAdmin(event);
+		if (!admin) {
+			// Pretend it doesn't exist
+			throw createError({
+				statusCode: 404,
+				statusMessage: 'Post not found',
+			});
+		}
 	}
 
 	return post;

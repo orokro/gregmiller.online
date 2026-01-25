@@ -24,7 +24,13 @@ export default defineEventHandler(async (event) => {
 	await connectDb();
 
 	const query = getQuery(event);
-	const filter = {};
+	const filter = {
+		$or: [
+			{ status: 'published' },
+			{ status: { $exists: false } },
+			{ status: null },
+		]
+	};
 
 	if (query.category) {
 		filter.categories = query.category;

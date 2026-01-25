@@ -28,6 +28,11 @@ export default defineEventHandler(async (event) => {
 
 	const filter = {
 		$text: { $search: q },
+		$or: [
+			{ status: 'published' },
+			{ status: { $exists: false } },
+			{ status: null },
+		]
 	};
 
 	// optional category filter, same style as posts.get.js :contentReference[oaicite:3]{index=3}
