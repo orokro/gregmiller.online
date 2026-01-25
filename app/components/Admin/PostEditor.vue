@@ -7,7 +7,7 @@
 <script setup>
 
 // vue
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, toRaw } from 'vue';
 
 // props
 const props = defineProps({
@@ -19,6 +19,10 @@ const props = defineProps({
 		default: null,
 	},
 });
+
+
+// emits
+const emit = defineEmits(['refresh', 'update']);
 
 
 // current draft being edited
@@ -123,7 +127,7 @@ function computeDraftPayload() {
  */
 async function saveDraft() {
 
-	if (!draft.value || !selectedId.value)
+	if (!draft.value || !props.post?._id)
 		return;
 
 	clearNotices();
@@ -132,21 +136,21 @@ async function saveDraft() {
 	try {
 		const payload = computeDraftPayload();
 
-		const updated = await $fetch(`/api/admin/posts/${selectedId.value}`, {
+		const updated = await $fetch(`/api/admin/posts/${props.post._id}`, {
 			method: 'PUT',
 			body: payload,
 			credentials: 'include',
 		});
 
-		post.value = updated;
-		draft.value = structuredClone(updated);
+		emit('update', updated);
+		draft.value = structuredClone(toRaw(updated));
 
 		tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
 		categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
 
 		dirty.value = false;
 		ok.value = 'Saved';
-		await refreshPosts();
+		emit('refresh');
 
 	} catch (e) {
 		err.value = 'Save failed';
@@ -162,20 +166,20 @@ async function saveDraft() {
  */
 async function publish() {
 
-	if (!selectedId.value)
+	if (!props.post?._id)
 		return;
 
 	clearNotices();
 
 	try {
-		const updated = await $fetch(`/api/admin/posts/${selectedId.value}/publish`, {
+		const updated = await $fetch(`/api/admin/posts/${props.post._id}/publish`, {
 			method: 'POST',
 			credentials: 'include',
 		});
-		post.value = updated;
-		draft.value = structuredClone(updated);
+		emit('update', updated);
+		draft.value = structuredClone(toRaw(updated));
 		ok.value = 'Published';
-		await refreshPosts();
+		emit('refresh');
 
 	} catch (e) {
 		err.value = 'Publish failed';
@@ -188,20 +192,20 @@ async function publish() {
  */
 async function unpublish() {
 
-	if (!selectedId.value)
+	if (!props.post?._id)
 		return;
 
 	clearNotices();
 
 	try {
-		const updated = await $fetch(`/api/admin/posts/${selectedId.value}/unpublish`, {
+		const updated = await $fetch(`/api/admin/posts/${props.post._id}/unpublish`, {
 			method: 'POST',
 			credentials: 'include',
 		});
-		post.value = updated;
-		draft.value = structuredClone(updated);
+		emit('update', updated);
+		draft.value = structuredClone(toRaw(updated));
 		ok.value = 'Unpublished';
-		await refreshPosts();
+		emit('refresh');
 
 	} catch (e) {
 		err.value = 'Unpublish failed';
@@ -225,7 +229,7 @@ function previewPost() {
  */
 async function deletePost() {
 
-	if (!selectedId.value)
+	if (!props.post?._id)
 		return;
 
 	clearNotices();
@@ -235,45 +239,18 @@ async function deletePost() {
 		return;
 
 	try {
-		await $fetch(`/api/admin/posts/${selectedId.value}`, {
+		await $fetch(`/api/admin/posts/${props.post._id}`, {
 			method: 'DELETE',
 			credentials: 'include',
 		});
 
 		ok.value = 'Deleted';
-		selectedId.value = '';
-		post.value = null;
-		draft.value = null;
 		dirty.value = false;
 
-		await refreshPosts();
+		emit('refresh');
 
 	} catch (e) {
 		err.value = 'Delete failed';
-	}
-}
-
-
-/**
- * Create a new draft post
- */
-async function createDraft() {
-
-	clearNotices();
-
-	try {
-		const created = await $fetch('/api/admin/posts', {
-			method: 'POST',
-			body: { title: 'Untitled' },
-			credentials: 'include',
-		});
-
-		await refreshPosts();
-		await selectPost(created._id);
-		ok.value = 'Draft created';
-
-	} catch (e) {
-		err.value = 'Create failed';
 	}
 }
 
@@ -326,7 +303,7 @@ watch(() => props.post, (newPost) => {
 	clearNotices();
 
 	if (newPost) {
-		draft.value = structuredClone(newPost)
+		draft.value = structuredClone(toRaw(newPost));
 		tagsText.value = Array.isArray(newPost.tags) ? newPost.tags.join(', ') : '';
 		categoryText.value = newPost.category || '';
 		loadingPost.value = false;

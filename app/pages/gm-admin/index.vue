@@ -74,9 +74,21 @@ function onPostChanged(data) {
 /**
  * Handle when our side bar notifies us to create a new draft
  */
-function onCreateDraft() {
+async function onCreateDraft() {
 
-	postEditorRef.value?.createDraft();
+	try {
+		const created = await $fetch('/api/admin/posts', {
+			method: 'POST',
+			body: { title: 'Untitled' },
+			credentials: 'include',
+		});
+
+		await refreshPosts();
+		post.value = created;
+
+	} catch (e) {
+		console.error('Failed to create draft', e);
+	}
 }
 
 
@@ -113,8 +125,10 @@ onMounted(async () => {
 			<PostEditor
 				v-if="post"
 				ref="postEditorRef"
-				:key="post.id"
+				:key="post._id"
 				:post="post"
+				@refresh="refreshPosts"
+				@update="(p) => post = p"
 			/>
 
 			<div
