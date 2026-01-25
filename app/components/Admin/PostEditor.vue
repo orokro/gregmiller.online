@@ -7,7 +7,7 @@
 <script setup>
 
 // vue
-import { ref, watch, computed, onMounted, toRaw } from 'vue';
+import { ref, watch, computed, onMounted, toRaw, nextTick } from 'vue';
 
 // components
 import PanelTitleBar from './PanelTitleBar.vue';
@@ -40,6 +40,7 @@ const saving = ref(false);
 
 // whether the draft has unsaved changes
 const dirty = ref(false);
+const ignoreChanges = ref(false);
 
 const ok = ref('');
 const err = ref('');
@@ -313,6 +314,7 @@ async function onFeaturedPicked(e) {
 watch(() => props.post, (newPost) => {
 
 	clearNotices();
+	ignoreChanges.value = true;
 
 	if (newPost) {
 		draft.value = structuredClone(toRaw(newPost));
@@ -327,7 +329,10 @@ watch(() => props.post, (newPost) => {
 		loadingPost.value = true;
 	}
 
-	dirty.value = false;
+	nextTick(() => {
+		dirty.value = false;
+		ignoreChanges.value = false;
+	});
 
 }, { immediate: true, deep: true });
 
@@ -336,7 +341,7 @@ watch(() => props.post, (newPost) => {
 */
 watch([draft, tagsText, categoryText], () => {
 
-	if (!draft.value)
+	if (!draft.value || ignoreChanges.value)
 		return;
 	dirty.value = true;
 

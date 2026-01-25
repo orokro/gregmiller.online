@@ -77,15 +77,19 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 
 			<article class="postCard">
 
-				<img
-					v-if="resolvedThumb"
-					:src="resolvedThumb"
-					:alt="post.title"
-					loading="lazy"
-					decoding="async"
-				/>
-				<div v-else class="thumbPlaceholder">
-					<span>NO IMAGE</span>
+				<div class="card-thumb">
+					<div class="thumb-clipper">
+						<img
+							v-if="resolvedThumb"
+							:src="resolvedThumb"
+							:alt="post.title"
+							loading="lazy"
+							decoding="async"
+						/>
+						<div v-else class="thumbPlaceholder">
+							<span>NO IMAGE</span>
+						</div>
+					</div>
 				</div>
 
 				<div class="body">
@@ -163,50 +167,74 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 	&:hover {
 		translate: 0 -5px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		z-index: 10;
 
-		img {
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-			transform: scale(1.4) translate(-20px, 0px);
-		}
+		.card-thumb {
+			// box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+			.thumb-clipper {
+				transform: scale(1.4) translate(-20px, 0px);
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+				z-index: 20;
+			}
+
+		}// .card-thumb
+
 	}// &:hover
 
-   // thumbnail image
-    img {
+   // thumbnail image container
+	.card-thumb {
 
-		// box styles
-        display: block;
-        width: 150px;
-        height: 150px;
-        border-radius: 4px;
-        object-fit: cover;
-        background: rgba(0, 0, 0, 0.08);
-		border: 3px solid white;
+		width: 150px;
+		height: 150px;
+		position: relative;
 
-		// hover animation
-		transition: transform 0.3s;
-		transform: scale(1.05) translate(0, 0);
+		.thumb-clipper {
 
-    }// img
+			width: 100%;
+			height: 100%;
 
-    // Placeholder styling if no image exists
-    .thumbPlaceholder {
+			// border styles
+			border-radius: 4px;
+			border: 3px solid white;
+			background: rgba(0, 0, 0, 0.08);
 
-		// box styles
-        width: 150px;
-        height: 150px;
-        opacity: 0.65;
-        background: rgba(0, 0, 0, 0.08);
-        border-radius: 4px;
+			// Clip the image to square
+			overflow: hidden;
 
-		// layout
-		display: grid;
-        place-items: center;
+			// hover animation
+			transition: transform 0.3s, box-shadow 0.3s;
+			transform: scale(1.05) translate(0, 0);
 
-		// text styles
-        font-size: 12px;
-        letter-spacing: 0.08em;
+			img {
+				display: block;
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
 
-   	}// .thumbPlaceholder
+			}// img
+
+			// Placeholder styling if no image exists
+			.thumbPlaceholder {
+
+				// box styles
+				width: 100%;
+				height: 100%;
+				opacity: 0.65;
+
+				// layout
+				display: grid;
+				place-items: center;
+
+				// text styles
+				font-size: 12px;
+				letter-spacing: 0.08em;
+
+			}// .thumbPlaceholder
+
+		}// .thumb-clipper
+
+	}// .card-thumb
 
     // Body Content
     .body {
@@ -242,7 +270,8 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
                 text-overflow: ellipsis;
 				text-align: left;
 				font-family: "Alumni Sans Pinstripe", sans-serif;
-				letter-spacing: 1px;;
+				letter-spacing: 1px;
+
             }// meta info row (date, categories)
 
 			// meta info row (date, categories)
@@ -259,7 +288,6 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 
 				// text styles
                 font-size: 12px;
-
 
             }// .meta
 
@@ -290,7 +318,7 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 
         }// .header
 
-		// blurb text from articl
+		// blurb text from article
         .excerpt {
 
 			// box styles
