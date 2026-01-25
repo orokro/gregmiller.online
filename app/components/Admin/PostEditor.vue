@@ -9,6 +9,10 @@
 // vue
 import { ref, watch, computed, onMounted, toRaw } from 'vue';
 
+// components
+import PanelTitleBar from './PanelTitleBar.vue';
+
+
 // props
 const props = defineProps({
 
@@ -361,6 +365,10 @@ onMounted(async () => {
 
 			<div class="post-edit-area">
 
+				<PanelTitleBar>
+					Editing Post: {{ draft.title || '(untitled)' }}
+				</PanelTitleBar>
+
 				<!-- EDITOR TABS -->
 				<div class="tabs">
 					<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
@@ -422,6 +430,10 @@ onMounted(async () => {
 			</div>
 
 			<div class="post-settings-area">
+
+				<PanelTitleBar>
+					Post Settings
+				</PanelTitleBar>
 
 				<!-- THUMBNAIL PICKER -->
 				<div class="thumb">
@@ -518,12 +530,14 @@ $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 $post-settings-width: 280px;
-$buttons-area-height: 80px;
+$buttons-area-height: 50px;
 
 .post-editor-wrapper{
 
 	// box settings
-	padding: 10px;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
 
 	/* ====== EDITOR ====== */
 	.editor{
@@ -531,6 +545,8 @@ $buttons-area-height: 80px;
 		// box settings
 		position: relative;
 		overflow: hidden;
+		flex: 1;
+		width: 100%;
 
 		// area with the main post editing textarea
 		.post-edit-area {
@@ -544,6 +560,7 @@ $buttons-area-height: 80px;
 
 				display: flex;
 				gap: 8px;
+				padding: 10px;
 
 				.tab {
 					padding: 6px 10px;
@@ -566,22 +583,30 @@ $buttons-area-height: 80px;
 			/* ====== EDITOR BODY ====== */
 			.editor-body {
 
-				flex: 1;
-				min-height: 0;
-				overflow: hidden;
+				position: relative;
+				width: 100%;
+				height: 100%;
+				border-bottom: 2px solid red;;
 
+				// text area box
 				.textarea {
-					width: 100%;
-					height: 100%;
+
+					// position
+					position: absolute;
+					inset: 0px 10px calc($buttons-area-height + 30px) 10px;
+
+					// box settings
 					min-height: 0;
 					resize: none;
 					border-radius: 12px;
+					border: 1px solid $border;
+					overflow: auto;
+
+					// text settings
 					padding: 12px;
 					font-family: monospace;
 					font-size: 13px;
 					line-height: 1.5;
-					border: 1px solid $border;
-					overflow: auto;
 
 					&:focus {
 						outline: none;
@@ -602,6 +627,7 @@ $buttons-area-height: 80px;
 			position: absolute;
 			inset: auto $post-settings-width 0px 0px;
 			height: $buttons-area-height;
+			padding: 8px 12px;
 
 			// box settings
 			border-top: 1px solid $border;
@@ -617,13 +643,12 @@ $buttons-area-height: 80px;
 			width: $post-settings-width;
 
 			// box settings
-			border-left: 3px solid $primary;
+			border-left: 3px solid $secondary;
 
 			.top-grid{
-				display: grid;
-				grid-template-columns: 1fr 260px;
+				display: flex;
+				flex-direction: column;
 				gap: 12px;
-				align-items: start;
 			}// .top-grid
 
 			/* ====== FEATURED IMAGE ====== */

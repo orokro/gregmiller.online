@@ -173,7 +173,7 @@ $assetTrayHeight: 250px;
 
 		// box settings
 		width: $leftColWidth;
-		border-right: 3px solid $primary;
+		border-right: 3px solid $secondary;
 
 	}// .left-column
 
@@ -185,12 +185,8 @@ $assetTrayHeight: 250px;
 		inset: $topBarHeight 0px $assetTrayHeight $leftColWidth;
 
 		// box settings
-		border-bottom: 3px solid $primary;
+		border-bottom: 3px solid $secondary;
 
-		display: flex;
-		flex-direction: column;
-		gap: 14px;
-		overflow: hidden;
 
 	}// .main-area
 

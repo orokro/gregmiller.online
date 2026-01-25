@@ -70,6 +70,7 @@ async function logout() {
 <style scoped lang="scss">
 
 $primary: #00ABAE;
+$secondary: #7561AA;
 $bg: #f6f8fb;
 $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
@@ -92,7 +93,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 		height: 56px;
 		padding: 0 16px;
 		background: #fff;
-		border-bottom: 3px solid $primary;
+		border-bottom: 3px solid $secondary;
 		box-shadow: $shadow;
 
 		// layout

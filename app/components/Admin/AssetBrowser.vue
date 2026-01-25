@@ -218,6 +218,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 	overflow: hidden;
 
 	.assets-top{
+		padding: 10px;
 		display: grid;
 		grid-template-columns: auto 1fr auto 1fr;
 		gap: 8px;
