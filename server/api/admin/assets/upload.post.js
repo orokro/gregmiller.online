@@ -40,10 +40,10 @@ export default defineEventHandler(async (event) => {
 	const files = [];
 
 	for (const part of form) {
-		if (part.type === 'field' && part.name === 'path') {
+		if (part.name === 'path') {
 			relDir = String(part.data || '').trim();
 		}
-		if (part.type === 'file' && part.name === 'file') {
+		if (part.name === 'file' && part.filename) {
 			files.push(part);
 		}
 	}
