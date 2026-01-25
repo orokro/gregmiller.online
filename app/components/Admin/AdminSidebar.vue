@@ -9,6 +9,10 @@
 // vue
 import { ref, computed } from 'vue';
 
+// components
+import PanelTitleBar from './PanelTitleBar.vue';
+
+
 // props
 const props = defineProps({
 
@@ -124,6 +128,8 @@ function createDraft() {
 
 	<aside class="left-column">
 
+		<PanelTitleBar>Posts</PanelTitleBar>
+
 		<div class="row controls">
 			<input
 				v-model="postSearch"
@@ -227,7 +233,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 		// position fixed
 		position: absolute;
-		top: 52px;
+		top: 74px;
 		bottom: 0px;
 		left: 0px;
 		right: 0px;

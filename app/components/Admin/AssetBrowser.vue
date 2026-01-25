@@ -9,6 +9,9 @@
 // vue
 import { ref, computed } from 'vue';
 
+// components
+import PanelTitleBar from './PanelTitleBar.vue';
+
 
 // provide emits
 const emit = defineEmits([]);
@@ -137,10 +140,7 @@ defineExpose({
 
 	<div class="card assets">
 
-		<div class="assets-head">
-			<h2 class="subtitle">Assets</h2>
-			<span class="muted">Served from <code>/wp-content/</code></span>
-		</div>
+		<PanelTitleBar>Asset Browser</PanelTitleBar>
 
 		<div class="assets-top">
 			<div class="row wrap">
@@ -211,20 +211,6 @@ $bg: #f6f8fb;
 $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
-
-/* ====== CARDS ====== */
-.card {
-	background: #fff;
-	border-radius: 16px;
-	border: 1px solid $border;
-	box-shadow: $shadow;
-	padding: 14px 16px;
-
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	min-width: 0;
-}// .card
 
 /* ====== ASSETS PANEL ====== */
 .assets{
