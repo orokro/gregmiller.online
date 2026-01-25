@@ -124,42 +124,41 @@ function createDraft() {
 
 	<aside class="left-column">
 
-		<div class="card">
-			<div class="row">
-				<input
-					v-model="postSearch"
-					class="input"
-					type="text"
-					placeholder="Search posts…"
-					@input="refreshPostsDebounced"
-				/>
-				<button class="btn" type="button" @click="createDraft">
-					New
-				</button>
-			</div>
+		<div class="row controls">
+			<input
+				v-model="postSearch"
+				class="input"
+				type="text"
+				placeholder="Search posts…"
+				@input="refreshPostsDebounced"
+			/>
+			<button class="btn" type="button" @click="createDraft">
+				New
+			</button>
+		</div>
 
-			<div class="list">
-				<button
-					v-for="p in filteredPosts"
-					:key="p._id"
-					type="button"
-					class="list-item post-row"
-					:class="{ active: p._id === selectedId }"
-					@click="selectPost(p._id)"
-				>
-					<div class="li-title">{{ p.title || '(Untitled)' }}</div>
-					<div class="li-meta">
-						<span class="pill">{{ p.status || 'published' }}</span>
-						<span v-if="p.date" class="muted">{{ formatDate(p.date) }}</span>
-					</div>
-				</button>
+		<div class="list">
+			<div
+				v-for="p in filteredPosts"
+				:key="p._id"
+				type="button"
+				class="list-item post-row"
+				:class="{ active: p._id === selectedId }"
+				@click="selectPost(p._id)"
+			>
+				<div class="li-title">{{ p.title || '(Untitled)' }}</div>
+				<div class="li-meta">
+					<span class="pill">{{ p.status || 'published' }}</span>
 
-				<div v-if="!posts.length" class="empty">
-					No posts found.
+					<span v-if="p.date" class="muted">{{ formatDate(p.date) }}</span>
 				</div>
 			</div>
 
+			<div v-if="!posts.length" class="empty">
+				No posts found.
+			</div>
 		</div>
+
 
 	</aside>
 
@@ -173,25 +172,11 @@ $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
-/* ====== CARDS ====== */
-.card {
-	background: #fff;
-	border-radius: 16px;
-	border: 1px solid $border;
-	box-shadow: $shadow;
-	padding: 14px 16px;
-
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	min-width: 0;
-}// .card
-
 /* ====== LEFT COLUMN ====== */
 .left-column {
 
-	height: 100%;
 	overflow: hidden;
+	position: relative;
 
 	// row in the left column
 	.row{
@@ -201,30 +186,97 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 	}// .row
 
-	.list{
-		flex: 1;
-		overflow: auto;
-		padding-right: 4px;
-		display: grid;
-		gap: 8px;
+	.controls {
+		padding: 10px;
+		border-bottom: 1px solid $border;
+		background: #fff;
 
-		/* ====== POST LIST ====== */
-		.post-row{
-			padding: 8px 10px;
-			border-radius: 12px;
-			border: 1px solid $border;
-			background: #fff;
+		input {
+			width: 160px;
+			border-radius: 8px;
+			padding: 4px;
+		}
+
+		button {
+
+			// box styles
+			background: $primary;
+			border-radius: 100px;
+			border: 2px solid $primary;
+			padding: 6px 14px;
+
+			// text styles
+			color: white;
+			font-weight: bolder;
+
+			// cursor styles
 			cursor: pointer;
+
+			// hover effect
+			&:hover{
+				background: white;
+				color: $primary;
+			}// &:hover
+
+		}// button
+
+	}// .controls
+
+	// list of posts
+	.list{
+
+		// position fixed
+		position: absolute;
+		top: 52px;
+		bottom: 0px;
+		left: 0px;
+		right: 0px;
+
+		// allow scrolling
+		overflow: auto;
+		// padding-right: 4px;
+
+		// one of the rows in the list
+		.post-row{
+
+			// box styles
+			background: white;
+			padding: 8px 10px;
+			margin-bottom: 2px;
+
+			// text styles
+			color: $secondary;
+			font-weight: bold;
+
+			// cursor styles
+			cursor: pointer;
+
+			// for animation
 			transition: .15s;
 
 			&:hover{
 				border-color: $primary;
+
+				background: $secondary;
+				color: white;
 			}// &:hover
 
 			&.active{
-				border-color: $primary;
-				box-shadow: 0 0 0 3px rgba($primary, .12);
+				background: $primary;
+				color: white;
 			}// &.active
+
+			.pill, .muted {
+
+				// box styles
+				margin-right: 5px;
+
+				// text styles
+				font-weight: normal;
+				font-size: 12px;
+				font-style: italic;
+
+			}// .pill, .muted
 
 		}// .post-row
 
