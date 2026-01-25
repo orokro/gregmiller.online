@@ -435,80 +435,79 @@ onMounted(async () => {
 					Post Settings
 				</PanelTitleBar>
 
-				<!-- THUMBNAIL PICKER -->
-				<div class="thumb">
-					<div class="thumb-label">Featured Image</div>
+				<div class="settings-list">
 
-					<button class="thumb-box" type="button" @click="pickFeatured">
-						<img
-							v-if="draft.featuredImage"
-							:src="draft.featuredImage"
-							alt="Featured"
+					<!-- 1. FEATURED IMAGE -->
+					<div class="setting-row centered">
+						<label class="label">Featured Image</label>
+
+						<button class="thumb-box-mini" type="button" @click="pickFeatured">
+							<img
+								v-if="draft.featuredImage"
+								:src="draft.featuredImage"
+								alt="Featured"
+							/>
+							<div v-else class="thumb-placeholder-text">
+								Upload
+							</div>
+						</button>
+
+						<input
+							ref="featuredInputEl"
+							type="file"
+							accept="image/*"
+							class="hidden"
+							@change="onFeaturedPicked"
 						/>
-						<div v-else class="thumb-placeholder">
-							Pick thumbnail
+
+						<div v-if="draft.featuredImage" class="mini-path" :title="draft.featuredImage">
+							{{ draft.featuredImage.split('/').pop() }}
 						</div>
-					</button>
-
-					<input
-						ref="featuredInputEl"
-						type="file"
-						accept="image/*"
-						class="hidden"
-						@change="onFeaturedPicked"
-					/>
-
-					<div v-if="draft.featuredImage" class="thumb-path muted">
-						{{ draft.featuredImage }}
-					</div>
-				</div>
-
-				<div class="top-grid">
-
-					<div class="fields">
-
-						<div class="field">
-							<label class="label">Post Title</label>
-							<input v-model="draft.title" class="input" type="text" />
-						</div>
-
-						<div class="row">
-							<div class="field">
-								<label class="label">Slug</label>
-								<input v-model="draft.slug" class="input" type="text" />
-							</div>
-
-							<div class="field">
-								<label class="label">Status</label>
-								<input class="input" type="text" :value="draft.status || 'published'" disabled />
-							</div>
-						</div>
-
-						<div class="row">
-							<div class="field">
-								<label class="label">Tags (comma separated)</label>
-								<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
-							</div>
-
-							<div class="field">
-								<label class="label">Category</label>
-								<input
-									v-model="categoryText"
-									class="input"
-									type="text"
-									list="categoryOptions"
-									placeholder="Type or pick…"
-								/>
-								<datalist id="categoryOptions">
-									<option v-for="c in categories" :key="c" :value="c" />
-								</datalist>
-							</div>
-						</div>
-
-					<!-- /fields -->
 					</div>
 
-				<!-- /top-grid -->
+					<!-- 2. TITLE -->
+					<div class="setting-row">
+						<label class="label">Post Title</label>
+						<input v-model="draft.title" class="input" type="text" />
+					</div>
+
+					<!-- 3. SLUG -->
+					<div class="setting-row">
+						<label class="label">Slug</label>
+						<input v-model="draft.slug" class="input" type="text" />
+					</div>
+
+					<!-- 4. STATUS -->
+					<div class="setting-row">
+						<label class="label">Status</label>
+						<input class="input" type="text" :value="draft.status || 'published'" disabled />
+					</div>
+
+					<!-- 5. TAGS -->
+					<div class="setting-row">
+						<label class="label">Tags (comma separated)</label>
+						<textarea
+							v-model="tagsText"
+							class="input tall-input"
+							placeholder="urbex, night, film"
+						></textarea>
+					</div>
+
+					<!-- 6. CATEGORY -->
+					<div class="setting-row">
+						<label class="label">Category</label>
+						<input
+							v-model="categoryText"
+							class="input"
+							type="text"
+							list="categoryOptions"
+							placeholder="Type or pick…"
+						/>
+						<datalist id="categoryOptions">
+							<option v-for="c in categories" :key="c" :value="c" />
+						</datalist>
+					</div>
+
 				</div>
 
 			<!-- /post-settings-area -->
@@ -644,34 +643,93 @@ $buttons-area-height: 50px;
 
 			// box settings
 			border-left: 3px solid $secondary;
+			display: flex;
+			flex-direction: column;
+			background: #fff;
 
-			.top-grid{
-				display: flex;
-				flex-direction: column;
-				gap: 12px;
-			}// .top-grid
+			.settings-header {
+				padding: 12px 14px;
+				border-bottom: 1px solid $border;
+				background: #fafafa;
 
-			/* ====== FEATURED IMAGE ====== */
-			.thumb-box {
-				width: 100%;
-				aspect-ratio: 1 / 1;
-				border-radius: 14px;
-				border: 2px dashed rgba($primary, .4);
+				h3 {
+					margin: 0;
+					font-size: 14px;
+					font-weight: 600;
+					color: $text;
+				}
+			}
+
+			.settings-list {
+				flex: 1;
+				overflow-y: auto;
+				padding: 14px;
+			}
+
+			.setting-row {
+				margin-bottom: 16px;
+
+				.label {
+					display: block;
+					font-size: 12px;
+					font-weight: 500;
+					margin-bottom: 4px;
+					color: rgba($text, 0.7);
+				}
+
+				&.centered {
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					text-align: center;
+				}
+			}
+
+			/* ====== MINI THUMBNAIL ====== */
+			.thumb-box-mini {
+				width: 80px;
+				height: 80px;
+				border: 1px solid $border;
+				background: #f0f0f0;
+				cursor: pointer;
 				display: flex;
 				align-items: center;
 				justify-content: center;
 				overflow: hidden;
-				background: rgba($primary, .05);
-				cursor: pointer;
+				padding: 0;
 
-				img{
+				&:hover {
+					border-color: $primary;
+				}
+
+				img {
 					width: 100%;
 					height: 100%;
-					object-fit: contain;
-					background: #999;
-				}// img
+					object-fit: cover;
+				}
 
-			}// .thumb-box
+				.thumb-placeholder-text {
+					font-size: 11px;
+					color: $secondary;
+					font-weight: 600;
+				}
+			}
+
+			.mini-path {
+				font-size: 10px;
+				color: #999;
+				margin-top: 4px;
+				max-width: 100%;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.tall-input {
+				height: 54px;
+				resize: none;
+				font-family: inherit;
+			}
 
 		}// .post-settings-area
 
