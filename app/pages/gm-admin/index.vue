@@ -243,7 +243,8 @@ async function deletePost() {
 	clearNotices();
 
 	const sure = window.confirm('Delete this post? This cannot be undone.');
-	if (!sure) return;
+	if (!sure)
+		return;
 
 	try {
 		await $fetch(`/api/admin/posts/${selectedId.value}`, {
@@ -398,9 +399,8 @@ onMounted(async () => {
 
 	<div class="admin">
 
-		<div class="grid">
+		<div class="left-column">
 
-			<!-- LEFT: SIDEBAR -->
 			<AdminSidebar
 				:posts="posts"
 				@refresh-posts="refreshPosts"
@@ -409,166 +409,167 @@ onMounted(async () => {
 				@postChanged="onPostChanged"
 			/>
 
-			<!-- MAIN: EDITOR -->
-			<section class="main-column">
-				<div class="card">
+		</div>
 
-					<div class="header-row">
-						<h1 class="title">Post Editor</h1>
-						<div class="hint muted">
-							Click a post on the left to edit.
-						</div>
-					</div>
+		<!-- MAIN: EDITOR -->
+		<section class="main-area">
+			<div class="card">
 
-					<div v-if="err" class="notice error">{{ err }}</div>
-					<div v-if="ok" class="notice ok">{{ ok }}</div>
-
-					<div v-if="loadingPost" class="status">
-						Loading selected post…
-					</div>
-
-					<div v-else-if="!post" class="status">
-						Select a post.
-					</div>
-
-					<div v-else class="editor">
-
-						<div class="top-grid">
-
-							<div class="fields">
-
-								<div class="field">
-									<label class="label">Post Title</label>
-									<input v-model="draft.title" class="input" type="text" />
-								</div>
-
-								<div class="row">
-									<div class="field">
-										<label class="label">Slug</label>
-										<input v-model="draft.slug" class="input" type="text" />
-									</div>
-
-									<div class="field">
-										<label class="label">Status</label>
-										<input class="input" type="text" :value="draft.status || 'published'" disabled />
-									</div>
-								</div>
-
-								<div class="row">
-									<div class="field">
-										<label class="label">Tags (comma separated)</label>
-										<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
-									</div>
-
-									<div class="field">
-										<label class="label">Category</label>
-										<input
-											v-model="categoryText"
-											class="input"
-											type="text"
-											list="categoryOptions"
-											placeholder="Type or pick…"
-										/>
-										<datalist id="categoryOptions">
-											<option v-for="c in categories" :key="c" :value="c" />
-										</datalist>
-									</div>
-								</div>
-
-								<div class="row wrap">
-									<button class="btn" type="button" @click="saveDraft" :disabled="saving">
-										{{ saving ? 'Saving…' : 'Save Draft' }}
-									</button>
-
-									<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
-										Preview
-									</button>
-
-									<button
-										v-if="(draft.status || 'published') !== 'published'"
-										class="btn primary"
-										type="button"
-										@click="publish"
-									>
-										Publish
-									</button>
-
-									<button
-										v-else
-										class="btn"
-										type="button"
-										@click="unpublish"
-									>
-										Unpublish
-									</button>
-
-									<button class="btn danger" type="button" @click="deletePost">
-										Delete
-									</button>
-
-									<span v-if="dirty" class="dirty">
-										● Unsaved changes
-									</span>
-								</div>
-
-							</div>
-
-							<!-- THUMBNAIL PICKER -->
-							<div class="thumb">
-								<div class="thumb-label">Featured Image</div>
-
-								<button class="thumb-box" type="button" @click="pickFeatured">
-									<img
-										v-if="draft.featuredImage"
-										:src="draft.featuredImage"
-										alt="Featured"
-									/>
-									<div v-else class="thumb-placeholder">
-										Pick thumbnail
-									</div>
-								</button>
-
-								<input
-									ref="featuredInputEl"
-									type="file"
-									accept="image/*"
-									class="hidden"
-									@change="onFeaturedPicked"
-								/>
-
-								<div v-if="draft.featuredImage" class="thumb-path muted">
-									{{ draft.featuredImage }}
-								</div>
-							</div>
-
-						</div>
-
-						<!-- EDITOR TABS -->
-						<div class="tabs">
-							<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
-								Rich Text
-							</button>
-							<button class="tab" :class="{ active: editorTab === 'html' }" type="button" @click="editorTab = 'html'">
-								Raw HTML
-							</button>
-						</div>
-
-						<div class="editor-body">
-							<textarea
-								v-model="draft.content"
-								class="textarea"
-								:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
-							/>
-						</div>
-
+				<div class="header-row">
+					<h1 class="title">Post Editor</h1>
+					<div class="hint muted">
+						Click a post on the left to edit.
 					</div>
 				</div>
 
-				<!-- ASSET BROWSER -->
-				<AssetBrowser ref="assetBrowserRef" />
+				<div v-if="err" class="notice error">{{ err }}</div>
+				<div v-if="ok" class="notice ok">{{ ok }}</div>
 
-			</section>
+				<div v-if="loadingPost" class="status">
+					Loading selected post…
+				</div>
 
+				<div v-else-if="!post" class="status">
+					Select a post.
+				</div>
+
+				<div v-else class="editor">
+
+					<div class="top-grid">
+
+						<div class="fields">
+
+							<div class="field">
+								<label class="label">Post Title</label>
+								<input v-model="draft.title" class="input" type="text" />
+							</div>
+
+							<div class="row">
+								<div class="field">
+									<label class="label">Slug</label>
+									<input v-model="draft.slug" class="input" type="text" />
+								</div>
+
+								<div class="field">
+									<label class="label">Status</label>
+									<input class="input" type="text" :value="draft.status || 'published'" disabled />
+								</div>
+							</div>
+
+							<div class="row">
+								<div class="field">
+									<label class="label">Tags (comma separated)</label>
+									<input v-model="tagsText" class="input" type="text" placeholder="urbex, night, film" />
+								</div>
+
+								<div class="field">
+									<label class="label">Category</label>
+									<input
+										v-model="categoryText"
+										class="input"
+										type="text"
+										list="categoryOptions"
+										placeholder="Type or pick…"
+									/>
+									<datalist id="categoryOptions">
+										<option v-for="c in categories" :key="c" :value="c" />
+									</datalist>
+								</div>
+							</div>
+
+							<div class="row wrap">
+								<button class="btn" type="button" @click="saveDraft" :disabled="saving">
+									{{ saving ? 'Saving…' : 'Save Draft' }}
+								</button>
+
+								<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
+									Preview
+								</button>
+
+								<button
+									v-if="(draft.status || 'published') !== 'published'"
+									class="btn primary"
+									type="button"
+									@click="publish"
+								>
+									Publish
+								</button>
+
+								<button
+									v-else
+									class="btn"
+									type="button"
+									@click="unpublish"
+								>
+									Unpublish
+								</button>
+
+								<button class="btn danger" type="button" @click="deletePost">
+									Delete
+								</button>
+
+								<span v-if="dirty" class="dirty">
+									● Unsaved changes
+								</span>
+							</div>
+
+						</div>
+
+						<!-- THUMBNAIL PICKER -->
+						<div class="thumb">
+							<div class="thumb-label">Featured Image</div>
+
+							<button class="thumb-box" type="button" @click="pickFeatured">
+								<img
+									v-if="draft.featuredImage"
+									:src="draft.featuredImage"
+									alt="Featured"
+								/>
+								<div v-else class="thumb-placeholder">
+									Pick thumbnail
+								</div>
+							</button>
+
+							<input
+								ref="featuredInputEl"
+								type="file"
+								accept="image/*"
+								class="hidden"
+								@change="onFeaturedPicked"
+							/>
+
+							<div v-if="draft.featuredImage" class="thumb-path muted">
+								{{ draft.featuredImage }}
+							</div>
+						</div>
+
+					</div>
+
+					<!-- EDITOR TABS -->
+					<div class="tabs">
+						<button class="tab" :class="{ active: editorTab === 'rich' }" type="button" @click="editorTab = 'rich'">
+							Rich Text
+						</button>
+						<button class="tab" :class="{ active: editorTab === 'html' }" type="button" @click="editorTab = 'html'">
+							Raw HTML
+						</button>
+					</div>
+
+					<div class="editor-body">
+						<textarea
+							v-model="draft.content"
+							class="textarea"
+							:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
+						/>
+					</div>
+
+				</div>
+			</div>
+
+		</section>
+
+		<div class="asset-tray">
+			<AssetBrowser ref="assetBrowserRef" />
 		</div>
 
 	</div>
@@ -582,6 +583,10 @@ $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
+$topBarHeight: 56px;
+$leftColWidth: 250px;
+$assetTrayHeight: 250px;
+
 // main admin page wrapper
 .admin{
 
@@ -589,43 +594,47 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 	overflow: hidden;
 	color: $text;
 
-	/* ====== MAIN GRID ====== */
-	.grid {
+	// left column fixed sidebar
+	.left-column {
 
-		height: 100%;
-		display: grid;
-		grid-template-columns: 340px 1fr;
+		// position
+		position: fixed;
+		inset: $topBarHeight auto 0px 0px;
+
+		// box settings
+		width: $leftColWidth;
+		border-right: 3px solid $primary;
+
+	}// .left-column
+
+	// main area fills right of sidebar
+	.main-area {
+
+		// position
+		position: fixed;
+		inset: $topBarHeight 0px $assetTrayHeight $leftColWidth;
+
+		// box settings
+		border-bottom: 3px solid $primary;
+
+		display: flex;
+		flex-direction: column;
 		gap: 14px;
-		align-items: stretch;
 		overflow: hidden;
 
-		/* ====== CARDS ====== */
-		.card {
-			background: #fff;
-			border-radius: 16px;
-			border: 1px solid $border;
-			box-shadow: $shadow;
-			padding: 14px 16px;
+	}// .main-area
 
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-			min-width: 0;
-		}// .card
+	// asset drawer on bottom right
+	.asset-tray{
 
-		/* ====== MAIN COLUMN ====== */
-		.main-column {
+		// position
+		position: fixed;
+		inset: auto 0px 0px $leftColWidth;
 
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			gap: 14px;
-			overflow: hidden;
-			min-width: 0;
+		// box settings
+		height: 250px;
 
-		}// .main-column
-
-	}// .grid
+	}// .asset-tray
 
 	/* ====== EDITOR ====== */
 	.editor{
