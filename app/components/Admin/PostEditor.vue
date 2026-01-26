@@ -11,6 +11,7 @@ import { ref, watch, computed, onMounted, toRaw, nextTick } from 'vue';
 
 // components
 import PanelTitleBar from './PanelTitleBar.vue';
+import PostRichEditor from './PostRichEditor.vue';
 
 
 // props
@@ -107,11 +108,19 @@ function computeDraftPayload() {
 	const payload = {
 		title: String(draft.value.title || ''),
 		slug: String(draft.value.slug || ''),
-		content: String(draft.value.content || ''),
 		flickrSetId: draft.value.flickrSetId ? String(draft.value.flickrSetId) : null,
 		featuredImage: String(draft.value.featuredImage || ''),
 		status: String(draft.value.status || 'published'),
 	};
+
+	// If using rich editor, postData is canonical and server will generate HTML content.
+	if (editorTab.value === 'rich') {
+		payload.postData = draft.value.postData || null;
+	} else {
+		// Raw HTML tab = legacy/manual mode
+		payload.content = String(draft.value.content || '');
+		payload.postData = null;
+	}
 
 	const tags = tagsText.value
 		.split(',')
@@ -393,11 +402,25 @@ onMounted(async () => {
 				</div>
 
 				<div class="editor-body">
+
+					<PostRichEditor
+						v-if="editorTab === 'rich'"
+						v-model="draft.postData"
+						:legacy-html="draft.content"
+					/>
+
 					<textarea
+						v-else
+						v-model="draft.content"
+						class="textarea"
+						placeholder="Edit raw HTML…"
+					/>
+
+					<!--textarea
 						v-model="draft.content"
 						class="textarea"
 						:placeholder="editorTab === 'rich' ? 'WYSIWYG will go here next…' : 'Edit raw HTML…'"
-					/>
+					/-->
 				</div>
 
 			</div>

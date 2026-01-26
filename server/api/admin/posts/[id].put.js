@@ -8,6 +8,7 @@
 	- title (string)
 	- slug (string)
 	- content (string)
+	- postData (object | string JSON)
 	- date (ISO string)
 	- tags (array of strings)
 	- categories (array of strings)
@@ -22,6 +23,7 @@ import { getRouterParam, createError } from 'h3';
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
+
 import { normalizePostData, renderPostDataToHtml } from '../../../utils/renderPostData.js';
 
 const ALLOWED_FIELDS = new Set([
@@ -61,14 +63,15 @@ export default defineEventHandler(async (event) => {
 	}
 
 	// If postData is provided, it becomes the source of truth.
-	// We generate and store SSR-friendly HTML in content.
+	// Generate SSR-friendly HTML into `content` on save.
 	if ('postData' in update) {
 
 		const normalized = normalizePostData(update.postData);
 
-		// Allow clearing
 		if (!normalized) {
 			update.postData = null;
+			// Do NOT auto-clear content; allow legacy content to remain
+			// (If you want clearing behavior, we can add a flag later)
 		} else {
 			update.postData = normalized;
 			update.content = await renderPostDataToHtml(normalized);
