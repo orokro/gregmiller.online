@@ -15,6 +15,7 @@ import { computed } from 'vue';
 import Container3D from './Container3D.vue';
 import FlickrGallery from './FlickrGallery.vue';
 import Spacer3D from './Spacer3D.vue';
+import PostBody from './PostBody.vue';
 
 
 // props
@@ -94,7 +95,7 @@ const processedContent = computed(() => {
 
 			</div>
 
-			<div class="post-content" v-html="processedContent"></div>
+			<PostBody :post="post" />
 		</div>
 	</Container3D>
 

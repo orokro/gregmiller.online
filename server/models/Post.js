@@ -12,6 +12,7 @@ const schema = new mongoose.Schema({
 	title: String,
 	slug: String,
 	content: String,
+	postData: mongoose.Schema.Types.Mixed,
 	date: Date,
 	flickrSetId: String,
 	legacyId: Number,

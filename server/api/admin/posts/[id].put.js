@@ -22,11 +22,13 @@ import { getRouterParam, createError } from 'h3';
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
+import { normalizePostData, renderPostDataToHtml } from '../../../utils/renderPostData.js';
 
 const ALLOWED_FIELDS = new Set([
 	'title',
 	'slug',
 	'content',
+	'postData',
 	'date',
 	'tags',
 	'categories',
@@ -56,6 +58,21 @@ export default defineEventHandler(async (event) => {
 
 	if (update.flickrSetId === '') {
 		update.flickrSetId = null;
+	}
+
+	// If postData is provided, it becomes the source of truth.
+	// We generate and store SSR-friendly HTML in content.
+	if ('postData' in update) {
+
+		const normalized = normalizePostData(update.postData);
+
+		// Allow clearing
+		if (!normalized) {
+			update.postData = null;
+		} else {
+			update.postData = normalized;
+			update.content = await renderPostDataToHtml(normalized);
+		}
 	}
 
 	update.updatedAt = new Date();

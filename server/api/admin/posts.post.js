@@ -19,6 +19,7 @@
 import { Post } from '../../models/Post.js';
 import { connectDb } from '../../utils/db.js';
 import { requireAdmin } from '../../utils/requireAdmin.js';
+import { normalizePostData, renderPostDataToHtml } from '../../utils/renderPostData.js';
 
 function slugify(s) {
 	return String(s || '')
@@ -51,10 +52,17 @@ export default defineEventHandler(async (event) => {
 
 	const now = new Date();
 
+	const normalized = normalizePostData(body?.postData);
+
+	const content = normalized
+		? await renderPostDataToHtml(normalized)
+		: String(body?.content || '');
+
 	const post = await Post.create({
 		title,
 		slug,
-		content: String(body?.content || ''),
+		content,
+		postData: normalized || null,
 		date: body?.date ? new Date(body.date) : now,
 		tags: Array.isArray(body?.tags) ? body.tags : [],
 		categories: Array.isArray(body?.categories) ? body.categories : [],
