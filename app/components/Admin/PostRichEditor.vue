@@ -130,6 +130,89 @@ function setLink() {
 	}).run();
 }
 
+function setAlign(align) {
+
+	if (!editor.value) return;
+
+	// TextAlign extension provides setTextAlign
+	editor.value.chain().focus().setTextAlign(align).run();
+}
+
+function clearAlign() {
+
+	if (!editor.value) return;
+
+	editor.value.chain().focus().unsetTextAlign().run();
+}
+
+function normalizeYouTubeEmbed(url) {
+
+	if (!url) return '';
+
+	const u = url.trim();
+
+	// Already an embed URL
+	const embedMatch = u.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/);
+	if (embedMatch) {
+		return `https://www.youtube.com/embed/${embedMatch[1]}`;
+	}
+
+	// youtu.be/<id>
+	const shortMatch = u.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/);
+	if (shortMatch) {
+		return `https://www.youtube.com/embed/${shortMatch[1]}`;
+	}
+
+	// youtube.com/watch?v=<id>
+	const watchMatch = u.match(/[?&]v=([a-zA-Z0-9_-]{6,})/);
+	if (watchMatch) {
+		return `https://www.youtube.com/embed/${watchMatch[1]}`;
+	}
+
+	return '';
+}
+
+function insertYouTube() {
+
+	if (!editor.value) return;
+
+	const url = window.prompt('YouTube URL (watch/youtu.be/embed):');
+	if (!url) return;
+
+	const src = normalizeYouTubeEmbed(url);
+
+	if (!src) {
+		window.alert('Could not parse YouTube URL.');
+		return;
+	}
+
+	editor.value.chain().focus().insertContent({
+		type: 'iframe',
+		attrs: {
+			src,
+			width: 560,
+			height: 315,
+			allowFullscreen: true,
+			allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+		},
+	}).run();
+}
+
+function insertTable() {
+	if (!editor.value) return;
+	editor.value.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+}
+
+function addColBefore() { editor.value?.chain().focus().addColumnBefore().run(); }
+function addColAfter() { editor.value?.chain().focus().addColumnAfter().run(); }
+function delCol() { editor.value?.chain().focus().deleteColumn().run(); }
+function addRowBefore() { editor.value?.chain().focus().addRowBefore().run(); }
+function addRowAfter() { editor.value?.chain().focus().addRowAfter().run(); }
+function delRow() { editor.value?.chain().focus().deleteRow().run(); }
+function delTable() { editor.value?.chain().focus().deleteTable().run(); }
+
+
+
 function insertImage() {
 
 	if (!editor.value) return;
@@ -363,6 +446,14 @@ onBeforeUnmount(() => {
 				<button class="btn" :class="{ active: editor.isActive('italic') }" @click="editor.chain().focus().toggleItalic().run()">I</button>
 				<button class="btn" :class="{ active: editor.isActive('underline') }" @click="editor.chain().focus().toggleUnderline().run()">U</button>
 				<button class="btn" :class="{ active: editor.isActive('strike') }" @click="editor.chain().focus().toggleStrike().run()">S</button>
+				<button class="btn" :class="{ active: editor.isActive('superscript') }" @click="editor.chain().focus().toggleSuperscript().run()">Sup</button>
+
+				<span class="sep"></span>
+
+				<button class="btn" :class="{ active: editor.isActive({ textAlign: 'left' }) }" @click="setAlign('left')">⟸</button>
+				<button class="btn" :class="{ active: editor.isActive({ textAlign: 'center' }) }" @click="setAlign('center')">≡</button>
+				<button class="btn" :class="{ active: editor.isActive({ textAlign: 'right' }) }" @click="setAlign('right')">⟹</button>
+				<button class="btn" @click="clearAlign()">Align ✕</button>
 
 				<span class="sep"></span>
 
@@ -374,6 +465,22 @@ onBeforeUnmount(() => {
 
 				<button class="btn" :class="{ active: editor.isActive('link') }" @click="setLink()">Link</button>
 				<button class="btn" @click="insertImage()">Image</button>
+				<button class="btn" @click="insertYouTube()">YouTube</button>
+
+				<span class="sep"></span>
+
+				<button class="btn" @click="editor.chain().focus().setHorizontalRule().run()">HR</button>
+
+				<span class="sep"></span>
+
+				<button class="btn" @click="insertTable()">Table</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="addRowBefore()">+Row↑</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="addRowAfter()">+Row↓</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="delRow()">-Row</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="addColBefore()">+Col←</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="addColAfter()">+Col→</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="delCol()">-Col</button>
+				<button class="btn" :disabled="!editor.isActive('table')" @click="delTable()">DelTbl</button>
 
 				<span class="sep"></span>
 
@@ -381,6 +488,7 @@ onBeforeUnmount(() => {
 				<button class="btn" :disabled="!editor.can().redo()" @click="editor.chain().focus().redo().run()">Redo</button>
 
 			</div>
+
 
 			<component
 				:is="EditorContent"
