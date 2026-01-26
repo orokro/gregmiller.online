@@ -655,7 +655,7 @@ $buttons-area-height: 50px;
 			width: $post-settings-width;
 
 			// box settings
-			border-left: 3px solid $secondary;
+			border-left: 3px solid white;
 			display: flex;
 			flex-direction: column;
 			background: #fff;

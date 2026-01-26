@@ -208,7 +208,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 			// box styles
 			background: $primary;
 			border-radius: 100px;
-			border: 2px solid $secondary;
+			border: 2px solid white;
 			padding: 6px 14px;
 
 			// text styles

@@ -93,7 +93,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 		height: 56px;
 		padding: 0 16px;
 		background: #fff;
-		border-bottom: 3px solid $secondary;
+		border-bottom: 3px solid white;
 		box-shadow: $shadow;
 
 		// layout
