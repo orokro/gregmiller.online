@@ -1,16 +1,15 @@
 /*
-	TemplateTheme.js
+	CityTheme.js
 	----------------
 
-	Not a theme intended to be implemented, but a copy-and-pastable base template
-	for building other themes on tp of.
+	3d top down city theme.
 */
 
 import * as THREE from 'three';
 import { ThreeManager } from '../utils/ThreeManager';
 import { Object3D } from 'three';
 
-export class TemplateTheme {
+export class CityTheme {
 
 	// static theme colors for UI elements, etc. (not used by theme code directly)
 	static themeColors = {
