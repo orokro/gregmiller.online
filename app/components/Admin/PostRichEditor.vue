@@ -511,17 +511,30 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 
 	.tiptap-wrap{
-		background: transparent;
-	}
+
+		display: flex;
+		flex-direction: column;
+
+		// fill whatever parent height you give this component
+		height: 100%;
+
+		background: #fff;
+
+	}// .tiptap-wrap
 
 	.toolbar{
+
+		flex: 0 0 auto;
 
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
 		align-items: center;
 
-		padding: 6px 0 10px 0;
+		padding: 6px 8px;
+
+		border-bottom: 1px solid rgba(0,0,0,0.15);
+		background: #fff;
 
 		.heading{
 			padding: 4px 6px;
@@ -556,19 +569,27 @@ onBeforeUnmount(() => {
 
 	.tiptap-body {
 
-		background: white;
+		flex: 1 1 auto;
+		min-height: 0; // IMPORTANT so the child can actually shrink and scroll
+
+		overflow-y: auto;
+		background: #fff;
+		border: 2px solid black;
 
 		:deep(.ProseMirror){
 
-			height: 100%;
-			max-height: 100%;
+			// Fill scroll area, but don't expand page
+			min-height: 100%;
 			padding: 0.75rem 0.75rem;
-
-			border: 1px solid rgba(0,0,0,0.15);
-			border-radius: 6px;
 
 			outline: none;
 			cursor: text;
+
+			// Kill border/rounding since it's container-based now
+			border: 0;
+			border-radius: 0;
+
+			background: #fff;
 
 		}// .ProseMirror
 

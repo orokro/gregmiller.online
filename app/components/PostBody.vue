@@ -60,6 +60,13 @@ const htmlToRender = computed(() => {
 
 		background: transparent;
 
+		:deep(blockquote){
+			margin: 1rem 0;
+			padding: 0.75rem 1rem;
+			border-left: 4px solid rgba(0,0,0,0.15);
+			background: rgba(0,0,0,0.03);
+		}
+
 	}// .post-body
 
 </style>

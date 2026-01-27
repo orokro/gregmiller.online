@@ -590,12 +590,15 @@ $buttons-area-height: 50px;
 			position: absolute;
 			inset: 0px $post-settings-width $buttons-area-height 0px;
 
+			padding-bottom: 20px;
+
 			/* ====== TABS ====== */
 			.tabs {
 
 				display: flex;
 				gap: 8px;
 				padding: 10px;
+				display: none;
 
 				.tab {
 					padding: 6px 10px;
@@ -621,7 +624,9 @@ $buttons-area-height: 50px;
 				position: relative;
 				width: 100%;
 				height: 100%;
-				border-bottom: 2px solid red;;
+
+
+				// border-bottom: 2px solid red;;
 
 				// text area box
 				.textarea {
