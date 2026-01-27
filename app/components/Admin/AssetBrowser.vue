@@ -37,6 +37,11 @@ function refreshAssets() {
 	vueFinderKey.value++;
 }
 
+function handlePathChange() {
+	// always refetch directory contents on navigation
+	refreshAssets();
+}
+
 defineExpose({
 	refreshAssets,
 });
@@ -54,8 +59,29 @@ defineExpose({
 			:config="{
 				initialPath: 'local://',
 				persist: true,
+				showMenuBar: false,
+			}"
+			:features="{
+				preview: true,
+				rename: true,
+				upload: true,
+				delete: true,
+				newfolder: true,
+				download: true,
+				move: true,
+				copy: true,
+				search: true,
+				fullscreen: true,
+
+				archive: false,
+				unarchive: false,
+				language: false,
+				history: false,
+				theme: false,
+				pinned: false,
 			}"
 			@file-dclick="handleFileDclick"
+			@path-change="handlePathChange"
 		/>
 
 	</div>

@@ -13,7 +13,6 @@ import { getAssetsRoot, resolveSafe } from '../../../utils/assetsRoot.js';
 import { fromVuePath } from './_utils.js';
 
 function sanitizeFilename(name) {
-
 	return String(name || 'file')
 		.replace(/\\/g, '/')
 		.split('/')
@@ -29,11 +28,24 @@ export default defineEventHandler(async (event) => {
 	const root = getAssetsRoot();
 
 	const q = getQuery(event);
-	const relDir = fromVuePath(q.path || 'local://');
 
 	const form = await readMultipartFormData(event);
 	if (!form) {
 		throw createError({ statusCode: 400, statusMessage: 'Expected multipart/form-data' });
+	}
+
+	// VueFinder SHOULD pass ?path=local://..., but be tolerant:
+	// - query path
+	// - a multipart field named "path"
+	let relDir = fromVuePath(q.path || 'local://');
+
+	for (const part of form) {
+		if (part.name === 'path' && part.data) {
+			const raw = part.data.toString('utf8').trim();
+			if (raw) {
+				relDir = fromVuePath(raw);
+			}
+		}
 	}
 
 	const files = [];
@@ -52,6 +64,5 @@ export default defineEventHandler(async (event) => {
 		await fs.writeFile(abs, f.data);
 	}
 
-	// VueFinder expects empty object on success per docs
 	return {};
 });
