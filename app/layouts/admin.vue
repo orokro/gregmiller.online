@@ -69,6 +69,16 @@ async function logout() {
 	</div>
 
 </template>
+<style lang="scss">
+/* Global reset for admin layout to prevent body scroll */
+html, body {
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	height: 100%;
+}
+</style>
+
 <style scoped lang="scss">
 
 $primary: #00ABAE;

@@ -690,6 +690,7 @@ $buttons-area-height: 50px;
 			display: flex;
 			flex-direction: column;
 			background: #fff;
+			overflow-x: hidden;
 
 			.settings-header {
 				padding: 12px 14px;
@@ -707,6 +708,7 @@ $buttons-area-height: 50px;
 			.settings-list {
 				flex: 1;
 				overflow-y: auto;
+				overflow-x: hidden;
 				padding: 14px;
 			}
 
@@ -790,6 +792,7 @@ $buttons-area-height: 50px;
 	background: #fff;
 	color: $text;
 	width: 100%;
+	box-sizing: border-box;
 
 	&:focus{
 		outline: none;
