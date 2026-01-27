@@ -13,6 +13,8 @@ import { RemoteDriver } from 'vuefinder';
 import PanelTitleBar from './PanelTitleBar.vue';
 import AssetDestinationPickerModal from './AssetDestinationPickerModal.vue';
 
+const moveModalOpen = ref(false);
+const moveStartPath = ref('local://');
 
 // provide emits
 const emit = defineEmits([ 'pick' ]);
@@ -34,110 +36,16 @@ const driver = new RemoteDriver({
 	},
 });
 
-const vfRef = ref(null);
+function refreshAssets() {
 
-const moveModalOpen = ref(false);
-const moveSources = ref([]);
-const moveStartPath = ref('local://');
-const vfCurrentPath = ref('local://');
-const moveApp = ref(null);
-const vfApp = ref(null);
-const vueFinderKey = ref(0);
-
-function onVfPathChanged(p) {
-	if (typeof p === 'string' && p)
-		vfCurrentPath.value = p;
+	// do nothing currently
 }
 
-function openMoveModalFromSelection(app, selectedItems) {
-
-	vfApp.value = app;
-
-	const items = Array.isArray(selectedItems) ? selectedItems : [];
-	if (!items.length)
-		return;
-
-	moveApp.value = app || null;
-	moveSources.value = items.map(it => it.path).filter(Boolean);
-	moveStartPath.value = vfCurrentPath.value || 'local://';
-	moveModalOpen.value = true;
-}
-
-async function refreshAfterMove() {
-	if (vfApp.value?.refresh) {
-		await vfApp.value.refresh();
-	}
-}
-
-const contextMenuItems = [
-	{
-		id: 'move-to',
-		title: () => 'Move to…',
-		action: (app, selectedItems) => openMoveModalFromSelection(app, selectedItems),
-		show: () => true,
-		order: 22,
-	},
-];
 
 async function onMovePicked(destination) {
 
-	const dest = String(destination || '').trim();
-	if (!dest)
-		return;
-
-	await $fetch('/api/admin/vuefinder/move', {
-		method: 'POST',
-		body: {
-			sources: moveSources.value,
-			destination: dest,
-			path: vfCurrentPath.value,
-		},
-		credentials: 'include',
-	});
-
-	await refreshAfterMove();
-	// await refreshVueFinderSoft(moveApp.value);
 }
 
-async function refreshVueFinderSoft(appArg) {
-
-	const app = appArg || null;
-
-	// Try common patterns (depends on build)
-	if (app?.refresh) {
-		await app.refresh();
-		return;
-	}
-	if (app?.open && vfCurrentPath.value) {
-		await app.open(vfCurrentPath.value);
-		return;
-	}
-
-	// Fallback: if you have vfRef, try that too
-	if (vfRef.value?.refresh) {
-		await vfRef.value.refresh();
-	}
-}
-
-
-function handleFileDclick(e) {
-
-	// VueFinder file object includes `path` like local://foo/bar.jpg
-	// We also attached `url` in list response for convenience.
-	const item = e?.item || null;
-	if (!item) return;
-
-	emit('pick', item);
-}
-
-function refreshAssets() {
-	// vueFinderKey.value++;
-}
-
-function handlePathChange() {
-	// always refetch directory contents on navigation
-	refreshAssets();
-}
 
 defineExpose({
 	refreshAssets,
@@ -150,7 +58,6 @@ defineExpose({
 
 		<PanelTitleBar>Asset Browser</PanelTitleBar>
 		<vue-finder
-			:key="vueFinderKey"
 			id="gm_asset_manager"
 			:driver="driver"
 			:config="{
@@ -178,9 +85,6 @@ defineExpose({
 				theme: false,
 				pinned: false,
 			}"
-			:contextMenuItems="contextMenuItems"
-			@file-dclick="handleFileDclick"
-			@path-change="onVfPathChanged"
 		/>
 
 		<AssetDestinationPickerModal
