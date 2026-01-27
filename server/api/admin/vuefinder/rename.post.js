@@ -27,10 +27,11 @@ export default defineEventHandler(async (event) => {
 	const root = getAssetsRoot();
 
 	const q = getQuery(event);
-	const relDir = fromVuePath(q.path || 'local://');
 
 	let body = await readAnyBody(event);
 	body = body && typeof body === 'object' ? body : {};
+
+	const relDir = fromVuePath(q.path || body.path || 'local://');
 
 	// VueFinder v4 sends { item: "local://dir/file.ext", name: "new.ext", path: "local://dir" }
 	const itemPathRaw =

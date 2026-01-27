@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
 	const q = getQuery(event);
 	const body = await readBody(event);
 
-	const relDir = fromVuePath(q.path || body?.path || 'local://');
+	const relDir = fromVuePath(q.path || body.path || 'local://');
 	const name = String(body?.name || '').trim();
 
 	if (!name) {
