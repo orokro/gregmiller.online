@@ -518,6 +518,8 @@ onBeforeUnmount(() => {
 		// fill whatever parent height you give this component
 		height: 100%;
 
+		padding-right: 4px;
+
 		background: #fff;
 
 	}// .tiptap-wrap
@@ -575,6 +577,7 @@ onBeforeUnmount(() => {
 		overflow-y: auto;
 		background: #fff;
 		border: 2px solid black;
+		box-sizing: border-box;
 
 		:deep(.ProseMirror){
 

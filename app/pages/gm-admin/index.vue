@@ -146,7 +146,7 @@ onMounted(async () => {
 
 	</div>
 </template>
-<style scoped lang="scss">
+<style lang="scss">
 
 $primary: #00ABAE;
 $secondary: #7561AA;
@@ -157,12 +157,13 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 $topBarHeight: 56px;
 $leftColWidth: 250px;
-$assetTrayHeight: 250px;
+$assetTrayHeight: 350px;
 
 // main admin page wrapper
 .admin{
 
 	color: $text;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 	// left column fixed sidebar
 	.left-column {
@@ -198,7 +199,7 @@ $assetTrayHeight: 250px;
 		inset: auto 0px 0px $leftColWidth;
 
 		// box settings
-		height: 250px;
+		height: $assetTrayHeight;
 
 	}// .asset-tray
 

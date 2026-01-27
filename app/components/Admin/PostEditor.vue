@@ -574,6 +574,8 @@ $buttons-area-height: 50px;
 	display: flex;
 	flex-direction: column;
 
+	padding-left: 4px;
+
 	/* ====== EDITOR ====== */
 	.editor{
 
@@ -667,8 +669,9 @@ $buttons-area-height: 50px;
 			position: absolute;
 			inset: auto $post-settings-width 0px 0px;
 			height: $buttons-area-height;
-			padding: 8px 12px;
+			padding: 8px 12px 0px 0px;
 
+			height: 40px;
 			// box settings
 			border-top: 1px solid $border;
 

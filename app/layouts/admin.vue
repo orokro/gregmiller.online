@@ -14,6 +14,8 @@ const route = useRoute();
 
 const err = ref('');
 
+import 'vuefinder/dist/style.css';
+
 
 /**
  * Whether to show the logout button
