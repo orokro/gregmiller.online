@@ -17,9 +17,7 @@ import { GlassTheme } from '../themes/GlassTheme';
 import { DebugTheme } from '../themes/DebugTheme';
 import { KoiPondTheme } from '../themes/KoiPondTheme';
 
-import { useTheming } from '../composables/useTheming';
 import { nextTick } from 'vue';
-const { setTheme } = useTheming();
 
 // Simple UUID generator (Works everywhere, no crypto requirement)
 function uuid() {
@@ -189,13 +187,7 @@ export class ThreeManager {
 		this.isOk = true;
 
 		// 7. Load Default Theme
-		// setTheme("KoiPondTheme");
-		setTheme('GlassTheme');
-		// this.setTheme(GlassTheme);
-		// setTimeout(() => {
-		// 	setTheme("KoiPondTheme");
-		// 	// setTheme("GlassTheme");
-		// }, 1);
+		// (handled by useTheming default)
 
 		// 8. Force initial layout update
 		this.onScroll();
