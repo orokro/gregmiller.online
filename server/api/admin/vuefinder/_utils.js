@@ -14,6 +14,7 @@ function extFromName(name) {
 	return m ? m[1] : '';
 }
 
+
 // Minimal mime resolver (good enough for thumbnails + embeds)
 export function guessMime(name) {
 	const ext = extFromName(name);
@@ -31,10 +32,12 @@ export function guessMime(name) {
 	return 'application/octet-stream';
 }
 
+
 export function toVuePath(rel) {
 	const p = String(rel || '').replace(/^\/+/, '');
 	return p ? `local://${p}` : 'local://';
 }
+
 
 export function fromVuePath(p) {
 	let s = String(p || '').trim();
@@ -42,6 +45,48 @@ export function fromVuePath(p) {
 	s = s.replace(/^\/+/, '');
 	return s;
 }
+
+
+export async function readAnyBody(event) {
+
+	const ct = String(getHeader(event, 'content-type') || '').toLowerCase();
+
+	if (ct.includes('multipart/form-data')) {
+
+		const form = await readMultipartFormData(event);
+		const out = {};
+
+		for (const part of (form || [])) {
+
+			// files come through as { filename, data } – ignore here
+			if (part.filename)
+				continue;
+
+			const key = String(part.name || '').trim();
+			if (!key)
+				continue;
+
+			out[key] = part.data ? part.data.toString('utf8') : '';
+		}
+
+		// If VueFinder sent JSON strings inside fields, parse when possible
+		for (const k of Object.keys(out)) {
+			const v = out[k];
+			if (typeof v === 'string' && v.trim().startsWith('{')) {
+				try { out[k] = JSON.parse(v); } catch {}
+			}
+			if (typeof v === 'string' && v.trim().startsWith('[')) {
+				try { out[k] = JSON.parse(v); } catch {}
+			}
+		}
+
+		return out;
+	}
+
+	// JSON or urlencoded: Nitro/H3 readBody handles both
+	return await readBody(event);
+}
+
 
 export async function listDir({ root, relDir, toPublicUrl }) {
 

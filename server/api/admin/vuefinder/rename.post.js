@@ -10,16 +10,15 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRoot.js';
-import { fromVuePath, listDir } from './_utils.js';
+import { fromVuePath, listDir, readAnyBody } from './_utils.js';
 
-function asObject(v) {
+
+function pickFirst(v) {
 	if (!v) return null;
-	if (typeof v === 'object') return v;
-	if (typeof v === 'string') {
-		try { return JSON.parse(v); } catch { return null; }
-	}
-	return null;
+	if (Array.isArray(v)) return v[0] || null;
+	return v;
 }
+
 
 export default defineEventHandler(async (event) => {
 
@@ -30,37 +29,31 @@ export default defineEventHandler(async (event) => {
 	const q = getQuery(event);
 	const relDir = fromVuePath(q.path || 'local://');
 
-	let body = await readBody(event);
-	body = asObject(body) || {};
+	let body = await readAnyBody(event);
+	body = body && typeof body === 'object' ? body : {};
 
-	// VueFinder-like shapes (be tolerant):
-	// - { item: { path }, name }
-	// - { items: [{ path }], name }
-	// - { from: 'local://...', name: 'new' }
+	// VueFinder v4 sends { item: "local://dir/file.ext", name: "new.ext", path: "local://dir" }
 	const itemPathRaw =
-		body?.item?.path
-		|| body?.items?.[0]?.path
-		|| body?.from
-		|| body?.itemPath;
+		pickFirst(body?.item?.path)
+		|| pickFirst(body?.items?.[0]?.path)
+		|| pickFirst(body?.item)			// <-- IMPORTANT (string form)
+		|| pickFirst(body?.from)
+		|| pickFirst(body?.itemPath);
 
 	const name =
-		String(body?.name || body?.toName || body?.newName || '').trim();
+		String(pickFirst(body?.name) || pickFirst(body?.newName) || pickFirst(body?.toName) || '').trim();
 
 	if (!itemPathRaw || !name) {
-		throw createError({
-			statusCode: 400,
-			statusMessage: 'Missing item/name',
-		});
+		throw createError({ statusCode: 400, statusMessage: 'Missing item/name' });
 	}
 
 	const fromPath = fromVuePath(itemPathRaw);
 
-	// IMPORTANT: prevent renaming the *current directory* accidentally
-	// (this is what happened to you when the folder renamed instead of the file)
+	// prevent accidental “rename the current directory”
 	if (fromPath === relDir) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Refusing to rename current directory. Missing item path?',
+			statusMessage: 'Rename payload pointed at current dir; expected item path',
 		});
 	}
 

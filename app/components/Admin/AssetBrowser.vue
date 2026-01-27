@@ -19,6 +19,18 @@ const emit = defineEmits([ 'pick' ]);
 // build our VueFinder remote driver
 const driver = new RemoteDriver({
 	baseURL: '/api/admin/vuefinder',
+	url: {
+		list: '/',
+		upload: '/upload',
+		delete: '/delete',
+		rename: '/rename',
+		createFolder: '/create-folder',
+		preview: '/preview',
+		download: '/download',
+		move: '/move',
+		copy: '/copy',
+		search: '/search',
+	},
 });
 
 const vueFinderKey = ref(0);
@@ -34,7 +46,7 @@ function handleFileDclick(e) {
 }
 
 function refreshAssets() {
-	vueFinderKey.value++;
+	// vueFinderKey.value++;
 }
 
 function handlePathChange() {
@@ -70,6 +82,7 @@ defineExpose({
 				download: true,
 				move: true,
 				copy: true,
+				paste: true,
 				search: true,
 				fullscreen: true,
 
