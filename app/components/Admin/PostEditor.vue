@@ -671,7 +671,7 @@ $buttons-area-height: 50px;
 			height: $buttons-area-height;
 			padding: 8px 12px 0px 0px;
 
-			height: 40px;
+			height: 46px;
 			// box settings
 			border-top: 1px solid $border;
 
