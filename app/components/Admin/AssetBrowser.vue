@@ -7,7 +7,7 @@
 <script setup>
 
 // imports
-import { RemoteDriver } from 'vuefinder';
+import { RemoteDriver, contextMenuItems } from 'vuefinder';
 
 // components
 import PanelTitleBar from './PanelTitleBar.vue';
@@ -15,6 +15,8 @@ import AssetDestinationPickerModal from './AssetDestinationPickerModal.vue';
 
 const moveModalOpen = ref(false);
 const moveStartPath = ref('local://');
+const itemsToMove = ref([]);
+let vfInstance = null;
 
 // provide emits
 const emit = defineEmits([ 'pick' ]);
@@ -36,14 +38,53 @@ const driver = new RemoteDriver({
 	},
 });
 
-function refreshAssets() {
+const myContextMenuItems = [
+	...contextMenuItems,
+	{
+		id: 'move_to',
+		title: () => 'Move to…',
+		action: (vf, selection) => {
+			vfInstance = vf;
+			itemsToMove.value = selection;
+			moveStartPath.value = vf.fs.path.get().path;
+			moveModalOpen.value = true;
+		},
+		show: (vf, { items }) => {
+			return items.length > 0;
+		},
+		order: 100,
+	}
+];
 
-	// do nothing currently
+function refreshAssets() {
+	if (vfInstance) {
+		vfInstance.adapter.invalidateListQuery(vfInstance.fs.path.get().path);
+		vfInstance.adapter.open(vfInstance.fs.path.get().path);
+	}
 }
 
 
 async function onMovePicked(destination) {
+	if (!itemsToMove.value.length)
+		return;
 
+	try {
+		await $fetch('/api/admin/vuefinder/move', {
+			method: 'POST',
+			body: {
+				path: vfInstance?.fs?.path?.get()?.path || 'local://',
+				sources: itemsToMove.value.map(i => i.path),
+				destination: destination,
+			}
+		});
+
+		refreshAssets();
+		moveModalOpen.value = false;
+		itemsToMove.value = [];
+	} catch (err) {
+		console.error('Failed to move files:', err);
+		alert('Failed to move files: ' + (err.data?.statusMessage || err.message));
+	}
 }
 
 
@@ -60,6 +101,8 @@ defineExpose({
 		<vue-finder
 			id="gm_asset_manager"
 			:driver="driver"
+			:context-menu-items="myContextMenuItems"
+			@ready="vfInstance = $event"
 			:config="{
 				initialPath: 'local://',
 				persist: true,
