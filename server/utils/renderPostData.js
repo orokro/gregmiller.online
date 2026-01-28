@@ -150,6 +150,28 @@ async function getRenderer() {
 		},
 	});
 
+	const AudioNode = Node.create({
+
+		name: 'audio',
+		group: 'block',
+		atom: true,
+
+		addAttributes() {
+			return {
+				src: { default: null },
+				controls: { default: true },
+			};
+		},
+
+		parseHTML() {
+			return [ { tag: 'audio' } ];
+		},
+
+		renderHTML({ HTMLAttributes }) {
+			return [ 'audio', { ...HTMLAttributes, controls: 'controls' } ];
+		},
+	});
+
 	const extensions = [];
 
 	if (StarterKit) extensions.push(StarterKit);
@@ -183,6 +205,7 @@ async function getRenderer() {
 	}
 
 	extensions.push(Iframe);
+	extensions.push(AudioNode);
 
 	_cached = { generateHTML, extensions };
 	return _cached;

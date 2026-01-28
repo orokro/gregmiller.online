@@ -67,6 +67,14 @@ const htmlToRender = computed(() => {
 			background: rgba(0,0,0,0.03);
 		}
 
+		:deep(iframe),
+		:deep(audio) {
+			max-width: 100%;
+			display: block;
+			margin: 1rem auto;
+			border: 0;
+		}
+
 	}// .post-body
 
 </style>

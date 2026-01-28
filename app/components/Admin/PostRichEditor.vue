@@ -335,6 +335,28 @@ onMounted(async () => {
 		},
 	});
 
+	const AudioNode = Node.create({
+
+		name: 'audio',
+		group: 'block',
+		atom: true,
+
+		addAttributes() {
+			return {
+				src: { default: null },
+				controls: { default: true },
+			};
+		},
+
+		parseHTML() {
+			return [ { tag: 'audio' } ];
+		},
+
+		renderHTML({ HTMLAttributes }) {
+			return [ 'audio', { ...HTMLAttributes, controls: 'controls' } ];
+		},
+	});
+
 	const extensions = [];
 
 	// Prevent duplicate names: StarterKit can include link/underline depending on version.
@@ -377,6 +399,7 @@ onMounted(async () => {
 	}
 
 	extensions.push(Iframe);
+	extensions.push(AudioNode);
 
 	editor.value = new VueMod.Editor({
 		extensions,
@@ -398,7 +421,17 @@ onMounted(async () => {
 						const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
 						
 						if (coordinates) {
-							const node = schema.nodes.image.create({ src: '/' + text });
+							// Determine if it's audio or image based on extension
+							const ext = text.split('.').pop().toLowerCase();
+							const isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
+							
+							let node;
+							if (isAudio) {
+								node = schema.nodes.audio.create({ src: '/' + text });
+							} else {
+								node = schema.nodes.image.create({ src: '/' + text });
+							}
+
 							const transaction = view.state.tr.insert(coordinates.pos, node);
 							view.dispatch(transaction);
 							event.preventDefault();
@@ -649,6 +682,12 @@ onBeforeUnmount(() => {
 			display: block;
 			margin: 1rem auto;
 			border: 0;
+		}
+
+		:deep(audio){
+			max-width: 100%;
+			display: block;
+			margin: 1rem auto;
 		}
 
 	}// .tiptap-body
