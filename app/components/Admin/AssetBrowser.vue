@@ -146,6 +146,7 @@ defineExpose({
 	.asset-manager{
 		height: 100%;
 		min-height: 0;
+		padding-left: 3px;
 	}
 
 	:deep(.vf-item img),

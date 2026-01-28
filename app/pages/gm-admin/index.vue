@@ -13,6 +13,7 @@ import { ref, onMounted } from 'vue';
 import AdminSidebar from '../../components/Admin/AdminSidebar.vue';
 import AssetBrowser from '../../components/Admin/AssetBrowser.vue';
 import PostEditor from '../../components/Admin/PostEditor.vue';
+import PanelTitleBar from '../../components/Admin/PanelTitleBar.vue';
 
 
 // Page metadata
@@ -133,9 +134,15 @@ onMounted(async () => {
 
 			<div
 				v-else
-				class="card"
+				class="card else-card"
 			>
-				<p>Select a post to edit from the left sidebar, or create a new post.</p>
+				<PanelTitleBar>
+					Post Editor
+				</PanelTitleBar>
+
+				<div class="msg">
+					<p>Select a post to edit from the left sidebar, or create a new post.</p>
+				</div>
 			</div>
 
 		</section>
@@ -188,7 +195,13 @@ $assetTrayHeight: 350px;
 		// box settings
 		border-bottom: 3px solid white;
 
+		.else-card {
+			padding-left: 3px;
 
+			.msg {
+				padding: 20px;
+			}
+		}// .else-card
 	}// .main-area
 
 	// asset drawer on bottom right

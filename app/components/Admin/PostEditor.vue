@@ -574,7 +574,7 @@ $buttons-area-height: 50px;
 	display: flex;
 	flex-direction: column;
 
-	padding-left: 4px;
+	padding-left: 3px;
 
 	/* ====== EDITOR ====== */
 	.editor{
