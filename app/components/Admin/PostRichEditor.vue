@@ -383,6 +383,32 @@ onMounted(async () => {
 		content: { type: 'doc', content: [ { type: 'paragraph' } ] },
 		editable: true,
 		onUpdate: scheduleEmitJson,
+		editorProps: {
+			handleDrop: (view, event, slice, moved) => {
+				if (event.dataTransfer) {
+					// Check for our custom type first
+					let text = event.dataTransfer.getData('application/x-gm-asset');
+					if (!text) {
+						text = event.dataTransfer.getData('text/plain');
+					}
+
+					// Check if it looks like our file path (wp-content/...)
+					if (text && text.startsWith('wp-content/')) {
+						const { schema } = view.state;
+						const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+						
+						if (coordinates) {
+							const node = schema.nodes.image.create({ src: '/' + text });
+							const transaction = view.state.tr.insert(coordinates.pos, node);
+							view.dispatch(transaction);
+							event.preventDefault();
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+		}
 	});
 
 	editor.value.setEditable(true);

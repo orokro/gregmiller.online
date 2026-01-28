@@ -8,6 +8,7 @@
 
 // imports
 import { RemoteDriver, contextMenuItems } from 'vuefinder';
+import { onMounted, onBeforeUnmount } from 'vue';
 
 // components
 import PanelTitleBar from './PanelTitleBar.vue';
@@ -16,6 +17,7 @@ import AssetDestinationPickerModal from './AssetDestinationPickerModal.vue';
 const moveModalOpen = ref(false);
 const moveStartPath = ref('local://');
 const itemsToMove = ref([]);
+const rootRef = ref(null);
 let vfInstance = null;
 
 // provide emits
@@ -87,6 +89,47 @@ async function onMovePicked(destination) {
 	}
 }
 
+function handleDragStart(e) {
+	let target = e.target;
+	let path = null;
+
+	// Check if target has data-key (VueFinder items usually do)
+	if (target.dataset?.key) {
+		path = target.dataset.key;
+	} else if (target.closest) {
+		// Try to find ancestor with data-key
+		const item = target.closest('[data-key]');
+		if (item) {
+			path = item.dataset.key;
+		}
+	}
+
+	if (path) {
+		if (path.startsWith('local://')) {
+			const relPath = path.replace(/^local:\/\//, '');
+			const finalUrl = 'wp-content/' + relPath;
+			
+			e.dataTransfer.setData('text/plain', finalUrl);
+			e.dataTransfer.setData('application/x-gm-asset', finalUrl);
+			e.dataTransfer.effectAllowed = 'copy';
+			e.stopPropagation(); 
+			return;
+		}
+	}
+}
+
+onMounted(() => {
+	if (rootRef.value) {
+		rootRef.value.addEventListener('dragstart', handleDragStart, true);
+	}
+});
+
+onBeforeUnmount(() => {
+	if (rootRef.value) {
+		rootRef.value.removeEventListener('dragstart', handleDragStart, true);
+	}
+});
+
 
 defineExpose({
 	refreshAssets,
@@ -95,7 +138,7 @@ defineExpose({
 </script>
 <template>
 
-	<div class="asset-manager">
+	<div class="asset-manager" ref="rootRef">
 
 		<PanelTitleBar>Asset Browser</PanelTitleBar>
 		<vue-finder
