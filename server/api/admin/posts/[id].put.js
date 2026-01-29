@@ -19,13 +19,12 @@
 
 // imports
 import { getRouterParam, createError } from 'h3';
-
 import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
-
 import { normalizePostData, renderPostDataToHtml } from '../../../utils/renderPostData.js';
 
+// Allowed fields to update
 const ALLOWED_FIELDS = new Set([
 	'title',
 	'slug',
@@ -39,6 +38,10 @@ const ALLOWED_FIELDS = new Set([
 	'status',
 ]);
 
+
+/**
+ * Handle update post requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

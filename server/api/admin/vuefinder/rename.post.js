@@ -13,13 +13,23 @@ import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRo
 import { fromVuePath, listDir, readAnyBody } from './_utils.js';
 
 
+/**
+ * Pick the first item from an array, or return null
+ *
+ * @param {Array|null} v - value that may be an array
+ * @returns {any|null}
+ */
 function pickFirst(v) {
+
 	if (!v) return null;
 	if (Array.isArray(v)) return v[0] || null;
 	return v;
 }
 
 
+/**
+ * Handle rename requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

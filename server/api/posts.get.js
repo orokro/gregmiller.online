@@ -17,7 +17,10 @@
 import { Post } from '../models/Post';
 import { connectDb } from '../utils/db';
 
-// define the API route handler
+
+/**
+ * Handle post list requests
+ */
 export default defineEventHandler(async (event) => {
 
     // console.log('API: /api/posts called');

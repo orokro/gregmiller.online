@@ -13,11 +13,20 @@ import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRo
 import { fromVuePath, listDir, readAnyBody } from './_utils.js';
 
 
+/**
+ * Helpter to check if a path exists
+ *
+ * @param {string} p - path to check
+ * @returns {Promise<boolean>} - true if path exists
+ */
 async function exists(p) {
 	try { await fs.stat(p); return true; } catch { return false; }
 }
 
 
+/**
+ * Handle copy requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

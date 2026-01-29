@@ -14,6 +14,7 @@ import { onMounted, onBeforeUnmount } from 'vue';
 import PanelTitleBar from './PanelTitleBar.vue';
 import AssetDestinationPickerModal from './AssetDestinationPickerModal.vue';
 
+// custom move modal implementation vars
 const moveModalOpen = ref(false);
 const moveStartPath = ref('local://');
 const itemsToMove = ref([]);
@@ -40,6 +41,7 @@ const driver = new RemoteDriver({
 	},
 });
 
+// define a custom context menu item for "Move to…"
 const myContextMenuItems = [
 	...contextMenuItems,
 	{
@@ -58,7 +60,12 @@ const myContextMenuItems = [
 	}
 ];
 
+
+/**
+ * Refresh the asset list
+ */
 function refreshAssets() {
+
 	if (vfInstance) {
 		vfInstance.adapter.invalidateListQuery(vfInstance.fs.path.get().path);
 		vfInstance.adapter.open(vfInstance.fs.path.get().path);
@@ -66,7 +73,13 @@ function refreshAssets() {
 }
 
 
+/**
+ * Handle when the move modal picks a destination
+ *
+ * @param {string} destination - destination path
+ */
 async function onMovePicked(destination) {
+
 	if (!itemsToMove.value.length)
 		return;
 
@@ -89,14 +102,24 @@ async function onMovePicked(destination) {
 	}
 }
 
+
+/**
+ * Handle dragstart events within the asset browser
+ *
+ * @param {DragEvent} e - drag event
+ */
 function handleDragStart(e) {
+
 	let target = e.target;
 	let path = null;
 
 	// Check if target has data-key (VueFinder items usually do)
 	if (target.dataset?.key) {
+
 		path = target.dataset.key;
+
 	} else if (target.closest) {
+
 		// Try to find ancestor with data-key
 		const item = target.closest('[data-key]');
 		if (item) {
@@ -108,22 +131,25 @@ function handleDragStart(e) {
 		if (path.startsWith('local://')) {
 			const relPath = path.replace(/^local:\/\//, '');
 			const finalUrl = 'wp-content/' + relPath;
-			
+
 			e.dataTransfer.setData('text/plain', finalUrl);
 			e.dataTransfer.setData('application/x-gm-asset', finalUrl);
 			e.dataTransfer.effectAllowed = 'copy';
-			e.stopPropagation(); 
+			e.stopPropagation();
 			return;
 		}
 	}
 }
 
+// setup dragstart listener
 onMounted(() => {
 	if (rootRef.value) {
 		rootRef.value.addEventListener('dragstart', handleDragStart, true);
 	}
 });
 
+
+// cleanup listener
 onBeforeUnmount(() => {
 	if (rootRef.value) {
 		rootRef.value.removeEventListener('dragstart', handleDragStart, true);
@@ -131,6 +157,7 @@ onBeforeUnmount(() => {
 });
 
 
+// provide refreshAssets method to parent components
 defineExpose({
 	refreshAssets,
 });

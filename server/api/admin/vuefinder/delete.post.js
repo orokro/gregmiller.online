@@ -11,6 +11,10 @@ import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRoot.js';
 import { fromVuePath, listDir } from './_utils.js';
 
+
+/**
+ * Handle delete requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

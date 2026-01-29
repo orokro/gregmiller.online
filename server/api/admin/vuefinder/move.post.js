@@ -13,6 +13,9 @@ import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRo
 import { fromVuePath, listDir, readAnyBody } from './_utils.js';
 
 
+/**
+ * Handle move requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

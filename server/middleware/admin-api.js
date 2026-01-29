@@ -13,6 +13,10 @@
 // imports
 import { requireAdmin } from '../utils/requireAdmin.js';
 
+
+/**
+ * Admin API middleware
+ */
 export default defineEventHandler((event) => {
 
 	const url = event.node.req.url || '';

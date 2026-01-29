@@ -13,6 +13,10 @@
 import { Post } from '../models/Post';
 import { connectDb } from '../utils/db';
 
+
+/**
+ * Handle search requests
+ */
 export default defineEventHandler(async (event) => {
 
 	await connectDb();

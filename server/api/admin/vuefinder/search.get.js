@@ -13,12 +13,26 @@ import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRo
 import { fromVuePath, toVuePath, guessMime } from './_utils.js';
 
 
+/**
+ * Get file extension from filename
+ *
+ * @param {String} name - filename
+ * @returns {String} - file extension (without dot)
+ */
 function extFromName(name) {
 	const m = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/);
 	return m ? m[1] : '';
 }
 
 
+/**
+ * Find if a filename matches the search term and/or filter
+ *
+ * @param {string} termLower - lowercased search term
+ * @param {string} filter - filter string (could be glob)
+ * @param {string} name - filename to check
+ * @returns {boolean} - whether the name matches the term/filter
+ */
 function matches(termLower, filter, name) {
 
 	const nl = name.toLowerCase();
@@ -41,6 +55,14 @@ function matches(termLower, filter, name) {
 }
 
 
+/**
+ * Help walk directory recursively
+ *
+ * @param {String} absDir - absolute directory path
+ * @param {String} relDir - relative directory path
+ * @param {{ deep: boolean, termLower: string, filter: string }} opts - options
+ * @param {Array} out - output array to collect results
+ */
 async function walk(absDir, relDir, opts, out) {
 
 	const entries = await fs.readdir(absDir, { withFileTypes: true });
@@ -102,6 +124,9 @@ async function walk(absDir, relDir, opts, out) {
 }
 
 
+/**
+ * Handle search requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

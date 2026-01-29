@@ -21,6 +21,13 @@ import { connectDb } from '../../utils/db.js';
 import { requireAdmin } from '../../utils/requireAdmin.js';
 import { normalizePostData, renderPostDataToHtml } from '../../utils/renderPostData.js';
 
+
+/**
+ * Slugify a string
+ *
+ * @param {string} s - string to slugify
+ * @returns {string} - slugified string
+ */
 function slugify(s) {
 	return String(s || '')
 		.toLowerCase()
@@ -29,6 +36,10 @@ function slugify(s) {
 		.replace(/^-+|-+$/g, '');
 }
 
+
+/**
+ * Handle create post requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

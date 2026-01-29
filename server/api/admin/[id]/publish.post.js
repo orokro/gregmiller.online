@@ -13,6 +13,10 @@ import { Post } from '../../../models/Post.js';
 import { connectDb } from '../../../utils/db.js';
 import { requireAdmin } from '../../../utils/requireAdmin.js';
 
+
+/**
+ * Handle publish post requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

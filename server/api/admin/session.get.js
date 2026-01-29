@@ -5,9 +5,14 @@
 	API endpoint to check if the admin session is valid.
 */
 
+// imports
 import { getCookie } from 'h3';
 import { verifyAdminToken } from '../../utils/adminSession.js';
 
+
+/**
+ * Handle session check requests
+ */
 export default defineEventHandler((event) => {
 
 	const { adminCookieSecret } = useRuntimeConfig();

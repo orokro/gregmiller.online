@@ -8,6 +8,10 @@
 // imports
 import { deleteCookie } from 'h3';
 
+
+/**
+ * Handle admin logout requests
+ */
 export default defineEventHandler(async (event) => {
 
 	deleteCookie(event, 'gm_admin', { path: '/' });

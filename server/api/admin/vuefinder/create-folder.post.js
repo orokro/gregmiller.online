@@ -12,6 +12,10 @@ import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe, toPublicUrl } from '../../../utils/assetsRoot.js';
 import { fromVuePath, listDir } from './_utils.js';
 
+
+/**
+ * Handle create-folder requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

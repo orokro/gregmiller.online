@@ -12,6 +12,10 @@
 import { readBody, setCookie, createError } from 'h3';
 import { signAdminToken } from '../../utils/adminSession.js';
 
+
+/**
+ * Handle admin login requests
+ */
 export default defineEventHandler(async (event) => {
 
 	const { adminPassword, adminCookieSecret } = useRuntimeConfig();

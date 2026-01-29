@@ -14,6 +14,8 @@
 // imports
 import { defineEventHandler, getRouterParam, createError } from 'h3';
 
+
+// Cache settings
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const cache = new Map();
 

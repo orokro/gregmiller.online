@@ -12,6 +12,13 @@ import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe } from '../../../utils/assetsRoot.js';
 import { fromVuePath } from './_utils.js';
 
+
+/**
+ * Sanitize a filename by removing unsafe characters
+ *
+ * @param {String} name - original filename
+ * @returns	{String} sanitized filename
+ */
 function sanitizeFilename(name) {
 	return String(name || 'file')
 		.replace(/\\/g, '/')
@@ -21,6 +28,10 @@ function sanitizeFilename(name) {
 		.trim();
 }
 
+
+/**
+ * Handle upload requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

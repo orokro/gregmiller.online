@@ -9,15 +9,29 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+
+/**
+ * Get file extension from filename
+ *
+ * @param {String} name - filename
+ * @returns {String} - extension without dot, lowercased
+ */
 function extFromName(name) {
 	const m = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/);
 	return m ? m[1] : '';
 }
 
 
-// Minimal mime resolver (good enough for thumbnails + embeds)
+/**
+ * Help guess mime type from filename
+ *
+ * @param {String} name - filename
+ * @returns {String} - mime type
+ */
 export function guessMime(name) {
+
 	const ext = extFromName(name);
+
 	if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
 	if (ext === 'png') return 'image/png';
 	if (ext === 'gif') return 'image/gif';
@@ -29,16 +43,30 @@ export function guessMime(name) {
 	if (ext === 'txt') return 'text/plain';
 	if (ext === 'html' || ext === 'htm') return 'text/html';
 	if (ext === 'json') return 'application/json';
+
 	return 'application/octet-stream';
 }
 
 
+/**
+ * Format a relative path as a VueFinder local:// path
+ *
+ * @param {String} rel - relative path
+ * @returns {String} - VueFinder local path
+ */
 export function toVuePath(rel) {
+
 	const p = String(rel || '').replace(/^\/+/, '');
 	return p ? `local://${p}` : 'local://';
 }
 
 
+/**
+ * Convert a VueFinder local:// path to a relative path
+ *
+ * @param {String} p - VueFinder local:// path
+ * @returns {String} - relative path
+ */
 export function fromVuePath(p) {
 	let s = String(p || '').trim();
 	s = s.replace(/^local:\/\//, '');
@@ -47,6 +75,12 @@ export function fromVuePath(p) {
 }
 
 
+/**
+ * Read request body, handling both JSON/urlencoded and multipart/form-data
+ *
+ * @param {Object} event - H3 event
+ * @returns
+ */
 export async function readAnyBody(event) {
 
 	const ct = String(getHeader(event, 'content-type') || '').toLowerCase();
@@ -88,6 +122,12 @@ export async function readAnyBody(event) {
 }
 
 
+/**
+ * List directory contents for VueFinder
+ *
+ * @param {Object} param0 - parameters
+ * @returns {Object} - directory listing
+ */
 export async function listDir({ root, relDir, toPublicUrl }) {
 
 	const abs = path.join(root, relDir);
@@ -117,6 +157,7 @@ export async function listDir({ root, relDir, toPublicUrl }) {
 			last_modified: stat ? Math.floor(stat.mtimeMs / 1000) : 0,
 			mime_type: isDir ? 'directory' : guessMime(ent.name),
 			visibility: 'public',
+
 			// This is non-standard but harmless; VueFinder mainly needs `path`.
 			url: isDir ? null : toPublicUrl(childRel),
 		});
@@ -128,6 +169,7 @@ export async function listDir({ root, relDir, toPublicUrl }) {
 		return a.basename.localeCompare(b.basename);
 	});
 
+	// pack and return
 	return {
 		storages: [ 'local' ],
 		dirname: toVuePath(relDir),

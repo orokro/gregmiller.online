@@ -15,6 +15,10 @@
 import { Post } from '../../models/Post';
 import { isAdmin } from '../../utils/isAdmin';
 
+
+/**
+ * Handle get post by slug requests
+ */
 export default defineEventHandler(async (event) => {
 
 	await connectDb();

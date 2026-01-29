@@ -47,16 +47,19 @@ const destination = computed(() => {
 	return currentPath.value || 'local://';
 });
 
+
 function onBackdrop(e) {
 	// click outside closes
 	if (e.target?.classList?.contains('modal-backdrop'))
 		emit('close');
 }
 
+
 function onConfirm() {
 	emit('picked', destination.value);
 	emit('close');
 }
+
 
 /**
  * VueFinder events are not super well documented, so we handle several common ones.
@@ -66,6 +69,7 @@ function onPathChanged(p) {
 	if (typeof p === 'string' && p)
 		currentPath.value = p;
 }
+
 
 // Heuristic: VueFinder selection typically gives an array of “items”
 function onSelectionChanged(items) {

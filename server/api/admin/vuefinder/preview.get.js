@@ -11,6 +11,10 @@ import { requireAdmin } from '../../../utils/requireAdmin.js';
 import { getAssetsRoot, resolveSafe } from '../../../utils/assetsRoot.js';
 import { fromVuePath, guessMime } from './_utils.js';
 
+
+/**
+ * Handle preview requests
+ */
 export default defineEventHandler(async (event) => {
 
 	requireAdmin(event);

@@ -1,7 +1,15 @@
+<!--
+	PostRichEditor.vue
+	------------------
+
+	Rich text editor component for admin post editing, using Tiptap (ProseMirror)
+-->
 <script setup>
 
+// vue
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 
+// props
 const props = defineProps({
 
 	// ProseMirror JSON doc (canonical)
@@ -19,10 +27,12 @@ const props = defineProps({
 	},
 });
 
+// emits
 const emit = defineEmits([
 	'update:modelValue',
 ]);
 
+// editor instance and content component
 const editor = ref(null);
 const EditorContent = shallowRef(null);
 
@@ -419,12 +429,12 @@ onMounted(async () => {
 					if (text && text.startsWith('wp-content/')) {
 						const { schema } = view.state;
 						const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-						
+
 						if (coordinates) {
 							// Determine if it's audio or image based on extension
 							const ext = text.split('.').pop().toLowerCase();
 							const isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
-							
+
 							let node;
 							if (isAudio) {
 								node = schema.nodes.audio.create({ src: '/' + text });

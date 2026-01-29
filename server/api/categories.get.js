@@ -12,6 +12,10 @@
 import { Post } from '../models/Post';
 import { connectDb } from '../utils/db';
 
+
+/**
+ * Handle category list requests
+ */
 export default defineEventHandler(async (event) => {
 
     await connectDb();
