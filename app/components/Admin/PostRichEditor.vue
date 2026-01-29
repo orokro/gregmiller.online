@@ -417,6 +417,11 @@ onMounted(async () => {
 		editable: true,
 		onUpdate: scheduleEmitJson,
 		editorProps: {
+			attributes: {
+				spellcheck: 'true', // boolean or string usually works, but explicit string 'true' is standard for HTML
+				autocorrect: 'on',
+				autocapitalize: 'on',
+			},
 			handleDrop: (view, event, slice, moved) => {
 				if (event.dataTransfer) {
 					// Check for our custom type first
