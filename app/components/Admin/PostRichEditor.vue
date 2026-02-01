@@ -652,8 +652,6 @@ onBeforeUnmount(() => {
 		border: 2px solid black;
 		box-sizing: border-box;
 
-		margin-bottom: 25px;
-
 		:deep(.ProseMirror){
 
 			// Fill scroll area, but don't expand page

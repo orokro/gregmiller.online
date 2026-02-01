@@ -405,6 +405,7 @@ onMounted(async () => {
 
 					<PostRichEditor
 						v-if="editorTab === 'rich'"
+						class="rich-editor-instance"
 						v-model="draft.postData"
 						:legacy-html="draft.content"
 					/>
@@ -423,44 +424,44 @@ onMounted(async () => {
 					/-->
 				</div>
 
-			</div>
+				<div class="post-buttons-area">
 
-			<div class="post-buttons-area">
+					<div class="row wrap">
+						<button class="btn" type="button" @click="saveDraft" :disabled="saving">
+							{{ saving ? 'Saving…' : 'Save Draft' }}
+						</button>
 
-				<div class="row wrap">
-					<button class="btn" type="button" @click="saveDraft" :disabled="saving">
-						{{ saving ? 'Saving…' : 'Save Draft' }}
-					</button>
+						<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
+							Preview
+						</button>
 
-					<button class="btn" type="button" @click="previewPost" :disabled="!draft.slug">
-						Preview
-					</button>
+						<button
+							v-if="(draft.status || 'published') !== 'published'"
+							class="btn primary"
+							type="button"
+							@click="publish"
+						>
+							Publish
+						</button>
 
-					<button
-						v-if="(draft.status || 'published') !== 'published'"
-						class="btn primary"
-						type="button"
-						@click="publish"
-					>
-						Publish
-					</button>
+						<button
+							v-else
+							class="btn"
+							type="button"
+							@click="unpublish"
+						>
+							Unpublish
+						</button>
 
-					<button
-						v-else
-						class="btn"
-						type="button"
-						@click="unpublish"
-					>
-						Unpublish
-					</button>
+						<button class="btn danger" type="button" @click="deletePost">
+							Delete
+						</button>
 
-					<button class="btn danger" type="button" @click="deletePost">
-						Delete
-					</button>
+						<span v-if="dirty" class="dirty">
+							● Unsaved changes
+						</span>
+					</div>
 
-					<span v-if="dirty" class="dirty">
-						● Unsaved changes
-					</span>
 				</div>
 
 			</div>
@@ -583,25 +584,26 @@ $post-settings-width: 280px;
 		width: 100%;
 		overflow: hidden;
 
-		display: grid;
-		grid-template-columns: 1fr $post-settings-width;
-		grid-template-rows: minmax(0, 1fr) max-content;
+		// Flex Row: [ Main Content | Settings ]
+		display: flex;
+		flex-direction: row;
 
 		// area with the main post editing textarea
 		.post-edit-area {
 
-			// Grid position: Top-Left cell
-			grid-column: 1;
-			grid-row: 1;
+			flex: 1;
+			min-width: 0; // Prevent flex blowout
+			display: flex;
+			flex-direction: column;
+			height: 100%;
 
-			position: relative;
-			overflow: hidden; // Contain inner scroll
-			padding-bottom: 0;
-			min-height: 0; // CRITICAL: allows this grid item to shrink below its content size
+			position: relative; // Just context
+			padding: 0;
 
 			/* ====== TABS ====== */
 			.tabs {
 
+				flex: 0 0 auto;
 				display: flex;
 				gap: 8px;
 				padding: 10px;
@@ -628,24 +630,37 @@ $post-settings-width: 280px;
 			/* ====== EDITOR BODY ====== */
 			.editor-body {
 
+				flex: 1;
+				min-height: 0; // Allow shrinking
 				position: relative;
 				width: 100%;
-				height: 100%;
+
+				display: flex;
+				flex-direction: column;
+
+				// Removed padding as flexbox handles separation now
+				padding: 0;
+				box-sizing: border-box;
+
+				// Rich Editor Component
+				.rich-editor-instance {
+					width: 100%;
+					height: 100%;
+				}
 
 				// text area box
 				.textarea {
 
-					// position
-					position: absolute;
-					// Bottom is 15px to avoid clipping the border
-					inset: 0px 10px 15px 10px;
-
+					width: 100%;
+					height: 100%;
+					
 					// box settings
 					min-height: 0;
 					resize: none;
 					border-radius: 12px;
 					border: 1px solid $border;
 					overflow: auto;
+					box-sizing: border-box;
 
 					// text settings
 					padding: 12px;
@@ -668,28 +683,21 @@ $post-settings-width: 280px;
 		// area with post action buttons
 		.post-buttons-area {
 
-			// Grid position: Bottom-Left cell
-			grid-column: 1;
-			grid-row: 2;
-
-			position: relative;
-			z-index: 5;
+			// Stacked at bottom of Main Content column
+			flex: 0 0 auto;
+			
 			background: #fff;
-
-			height: auto;
 			padding: 8px 12px;
-
-			// box settings
 			border-top: 1px solid $border;
+			z-index: 10;
 
 		}// .post-buttons-area
 
 		// area with post settings like categories, tags, etc
 		.post-settings-area {
 
-			// Grid position: Right column (spans both rows)
-			grid-column: 2;
-			grid-row: 1 / span 2;
+			flex: 0 0 $post-settings-width;
+			width: $post-settings-width;
 
 			// box settings
 			border-left: 3px solid white;
@@ -697,7 +705,7 @@ $post-settings-width: 280px;
 			flex-direction: column;
 			background: #fff;
 			overflow-x: hidden;
-			height: 100%; // Fill grid height
+			height: 100%;
 
 			.settings-header {
 				padding: 12px 14px;
