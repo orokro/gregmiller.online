@@ -593,7 +593,6 @@ onBeforeUnmount(() => {
 		height: 100%;
 
 		padding-right: 4px;
-
 		background: #fff;
 
 	}// .tiptap-wrap

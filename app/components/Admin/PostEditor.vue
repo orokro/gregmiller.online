@@ -565,7 +565,6 @@ $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 $post-settings-width: 280px;
-$buttons-area-height: 50px;
 
 .post-editor-wrapper{
 
@@ -580,19 +579,26 @@ $buttons-area-height: 50px;
 	.editor{
 
 		// box settings
-		position: relative;
-		overflow: hidden;
 		flex: 1;
 		width: 100%;
+		overflow: hidden;
+
+		display: grid;
+		grid-template-columns: 1fr $post-settings-width;
+		grid-template-rows: minmax(0, 1fr) max-content;
 
 		// area with the main post editing textarea
 		.post-edit-area {
 
-			// fixed on left
-			position: absolute;
-			inset: 0px $post-settings-width $buttons-area-height 0px;
+			// Grid position: Top-Left cell
+			grid-column: 1;
+			grid-row: 1;
 
-			padding-bottom: 20px;
+
+			position: relative;
+			overflow: hidden; // Contain inner scroll
+			padding-bottom: 0;
+			min-height: 0; // CRITICAL: allows this grid item to shrink below its content size
 
 			/* ====== TABS ====== */
 			.tabs {
@@ -627,15 +633,13 @@ $buttons-area-height: 50px;
 				width: 100%;
 				height: 100%;
 
-
-				// border-bottom: 2px solid red;;
-
 				// text area box
 				.textarea {
 
 					// position
 					position: absolute;
-					inset: 0px 10px calc($buttons-area-height + 30px) 10px;
+					// Bottom is 15px to avoid clipping the border
+					inset: 0px 10px 15px 10px;
 
 					// box settings
 					min-height: 0;
@@ -665,13 +669,17 @@ $buttons-area-height: 50px;
 		// area with post action buttons
 		.post-buttons-area {
 
-			// fixed on bottom left
-			position: absolute;
-			inset: auto $post-settings-width 0px 0px;
-			height: $buttons-area-height;
-			padding: 8px 12px 0px 0px;
+			// Grid position: Bottom-Left cell
+			grid-column: 1;
+			grid-row: 2;
 
-			height: 46px;
+			position: relative;
+			z-index: 5;
+			background: #fff;
+
+			height: auto;
+			padding: 8px 12px;
+
 			// box settings
 			border-top: 1px solid $border;
 
@@ -680,10 +688,9 @@ $buttons-area-height: 50px;
 		// area with post settings like categories, tags, etc
 		.post-settings-area {
 
-			// fixed on right
-			position: absolute;
-			inset: 0px 0px 0px auto;
-			width: $post-settings-width;
+			// Grid position: Right column (spans both rows)
+			grid-column: 2;
+			grid-row: 1 / span 2;
 
 			// box settings
 			border-left: 3px solid white;
@@ -691,6 +698,7 @@ $buttons-area-height: 50px;
 			flex-direction: column;
 			background: #fff;
 			overflow-x: hidden;
+			height: 100%; // Fill grid height
 
 			.settings-header {
 				padding: 12px 14px;
