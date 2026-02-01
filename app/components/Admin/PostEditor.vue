@@ -594,7 +594,6 @@ $post-settings-width: 280px;
 			grid-column: 1;
 			grid-row: 1;
 
-
 			position: relative;
 			overflow: hidden; // Contain inner scroll
 			padding-bottom: 0;
