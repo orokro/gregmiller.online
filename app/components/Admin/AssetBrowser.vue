@@ -217,6 +217,20 @@ defineExpose({
 		height: 100%;
 		min-height: 0;
 		padding-left: 3px;
+
+		display: flex;
+		flex-direction: column;
+
+		// Make VueFinder fill the remaining space
+		:deep(#gm_asset_manager) {
+			flex: 1;
+			min-height: 0;
+			height: 100% !important; // Force it to respect flex container
+			
+			.vf-main {
+				height: 100%; // Ensure internal container fills
+			}
+		}
 	}
 
 	:deep(.vf-item img),
