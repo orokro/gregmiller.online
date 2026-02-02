@@ -342,7 +342,7 @@ export default class Building extends THREE.Object3D {
                 prefabs[name] = obj.clone();
                 prefabs[name].position.set(0, 0, 0);
                 prefabs[name].rotation.set(0, 0, 0);
-                prefabs[name].scale.set(1, 1, 1);
+                // Do NOT reset scale. Some items like RoofExit depend on it.
                 obj.removeFromParent();
             }
         });
@@ -465,7 +465,7 @@ export default class Building extends THREE.Object3D {
         const placeObject = (obj, u, v, w, d, scale, rotIdx) => {
              // Create Instance
             const instance = obj.clone();
-            instance.scale.set(scale, scale, scale);
+            instance.scale.multiplyScalar(scale);
             // Rotate around Up
             instance.rotateY(rotIdx * (Math.PI / 2));
 
