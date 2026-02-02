@@ -197,6 +197,7 @@ defineExpose({
 				history: false,
 				theme: false,
 				pinned: false,
+				statusbar: false,
 			}"
 		/>
 
