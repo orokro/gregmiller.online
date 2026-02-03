@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import Block from './Block.js';
 import BlockUnit from './BlockUnit.js';
+import { computeBlockRowLayout } from './utils/LayoutUtils.js';
 
 export default class BlockRow extends THREE.Object3D {
     constructor(targetFitObject, targetFloorObject, unitsPerBuilding, roadMaterial, seed, cityModel, settings = {}, buildingSettings = {}) {
@@ -81,121 +82,46 @@ export default class BlockRow extends THREE.Object3D {
     updateLayout() {
         if (!this.centerUnit) return;
 
-        const box = new THREE.Box3().setFromObject(this.targetFitObject);
-        const prismSize = new THREE.Vector3();
-        box.getSize(prismSize);
+        const layout = computeBlockRowLayout(
+            this.targetFitObject,
+            this.targetFloorObject,
+            this.unitsPerBuilding,
+            this.settings
+        );
 
-        const floorBox = new THREE.Box3().setFromObject(this.targetFloorObject);
-        const floorSize = new THREE.Vector3();
-        floorBox.getSize(floorSize);
-        
-        const floorTotalWidth = floorSize.x;
-        const prismX = prismSize.x;
-        const prismZ = prismSize.z;
-
-        // BCP (Bottom-Center of Prism) X in world space
-        const BCP_X = (box.min.x + box.max.x) / 2;
-        const floorMinX = floorBox.min.x;
-        const floorMaxX = floorBox.max.x;
-
-        const leftSpace = BCP_X - floorMinX;
-        const rightSpace = floorMaxX - BCP_X;
-
-        const availableLeft = leftSpace - (prismX / 2);
-        const availableRight = rightSpace - (prismX / 2);
+        this.sceneScale = layout.sceneScale;
+        this.unitLength = layout.unitLength;
+        this.unitWidth = layout.unitWidth;
 
         // Update Center Unit
-        const buildingCount = Math.max(1, Math.round(prismZ / this.unitsPerBuilding));
-        const baseLength = buildingCount * 2.0;
-        this.sceneScale = prismZ / baseLength;
-        this.unitLength = baseLength;
-        this.unitWidth = prismX / this.sceneScale;
-
         this.centerUnit.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
         this.centerUnit.setLength(this.unitLength);
         this.centerUnit.setWidth(this.unitWidth);
-        this.centerUnit.position.y = box.min.y;
+        this.centerUnit.position.y = layout.floorY;
 
-        // Base Widths for logic (World Units)
-        const blockBaseWidth = (3.28 * this.sceneScale);
-        const unitBaseWidth = (6.56 * this.sceneScale);
-        const roadBaseWidth = prismX; // Default street width matches center block width
-
-        const layoutSide = (side) => {
+        // Helper for updates
+        const updateSide = (side, data) => {
             const roadObj = this.roads.find(r => r.side === side);
-            const availableSide = side === -1 ? availableLeft : availableRight;
             
-            // Priority 1: Roads always appear (min width)
-            roadObj.mesh.visible = true;
-            let roadWidth = roadBaseWidth * this.settings.roadMinWidth;
-
-            // Space remaining after min road
-            let remaining = availableSide - roadWidth;
-            let buildingWidth = 0;
-            let useUnit = false;
-            let spawnBuilding = false;
-
-            // Priority 2: Grow Road to Max BEFORE buildings
-            let maxRoadWidth = roadBaseWidth * this.settings.roadMaxWidth;
-            if (remaining > 0) {
-                let canGrow = maxRoadWidth - roadWidth;
-                let grow = Math.min(remaining, canGrow);
-                roadWidth += grow;
-                remaining -= grow;
-            }
-
-            // Priority 3: Single Blocks
-            if (remaining > 0.001) { 
-                spawnBuilding = true;
-                
-                // Max Block Width
-                let maxBlock = blockBaseWidth * this.settings.maxEdgeScale;
-                
-                // Priority 4: Grow Single Blocks to Max
-                if (remaining < maxBlock) {
-                    useUnit = false;
-                    buildingWidth = Math.max(blockBaseWidth, remaining);
-                } 
-                else {
-                    // Remaining is more than max block.
-                    // Priority 5: Switch to Unit
-                    let maxUnit = unitBaseWidth * this.settings.maxEdgeScale;
-
-                    if (remaining >= unitBaseWidth) {
-                        useUnit = true;
-                        // Priority 6: Grow Unit to Max
-                        buildingWidth = Math.min(remaining, maxUnit);
-                    } else {
-                        // Can't fit base unit yet, stay as max block
-                        useUnit = false;
-                        buildingWidth = maxBlock;
-                    }
-                }
-            } else {
-                spawnBuilding = false;
-            }
-
             // Update Road
-            roadObj.mesh.scale.set(roadWidth, prismZ, 1);
+            roadObj.mesh.visible = true;
+            roadObj.mesh.scale.set(data.roadWidth, layout.prismZ, 1);
             if (roadObj.mesh.material.map) {
-                roadObj.mesh.material.map.repeat.set(1, prismZ / roadWidth);
+                roadObj.mesh.material.map.repeat.set(1, layout.prismZ / data.roadWidth);
             }
-
-            let roadCenter = prismX / 2 + roadWidth / 2;
-            roadObj.mesh.position.set(side * roadCenter, box.min.y, 0);
+            roadObj.mesh.position.set(side * data.roadCenter, layout.floorY, 0);
 
             // Update Building
-            if (spawnBuilding) {
-                let buildingCenter = prismX / 2 + roadWidth + buildingWidth / 2;
-                this.updateEdgeObject(side, useUnit, buildingWidth, prismZ, box.min.y, buildingCenter);
+            if (data.spawnBuilding) {
+                this.updateEdgeObject(side, data.useUnit, data.buildingWidth, layout.prismZ, layout.floorY, data.buildingCenter);
             } else {
                 const edge = this.edgeItems.find(e => e.side === side);
                 if (edge) edge.object.visible = false;
             }
         };
 
-        layoutSide(-1);
-        layoutSide(1);
+        updateSide(-1, layout.left);
+        updateSide(1, layout.right);
     }
 
     updateEdgeObject(side, isUnit, width, length, y, centerX) {

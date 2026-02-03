@@ -35,6 +35,7 @@ let glbAsset = null;
 let currentCityGrid = null;
 let roadMaterial = null;
 let roadIntersectionMaterial = null;
+let roadSideMaterial = null;
 
 // Target Objects
 let targetPrisms = [];
@@ -140,6 +141,11 @@ async function init() {
     roadIntersectionMaterial = roadMaterial.clone();
     roadIntersectionMaterial.map = intersectionTex;
 
+    const roadSideTex = textureLoader.load('tex/road_side.jpg');
+    roadSideTex.wrapS = roadSideTex.wrapT = THREE.RepeatWrapping;
+    roadSideMaterial = roadMaterial.clone();
+    roadSideMaterial.map = roadSideTex;
+
     // Events
     regenBtn.addEventListener('click', regenerate);
     wireframeCheck.addEventListener('change', (e) => {
@@ -191,7 +197,7 @@ async function init() {
     setupDraggable(prismSpacingInput, (v) => {
         localStorage.setItem('cg_prismSpacing', v);
         updatePrismPositions();
-        if (currentCityGrid) currentCityGrid.update();
+        if (currentCityGrid) currentCityGrid.setPrismSpacing(v);
     });
 
     setupDraggable(upbInput, (v) => {
@@ -277,12 +283,14 @@ function regenerate() {
         glbAsset,
         roadMaterial,
         roadIntersectionMaterial,
+        roadSideMaterial,
         targetFloor,
         targetPrisms,
         upb,
         rowSettings,
         buildingSettings
     );
+    currentCityGrid.setPrismSpacing(spacing);
     scene.add(currentCityGrid);
 }
 
