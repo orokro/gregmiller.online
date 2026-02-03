@@ -47,6 +47,7 @@ async function init() {
     const prismLInput = document.getElementById('prismL');
     const floorWInput = document.getElementById('floorW');
     const upbInput = document.getElementById('unitsPerBuilding');
+    const rowSettingsInput = document.getElementById('rowSettingsJson');
     const wireframeCheck = document.getElementById('wireframe');
     const regenBtn = document.getElementById('regenerate');
 
@@ -57,6 +58,12 @@ async function init() {
     if (localStorage.getItem('br_prismL')) prismLInput.value = localStorage.getItem('br_prismL');
     if (localStorage.getItem('br_floorW')) floorWInput.value = localStorage.getItem('br_floorW');
     if (localStorage.getItem('br_upb')) upbInput.value = localStorage.getItem('br_upb');
+    
+    if (localStorage.getItem('br_rowSettings')) {
+        rowSettingsInput.value = localStorage.getItem('br_rowSettings');
+    } else {
+        rowSettingsInput.value = JSON.stringify(defaultRowSettings, null, 2);
+    }
 
     // Three.js Setup
     scene = new THREE.Scene();
@@ -106,15 +113,15 @@ async function init() {
 
     // Road Material
     const textureLoader = new THREE.TextureLoader();
-    const roadTex = textureLoader.load('https://threejs.org/examples/textures/floors/FloorsCheckerboard_S_Diffuse.jpg'); // Placeholder
+    const roadTex = textureLoader.load('tex/road.jpg'); 
     roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
     roadMaterial = new THREE.MeshStandardMaterial({ map: roadTex });
 
     // Events
     regenBtn.addEventListener('click', regenerate);
     wireframeCheck.addEventListener('change', (e) => {
-        targetPrism.visible = e.target.checked;
-        targetFloor.visible = e.target.checked;
+        targetPrism.material.visible = e.target.checked;
+        targetFloor.material.visible = e.target.checked;
     });
 
     setupDraggable(prismWInput, (v) => {
@@ -141,7 +148,6 @@ async function init() {
     });
     setupDraggable(upbInput, (v) => {
         localStorage.setItem('br_upb', v);
-        // UPB requires re-init of BlockRow because it affects building counts
         regenerate();
     });
 
@@ -170,6 +176,14 @@ function regenerate() {
     const seed = document.getElementById('seed').value;
     const upb = parseFloat(document.getElementById('unitsPerBuilding').value) || 2.5;
     
+    let rowSettings;
+    try {
+        rowSettings = JSON.parse(document.getElementById('rowSettingsJson').value);
+        localStorage.setItem('br_rowSettings', JSON.stringify(rowSettings, null, 2));
+    } catch (e) {
+        rowSettings = defaultRowSettings;
+    }
+
     currentBlockRow = new BlockRow(
         targetPrism,
         targetFloor,
@@ -177,7 +191,7 @@ function regenerate() {
         roadMaterial,
         seed,
         glbAsset,
-        defaultRowSettings,
+        rowSettings,
         defaultBuildingSettings
     );
     scene.add(currentBlockRow);

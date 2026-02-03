@@ -37,31 +37,25 @@ export default class BlockRow extends THREE.Object3D {
         const size = new THREE.Vector3();
         box.getSize(size);
 
-        // Prism X is Block Width (Z-axis in BlockUnit space)
-        // Prism Z is Block Length (X-axis in BlockUnit space)
-        // Note: prompt says "the x-axis of the prism corresponds to the width of the block (i.e. z), 
-        // and the length of the prism corresponds to the length of the block (i.e x)"
+        // Prism Z is Block Length (X-axis in BlockUnit local space)
+        // Prism X is Block Width (Z-axis in BlockUnit local space)
         const prismX = size.x;
         const prismZ = size.z;
 
-        // Determine BlockUnit length (X-axis)
-        // "divide by the unitsPerBuilding on it's z axis [of prism], ... also needs to be divided by 2 ... because building width is default 2"
-        // If unitsPerBuilding is e.g. 5 units of space per building?
-        // Let's assume unitsPerBuilding is the width in world units for ONE building.
+        // 1. Calculate Base Length and Scene Scale
         // buildingCount = prismZ / unitsPerBuilding
-        // In Block.js, building width is 2.0 * scaleX.
-        // So raw length = buildingCount * 2.0 = (prismZ / unitsPerBuilding) * 2.0.
-        this.unitLength = (prismZ / this.unitsPerBuilding) * 2.0;
+        // baseLength = buildingCount * 2.0 (since each building is 2 units wide at scale 1)
+        const buildingCount = Math.max(1, Math.round(prismZ / this.unitsPerBuilding));
+        const baseLength = buildingCount * 2.0;
+        this.sceneScale = prismZ / baseLength;
 
-        // Ratios for width? Prompt says "use ratios to figure out what the BlockUnit width should be"
-        // Let's assume we want to match the prism ratio or some default.
-        // "Once we have the converted BlockUnit length, we use ratios to figure out what the BlockUnit width should be."
-        // Default building depth is 3.28. BlockUnit is 2 blocks back-to-back = 6.56 default width.
-        // Let's just use the default 6.56 as the base unitWidth and then scale up.
-        const baseUnitWidth = 6.56;
-        this.unitWidth = baseUnitWidth;
+        // 2. Calculate Base Width for BlockUnit
+        // We want (baseWidth * sceneScale) to ideally fit prismX.
+        // So baseWidth = prismX / sceneScale.
+        this.unitLength = baseLength;
+        this.unitWidth = prismX / this.sceneScale;
 
-        // Spawn Center BlockUnit
+        // 3. Spawn Center BlockUnit
         this.centerUnit = new BlockUnit(
             this.seed + "_center",
             this.cityModel,
@@ -71,26 +65,16 @@ export default class BlockRow extends THREE.Object3D {
             this.buildingSettings
         );
 
-        // Rotate to fit Prism: BlockUnit X (length) along Prism Z. BlockUnit Z (width) along Prism X.
-        // Three.js rotation: Y is up.
+        // Rotate: BlockUnit X (Length) -> Prism Z. BlockUnit Z (Width) -> Prism X.
         this.centerUnit.rotation.y = Math.PI / 2;
-        this.add(this.centerUnit);
-
-        // Scale to fit Prism
-        // Current Length is this.unitLength. Needs to be prismZ. -> scale = prismZ / unitLength
-        // BUT wait, prompt says "Scale the entire block up, so it fits the prism perfectly on x/z. Call this scalar 'sceneScale'"
-        // If we want it to fit perfectly on BOTH, and we used ratios to determine width, then one scale should cover both if ratios match.
-        this.sceneScale = prismZ / this.unitLength; 
         this.centerUnit.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
+        this.add(this.centerUnit);
 
         // Position: Bottom of prism
         this.centerUnit.position.y = box.min.y;
 
-        // Roads
+        // 4. Roads
         this.createRoads();
-
-        // Edges
-        this.createEdges();
 
         this.updateLayout();
     }
@@ -100,119 +84,97 @@ export default class BlockRow extends THREE.Object3D {
         for (let i = 0; i < 2; i++) {
             const geom = new THREE.PlaneGeometry(1, 1);
             const mesh = new THREE.Mesh(geom, this.roadMaterial.clone());
-            mesh.rotation.x = -Math.PI / 2; // Flat on ground
+            mesh.rotation.x = -Math.PI / 2; 
             this.add(mesh);
             this.roads.push({ mesh, side: i === 0 ? -1 : 1 });
         }
     }
 
-    createEdges() {
-        // We'll spawn these lazily in updateLayout or pre-spawn and hide.
-        // Let's pre-spawn 2 BlockUnits and 2 Blocks per side?
-        // Actually, let's just create them when needed in updateLayout to keep it simple,
-        // since the prompt says "Avoid ever rebuilding geo unless initial generation ... everything should adjust layout dynamically"
-        // "Geo" usually refers to BufferGeometry. Re-using class instances is fine.
-    }
-
     updateLayout() {
+        if (!this.centerUnit) return;
+
+        // Re-measure Prism
         const box = new THREE.Box3().setFromObject(this.targetFitObject);
         const prismSize = new THREE.Vector3();
         box.getSize(prismSize);
 
+        // Re-measure Floor
         const floorBox = new THREE.Box3().setFromObject(this.targetFloorObject);
         const floorSize = new THREE.Vector3();
         floorBox.getSize(floorSize);
-        // Floor Width on Z? Prompt: "measure the width of the floor plane on z (its x should be the same as the block/prism x)"
-        // Wait, if Prism X is width, and Floor is bigger on Z?
-        // "the blocks should run north/south now (along z, not x)"
-        // "measure the width of the floor plane on z"
-        // This implies the Row expands along Z.
-        const floorTotalWidth = floorSize.z; 
-
-        // Current Center Unit Width (on Z of the Row, which is Prism X)
-        const unitWidth = prismSize.x;
-        const roadBaseWidth = unitWidth; // "Default width of street should match the block units width after being scaled"
         
-        // Available space on each side from center
-        let availableSide = (floorTotalWidth - unitWidth) / 2;
+        // Expansion is along X axis
+        const floorTotalWidth = floorSize.x;
+        const prismX = prismSize.x;
+        const prismZ = prismSize.z;
+
+        // Update Center Unit to fit Prism
+        const buildingCount = Math.max(1, Math.round(prismZ / this.unitsPerBuilding));
+        const baseLength = buildingCount * 2.0;
+        this.sceneScale = prismZ / baseLength;
+        this.unitLength = baseLength;
+        this.unitWidth = prismX / this.sceneScale;
+
+        this.centerUnit.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
+        this.centerUnit.setLength(this.unitLength);
+        this.centerUnit.setWidth(this.unitWidth);
+        this.centerUnit.position.y = box.min.y;
+
+        // Layout Roads and Edges
+        const roadBaseWidth = prismX; // Match block unit width
+        const availableSide = (floorTotalWidth - prismX) / 2;
 
         const layoutSide = (side) => {
-            let cursor = unitWidth / 2;
-
-            // 1. Road
             const roadObj = this.roads.find(r => r.side === side);
-            let roadWidth = roadBaseWidth;
-            // "if roadMaxWidth is 1.5, the responsive code should let the streets scale up to 1.5x"
-            // We only scale if there's enough room? Or always?
-            // Usually "responsive" means fill space.
-            // Let's see how much space we have.
-            const maxRoad = roadBaseWidth * this.settings.roadMaxWidth;
             
-            // 2. Edge item (Block or Unit)
-            // Need to decide what fits.
-            // Edge min width is a single block (width ~3.28 * sceneScale)
+            // Min space needed for road + one block
             const blockBaseWidth = (3.28 * this.sceneScale);
             const unitBaseWidth = (6.56 * this.sceneScale);
+            const minRoadWidth = roadBaseWidth * this.settings.roadMinWidth;
 
-            // If we have room for road + at least one block
-            if (availableSide > roadBaseWidth + blockBaseWidth) {
+            if (availableSide > minRoadWidth + blockBaseWidth) {
                 roadObj.mesh.visible = true;
                 
-                // Calculate remaining space for edge building after min road
-                let remainingForBuilding = availableSide - roadBaseWidth;
+                let roadWidth = minRoadWidth;
+                let remainingForBuilding = availableSide - roadWidth;
                 
-                let edgeObj = this.getEdgeObject(side);
+                // Determine if we use Unit or Block
                 let useUnit = false;
+                let buildingBaseWidth = blockBaseWidth;
 
-                // Check if it should be a Unit
-                if (remainingForBuilding > unitBaseWidth) {
-                    const scaleNeeded = remainingForBuilding / unitBaseWidth;
-                    if (scaleNeeded > 1.0) {
-                        // It's at least a unit. Check if we should stretch it or if it's too big.
-                        useUnit = true;
-                        // But wait, the rule: "if there isn't enough space to fit a whole BlockUnit... spawn regular Blocks"
-                        // "maxEdgeScale determines the maximum stretching allowed for the edge Blocks before they turn into BlockUnits"
-                        const blockScale = remainingForBuilding / blockBaseWidth;
-                        if (blockScale > this.settings.maxEdgeScale) {
-                            useUnit = true;
-                        } else {
-                            useUnit = false;
-                        }
-                    } else {
-                        // Fits a block easily, maybe a unit?
-                        useUnit = false;
-                    }
+                // Rule: "maxEdgeScale determines the maximum stretching allowed for the edge Blocks before they turn into BlockUnits"
+                if (remainingForBuilding / blockBaseWidth > this.settings.maxEdgeScale) {
+                    useUnit = true;
+                    buildingBaseWidth = unitBaseWidth;
                 }
 
-                // Finalize road and building widths
-                // If we have tons of space, road can grow
-                if (remainingForBuilding > (useUnit ? unitBaseWidth : blockBaseWidth) * this.settings.maxEdgeScale) {
-                    roadWidth = Math.min(maxRoad, availableSide - (useUnit ? unitBaseWidth : blockBaseWidth) * this.settings.maxEdgeScale);
+                // If building is too big even for Unit, it might stretch.
+                // If there's extra space, road can grow up to roadMaxWidth
+                const maxRoad = roadBaseWidth * this.settings.roadMaxWidth;
+                if (remainingForBuilding > buildingBaseWidth * this.settings.maxEdgeScale) {
+                    const extra = remainingForBuilding - (buildingBaseWidth * this.settings.maxEdgeScale);
+                    const grow = Math.min(extra, maxRoad - minRoadWidth);
+                    roadWidth += grow;
+                    remainingForBuilding -= grow;
                 }
+
+                // Final building width clamped to maxEdgeScale of its base
+                let finalBuildingWidth = Math.min(remainingForBuilding, buildingBaseWidth * this.settings.maxEdgeScale);
+
+                // Update Road Mesh
+                roadObj.mesh.scale.set(roadWidth, prismZ, 1);
+                roadObj.mesh.position.set(side * (prismX / 2 + roadWidth / 2), box.min.y, 0);
                 
-                // Recalculate building width based on finalized road
-                let finalBuildingWidth = availableSide - roadWidth;
-                // Clamp building width to maxEdgeScale
-                const base = useUnit ? unitBaseWidth : blockBaseWidth;
-                if (finalBuildingWidth > base * this.settings.maxEdgeScale) {
-                    finalBuildingWidth = base * this.settings.maxEdgeScale;
+                // UVs: Repeat square. Road length is prismZ. Road width is roadWidth.
+                // If texture is square, we want repeat.y = prismZ / roadWidth? 
+                // Wait, mesh scale is (width, length, 1). UV U is across width, V is along length.
+                // So repeat V = prismZ / roadWidth.
+                if (roadObj.mesh.material.map) {
+                    roadObj.mesh.material.map.repeat.set(1, prismZ / roadWidth);
                 }
 
-                // Apply to Road
-                roadObj.mesh.scale.set(finalBuildingWidth + roadWidth, prismSize.z, 1); // Not quite, road width is along Z-axis of Row
-                // Wait, Row expands on Z. Road width is on Row Z. Road length is Row X.
-                roadObj.mesh.scale.set(prismSize.z, roadWidth, 1);
-                roadObj.mesh.position.set(0, box.min.y, side * (unitWidth / 2 + roadWidth / 2));
-                
-                // UVs
-                const uvScale = prismSize.z / roadWidth;
-                roadObj.mesh.material.map.repeat.set(1, uvScale);
-
-                // Apply to Building
-                this.updateEdgeObject(side, useUnit, finalBuildingWidth, prismSize.z);
-                edgeObj = this.getEdgeObject(side);
-                edgeObj.object.visible = true;
-                edgeObj.object.position.set(0, box.min.y, side * (unitWidth / 2 + roadWidth + finalBuildingWidth / 2));
+                // Update Edge Object
+                this.updateEdgeObject(side, useUnit, finalBuildingWidth, prismZ, box.min.y);
             } else {
                 roadObj.mesh.visible = false;
                 const edge = this.edgeItems.find(e => e.side === side);
@@ -224,18 +186,12 @@ export default class BlockRow extends THREE.Object3D {
         layoutSide(1);
     }
 
-    getEdgeObject(side) {
-        return this.edgeItems.find(e => e.side === side);
-    }
-
-    updateEdgeObject(side, isUnit, width, length) {
+    updateEdgeObject(side, isUnit, width, length, y) {
         let entry = this.edgeItems.find(e => e.side === side);
         
-        // If type changed or doesn't exist, recreate
         if (!entry || entry.isUnit !== isUnit) {
-            if (entry) {
-                this.remove(entry.object);
-            }
+            if (entry) this.remove(entry.object);
+            
             let obj;
             if (isUnit) {
                 obj = new BlockUnit(
@@ -243,7 +199,7 @@ export default class BlockRow extends THREE.Object3D {
                     this.cityModel,
                     this.buildingSettings.tall_items,
                     this.unitLength,
-                    6.56, // base width
+                    this.unitWidth,
                     this.buildingSettings
                 );
             } else {
@@ -254,15 +210,24 @@ export default class BlockRow extends THREE.Object3D {
                     this.unitLength,
                     this.buildingSettings
                 );
-                // For a single block, the front faces one way. 
-                // We want it facing the road.
-                // Block origin is back-center. 
-                // Left side (side -1) road is at -Z. Building at more -Z. Front should face +Z.
-                // Right side (side 1) road is at +Z. Building at more +Z. Front should face -Z.
-                if (side === -1) obj.rotation.y = 0;
-                else obj.rotation.y = Math.PI;
             }
-            obj.rotation.y += Math.PI / 2;
+            
+            // Initial Orientation
+            obj.rotation.y = Math.PI / 2; // North-South
+            if (!isUnit) {
+                // Single block needs to face the road
+                if (side === -1) obj.rotation.y = Math.PI / 2; // Face East?
+                else obj.rotation.y = -Math.PI / 2; // Face West?
+                // Wait, Block local origin is back-center. 
+                // Rotation 90 deg (PI/2) makes local X along World Z.
+                // Front (+Z local) faces +X world if rotation is PI/2.
+                // If side is -1 (West), road is at -X relative to building? No, road is at +X relative to building.
+                // Building is at -X. Road is at center. So Front should face +X.
+                // If side is 1 (East), building is at +X. Road is at center. So Front should face -X.
+                if (side === -1) obj.rotation.y = Math.PI / 2;
+                else obj.rotation.y = -Math.PI / 2;
+            }
+
             obj.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
             this.add(obj);
             
@@ -275,19 +240,25 @@ export default class BlockRow extends THREE.Object3D {
             }
         }
 
-        // Adjust width
-        const baseWidth = isUnit ? 6.56 : 3.28;
-        const targetLocalWidth = width / this.sceneScale;
+        entry.object.visible = true;
         
+        // Adjust Dimensions
+        const targetLocalWidth = width / this.sceneScale;
         if (isUnit) {
+            entry.object.setLength(this.unitLength);
             entry.object.setWidth(targetLocalWidth);
         } else {
-            // Block scale depth (Z in block space, which is Row Z)
-            // Default Block doesn't have setWidth, it just has the scale we give it.
-            // But Block doesn't account for its internal building depth scale?
-            // Actually, Block is just a collection of buildings. 
-            // Let's assume the depth scale is applied to the Block object.
-            entry.object.scale.z = (targetLocalWidth / baseWidth) * this.sceneScale;
+            // Block doesn't have setWidth. Buildings are 2x3.28 at scale 1.
+            // Width of block is building depth.
+            // We need to scale the block's Z (local) to match targetLocalWidth.
+            entry.object.scale.set(this.sceneScale, this.sceneScale, (targetLocalWidth / 3.28) * this.sceneScale);
         }
+
+        // Position
+        const roadObj = this.roads.find(r => r.side === side);
+        const roadWidth = roadObj.mesh.scale.y; // Wait, road mesh scale is (width, length, 1)
+        const prismX = new THREE.Box3().setFromObject(this.targetFitObject).getSize(new THREE.Vector3()).x;
+        
+        entry.object.position.set(side * (prismX / 2 + roadWidth + width / 2), y, 0);
     }
 }
