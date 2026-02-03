@@ -135,7 +135,7 @@ export default class BlockRow extends THREE.Object3D {
             }
 
             // Priority 3: Single Blocks
-            if (remaining > 0.001) { // Fixed Dead Zone: remove threshold
+            if (remaining > 0.001) { 
                 spawnBuilding = true;
                 
                 // Max Block Width
@@ -218,11 +218,7 @@ export default class BlockRow extends THREE.Object3D {
             if (isUnit) {
                 obj.rotation.y = Math.PI / 2; 
             } else {
-                // Single block facing INWARD (Corrected)
-                // Side -1 (West): Needs to face East (+X).
-                // Rotation PI/2 maps Front (+Z) to +X.
-                // Side 1 (East): Needs to face West (-X).
-                // Rotation -PI/2 maps Front (+Z) to -X.
+                // Single block facing INWARD
                 if (side === -1) obj.rotation.y = Math.PI / 2;
                 else obj.rotation.y = -Math.PI / 2;
             }
@@ -250,19 +246,14 @@ export default class BlockRow extends THREE.Object3D {
             entry.object.position.set(side * centerX, y, 0);
         } else {
             // Block (Single)
+            // Fix: ensure the length is updated!
+            entry.object.setBlockSize(this.unitLength);
+            
             // Scale Z is custom Width
             const scaleZ = targetLocalWidth / 3.28;
             entry.object.scale.set(this.sceneScale, this.sceneScale, scaleZ * this.sceneScale);
             
             // Positioning Fix for Back-Pivot
-            // Single Block origin is at BACK.
-            // We want Front to touch the road.
-            // CenterX is the center of the building volume.
-            // Distance from Center to Back (Pivot) is Width/2.
-            // We need to push the Pivot OUTWARDS by Width/2 relative to the visual center.
-            // Side -1 (Left): Center is negative. Push Left (more negative).
-            // Side 1 (Right): Center is positive. Push Right (more positive).
-            // offset = side * (width/2)
             const pivotOffset = side * (width / 2);
             entry.object.position.set(side * centerX + pivotOffset, y, 0);
         }
