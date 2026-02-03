@@ -41,6 +41,16 @@ let roadSideMaterial = null;
 let targetPrisms = [];
 let targetFloor;
 
+async function loadAssets() {
+    const rgbeLoader = new RGBELoader();
+    const texture = await rgbeLoader.loadAsync('env.hdr');
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    scene.environment = texture;
+
+    const gltfLoader = new GLTFLoader();
+    glbAsset = await gltfLoader.loadAsync('City_v001.glb');
+}
+
 async function init() {
     const container = document.getElementById('canvas-container');
     
@@ -56,6 +66,7 @@ async function init() {
     const prismHInput = document.getElementById('prismH');
     const prismsCSVInput = document.getElementById('prisms');
     const prismSpacingInput = document.getElementById('prismSpacing');
+    const maxCapScaleInput = document.getElementById('maxCapScale');
     
     const upbInput = document.getElementById('unitsPerBuilding');
     const rowSettingsInput = document.getElementById('rowSettingsJson');
@@ -75,6 +86,7 @@ async function init() {
     if (localStorage.getItem('cg_prismH')) prismHInput.value = localStorage.getItem('cg_prismH');
     if (localStorage.getItem('cg_prisms')) prismsCSVInput.value = localStorage.getItem('cg_prisms');
     if (localStorage.getItem('cg_prismSpacing')) prismSpacingInput.value = localStorage.getItem('cg_prismSpacing');
+    if (localStorage.getItem('cg_maxCapScale')) maxCapScaleInput.value = localStorage.getItem('cg_maxCapScale');
     
     if (localStorage.getItem('cg_upb')) upbInput.value = localStorage.getItem('cg_upb');
     
@@ -200,6 +212,14 @@ async function init() {
         if (currentCityGrid) currentCityGrid.setPrismSpacing(v);
     });
 
+    setupDraggable(maxCapScaleInput, (v) => {
+        localStorage.setItem('cg_maxCapScale', v);
+        if (currentCityGrid) {
+            currentCityGrid.rowConfig.maxCapScale = v;
+            currentCityGrid.update();
+        }
+    }, 0.1);
+
     setupDraggable(upbInput, (v) => {
         localStorage.setItem('cg_upb', v);
         if (currentCityGrid) currentCityGrid.setUnitsPerBuilding(v);
@@ -211,87 +231,82 @@ async function init() {
 
     regenerate();
     animate();
-}
 
-async function loadAssets() {
-    const rgbeLoader = new RGBELoader();
-    const texture = await rgbeLoader.loadAsync('env.hdr');
-    texture.mapping = THREE.EquirectangularReflectionMapping;
-    scene.environment = texture;
-
-    const gltfLoader = new GLTFLoader();
-    glbAsset = await gltfLoader.loadAsync('City_v001.glb');
-}
-
-function regenerate() {
-    if (currentCityGrid) scene.remove(currentCityGrid);
-    targetPrisms.forEach(p => scene.remove(p));
-    targetPrisms = [];
-
-    const seed = document.getElementById('seed').value;
-    const upb = parseFloat(document.getElementById('unitsPerBuilding').value) || 2.5;
-    const wireframe = document.getElementById('wireframe').checked;
+    function regenerate() {
+        if (currentCityGrid) scene.remove(currentCityGrid);
+        targetPrisms.forEach(p => scene.remove(p));
+        targetPrisms = [];
     
-    const prismW = parseFloat(document.getElementById('prismW').value) || 10;
-    const prismH = parseFloat(document.getElementById('prismH').value) || 5;
-    const prismsCSV = document.getElementById('prisms').value;
-    const spacing = parseFloat(document.getElementById('prismSpacing').value) || 5;
+        const seed = document.getElementById('seed').value;
+        const upb = parseFloat(document.getElementById('unitsPerBuilding').value) || 2.5;
+        const wireframe = document.getElementById('wireframe').checked;
+        
+        const prismW = parseFloat(document.getElementById('prismW').value) || 10;
+        const prismH = parseFloat(document.getElementById('prismH').value) || 5;
+        const prismsCSV = document.getElementById('prisms').value;
+        const spacing = parseFloat(document.getElementById('prismSpacing').value) || 5;
+        const maxCapScale = parseFloat(document.getElementById('maxCapScale').value) || 1.5;
+    
+        // Save
+        localStorage.setItem('cg_seed', seed);
+        localStorage.setItem('cg_upb', upb);
+        localStorage.setItem('cg_prismW', prismW);
+        localStorage.setItem('cg_prismH', prismH);
+        localStorage.setItem('cg_prisms', prismsCSV);
+        localStorage.setItem('cg_prismSpacing', spacing);
+        localStorage.setItem('cg_maxCapScale', maxCapScale);
+    
+        // Create Prisms
+        const zSizes = prismsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        const totalZLength = zSizes.reduce((a, b) => a + b, 0) + (zSizes.length - 1) * spacing;
+        let currentZ = -totalZLength / 2;
+    
+        const geom = new THREE.BoxGeometry(1, 1, 1);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true, transparent: true, opacity: 0.2, visible: wireframe });
+    
+        zSizes.forEach((zSize, i) => {
+            const prism = new THREE.Mesh(geom, mat);
+            prism.scale.set(prismW, prismH, zSize);
+            prism.position.set(0, prismH / 2, currentZ + zSize / 2);
+            scene.add(prism);
+            targetPrisms.push(prism);
+            currentZ += zSize + spacing;
+        });
+    
+        let rowSettings;
+        try {
+            rowSettings = JSON.parse(document.getElementById('rowSettingsJson').value);
+            localStorage.setItem('cg_rowSettings', JSON.stringify(rowSettings, null, 2));
+        } catch (e) {
+            rowSettings = defaultRowSettings;
+        }
 
-    // Save
-    localStorage.setItem('cg_seed', seed);
-    localStorage.setItem('cg_upb', upb);
-    localStorage.setItem('cg_prismW', prismW);
-    localStorage.setItem('cg_prismH', prismH);
-    localStorage.setItem('cg_prisms', prismsCSV);
-    localStorage.setItem('cg_prismSpacing', spacing);
-
-    // Create Prisms
-    const zSizes = prismsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-    const totalZLength = zSizes.reduce((a, b) => a + b, 0) + (zSizes.length - 1) * spacing;
-    let currentZ = -totalZLength / 2;
-
-    const geom = new THREE.BoxGeometry(1, 1, 1);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true, transparent: true, opacity: 0.2, visible: wireframe });
-
-    zSizes.forEach((zSize, i) => {
-        const prism = new THREE.Mesh(geom, mat);
-        prism.scale.set(prismW, prismH, zSize);
-        prism.position.set(0, prismH / 2, currentZ + zSize / 2);
-        scene.add(prism);
-        targetPrisms.push(prism);
-        currentZ += zSize + spacing;
-    });
-
-    let rowSettings;
-    try {
-        rowSettings = JSON.parse(document.getElementById('rowSettingsJson').value);
-        localStorage.setItem('cg_rowSettings', JSON.stringify(rowSettings, null, 2));
-    } catch (e) {
-        rowSettings = defaultRowSettings;
+        // Merge Cap Max Scale
+        rowSettings.maxCapScale = maxCapScale;
+    
+        let buildingSettings;
+        try {
+            buildingSettings = JSON.parse(document.getElementById('buildingSettingsJson').value);
+            localStorage.setItem('cg_buildingSettings', JSON.stringify(buildingSettings, null, 2));
+        } catch (e) {
+            buildingSettings = defaultBuildingSettings;
+        }
+    
+        currentCityGrid = new CityGrid(
+            seed,
+            glbAsset,
+            roadMaterial,
+            roadIntersectionMaterial,
+            roadSideMaterial,
+            targetFloor,
+            targetPrisms,
+            upb,
+            rowSettings,
+            buildingSettings
+        );
+        currentCityGrid.setPrismSpacing(spacing);
+        scene.add(currentCityGrid);
     }
-
-    let buildingSettings;
-    try {
-        buildingSettings = JSON.parse(document.getElementById('buildingSettingsJson').value);
-        localStorage.setItem('cg_buildingSettings', JSON.stringify(buildingSettings, null, 2));
-    } catch (e) {
-        buildingSettings = defaultBuildingSettings;
-    }
-
-    currentCityGrid = new CityGrid(
-        seed,
-        glbAsset,
-        roadMaterial,
-        roadIntersectionMaterial,
-        roadSideMaterial,
-        targetFloor,
-        targetPrisms,
-        upb,
-        rowSettings,
-        buildingSettings
-    );
-    currentCityGrid.setPrismSpacing(spacing);
-    scene.add(currentCityGrid);
 }
 
 function updatePrismPositions() {

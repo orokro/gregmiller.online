@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import BlockRow from './BlockRow.js';
 import SideRoad from './SideRoad.js';
+import CapBlock from './CapBlock.js';
 
 export default class CityGrid extends THREE.Object3D {
     constructor(seed, buildingModel, mtlRoad, mtlRoadIntersection, mtlRoadSide, floorPlane, prisms, unitsPerBuilding, rowConfig, buildingConfig) {
@@ -18,6 +19,7 @@ export default class CityGrid extends THREE.Object3D {
 
         this.blockRows = [];
         this.sideRoads = [];
+        this.capBlocks = [];
         this.spacing = 5.0; // Default, should be set externally if different
         this.init();
     }
@@ -63,7 +65,39 @@ export default class CityGrid extends THREE.Object3D {
             blockRow.position.z = prism.position.z;
         });
         
+        // Create Cap Blocks
+        if (this.prisms.length > 0) {
+            // Top Cap (Use first prism as neighbor)
+            const topCap = new CapBlock(
+                this.floorPlane,
+                this.prisms[0],
+                "top",
+                this.unitsPerBuilding,
+                this.buildingModel,
+                this.seed + "_cap_top",
+                this.buildingConfig,
+                this.rowConfig // Passing rowConfig as capConfig for now to share maxEdgeScale etc
+            );
+            this.add(topCap);
+            this.capBlocks.push(topCap);
+
+            // Bottom Cap (Use last prism as neighbor)
+            const bottomCap = new CapBlock(
+                this.floorPlane,
+                this.prisms[this.prisms.length - 1],
+                "bottom",
+                this.unitsPerBuilding,
+                this.buildingModel,
+                this.seed + "_cap_btm",
+                this.buildingConfig,
+                this.rowConfig
+            );
+            this.add(bottomCap);
+            this.capBlocks.push(bottomCap);
+        }
+
         this.updateSideRoadPositions();
+        this.updateCapBlockPositions();
     }
 
     setUnitsPerBuilding(val) {
@@ -75,12 +109,16 @@ export default class CityGrid extends THREE.Object3D {
             road.unitsPerBuilding = val;
             road.update();
         });
+        this.capBlocks.forEach(cap => {
+            cap.setUnitsPerBuilding(val);
+        });
         this.update();
     }
 
     setPrismSpacing(val) {
         this.spacing = val;
         this.sideRoads.forEach(road => road.setSpacing(val));
+        this.capBlocks.forEach(cap => cap.setSpacing(val));
         this.update();
     }
 
@@ -94,6 +132,9 @@ export default class CityGrid extends THREE.Object3D {
         });
         this.updateSideRoadPositions();
         this.sideRoads.forEach(road => road.update());
+        
+        this.updateCapBlockPositions();
+        this.capBlocks.forEach(cap => cap.update());
     }
 
     updateSideRoadPositions() {
@@ -123,5 +164,16 @@ export default class CityGrid extends THREE.Object3D {
             road.position.z = zPos;
             road.setSpacing(this.spacing);
         }
+    }
+
+    updateCapBlockPositions() {
+        // Cap Blocks handle their own positioning relative to neighbor prism + spacing,
+        // but they need to know the spacing to calculate "startZ".
+        // In CapBlock.js: "startZ = sideRoadEdge".
+        // Top: PrismMin - Spacing. 
+        // Bottom: PrismMax + Spacing.
+        
+        // So we just need to ensure they have the latest spacing via setSpacing (called above).
+        // Their internal update() measures the prisms and floor directly.
     }
 }
