@@ -116,7 +116,6 @@ export default class BlockRow extends THREE.Object3D {
             const roadObj = this.roads.find(r => r.side === side);
             
             // Priority 1: Roads always appear (min width)
-            // Even if floor is small, they exist.
             roadObj.mesh.visible = true;
             let roadWidth = roadBaseWidth * this.settings.roadMinWidth;
 
@@ -126,69 +125,40 @@ export default class BlockRow extends THREE.Object3D {
             let useUnit = false;
             let spawnBuilding = false;
 
+            // Priority 2: Grow Road to Max BEFORE buildings
+            let maxRoadWidth = roadBaseWidth * this.settings.roadMaxWidth;
             if (remaining > 0) {
+                let canGrow = maxRoadWidth - roadWidth;
+                let grow = Math.min(remaining, canGrow);
+                roadWidth += grow;
+                remaining -= grow;
+            }
+
+            // Priority 3: Single Blocks
+            if (remaining > 0.001) { // Fixed Dead Zone: remove threshold
                 spawnBuilding = true;
                 
-                // Priority 2: Single Blocks
-                // Start with single block base
-                let targetWidth = blockBaseWidth;
-                
-                // Priority 3: Grow Single Blocks to Max
+                // Max Block Width
                 let maxBlock = blockBaseWidth * this.settings.maxEdgeScale;
                 
-                // Priority 4: Switch to Unit
-                let targetUnitWidth = unitBaseWidth;
-
-                // Priority 5: Grow Unit
-                let maxUnit = unitBaseWidth * this.settings.maxEdgeScale;
-
-                // Logic Flow
+                // Priority 4: Grow Single Blocks to Max
                 if (remaining < maxBlock) {
-                    // Fits within scalable block range (or is smaller than base block, we clamp min later)
                     useUnit = false;
-                    buildingWidth = Math.max(blockBaseWidth, remaining); 
-                    // Wait, if remaining < blockBaseWidth, do we spawn? 
-                    // Prompt: "if there's still space left over... then the single blocks should spawn".
-                    // Implies we need at least enough for a block? 
-                    // Let's assume if we have > 0, we try to fit a block, clamped to min size.
-                    // But if available < min road + min block, maybe we don't spawn building?
-                    if (remaining < blockBaseWidth * 0.5) spawnBuilding = false; // Threshold
-                    else buildingWidth = Math.max(blockBaseWidth, remaining);
-                } 
-                else if (remaining < maxUnit) {
-                    // Bigger than max block, smaller than max unit.
-                    // Could be big block or small unit?
-                    // "replace them with blockunits" implies switch.
-                    useUnit = true;
-                    // Ideally we switch when block hits max scale.
-                    // blockMax ~ 1.5 * 3.28 ~ 4.92.
-                    // unitBase ~ 6.56.
-                    // There is a gap where we are > maxBlock but < unitBase.
-                    // In that gap, we probably stick to maxBlock or jump to unit?
-                    // Let's jump to unit if we can fit base unit.
-                    if (remaining >= unitBaseWidth) {
-                        useUnit = true;
-                        buildingWidth = Math.max(unitBaseWidth, remaining);
-                    } else {
-                        // Can't fit unit yet, stick to max block
-                        useUnit = false;
-                        buildingWidth = maxBlock;
-                    }
+                    buildingWidth = Math.max(blockBaseWidth, remaining);
                 } 
                 else {
-                    // Bigger than max unit
-                    useUnit = true;
-                    buildingWidth = maxUnit; // Cap at max unit for now
-                    
-                    // Priority 6: Grow Unit Max (Already capped above)
-                    // Priority 7: Grow Road (if space remains after max unit)
-                    let extra = remaining - maxUnit;
-                    if (extra > 0) {
-                        let maxRoadGrow = (roadBaseWidth * this.settings.roadMaxWidth) - roadWidth;
-                        let roadGrow = Math.min(extra, maxRoadGrow);
-                        roadWidth += roadGrow;
-                        // extra -= roadGrow;
-                        // If still extra, nothing else changes
+                    // Remaining is more than max block.
+                    // Priority 5: Switch to Unit
+                    let maxUnit = unitBaseWidth * this.settings.maxEdgeScale;
+
+                    if (remaining >= unitBaseWidth) {
+                        useUnit = true;
+                        // Priority 6: Grow Unit to Max
+                        buildingWidth = Math.min(remaining, maxUnit);
+                    } else {
+                        // Can't fit base unit yet, stay as max block
+                        useUnit = false;
+                        buildingWidth = maxBlock;
                     }
                 }
             } else {
@@ -196,28 +166,17 @@ export default class BlockRow extends THREE.Object3D {
             }
 
             // Update Road
-            // Scale X is Width (Road Width along Row X). Scale Y is Length (Road Length along Row Z).
-            // PlaneGeometry(1,1) rotated X -90.
-            // Local X is World X. Local Y is World Z.
             roadObj.mesh.scale.set(roadWidth, prismZ, 1);
-            
-            // UVs
             if (roadObj.mesh.material.map) {
                 roadObj.mesh.material.map.repeat.set(1, prismZ / roadWidth);
             }
 
-            // Position Road
-            // Center Prism is width prismX.
-            // Road starts at prismX/2. Center is prismX/2 + roadWidth/2.
             let roadCenter = prismX / 2 + roadWidth / 2;
             roadObj.mesh.position.set(side * roadCenter, box.min.y, 0);
 
             // Update Building
             if (spawnBuilding) {
-                // Building starts at road edge: prismX/2 + roadWidth.
-                // Center is prismX/2 + roadWidth + buildingWidth/2.
                 let buildingCenter = prismX / 2 + roadWidth + buildingWidth / 2;
-                
                 this.updateEdgeObject(side, useUnit, buildingWidth, prismZ, box.min.y, buildingCenter);
             } else {
                 const edge = this.edgeItems.find(e => e.side === side);
@@ -256,18 +215,18 @@ export default class BlockRow extends THREE.Object3D {
             }
             
             // Orientation
-            obj.rotation.y = Math.PI / 2; 
-            if (!isUnit) {
-                // Face the road.
-                // Side -1 (Left/West): Road is to Right (+X). Front (+Z local) needs to face +X.
-                // Rot 90 (PI/2) -> +Z local is +X world. Correct.
-                // Side 1 (Right/East): Road is to Left (-X). Front (+Z local) needs to face -X.
-                // Rot -90 (-PI/2) -> +Z local is -X world. Correct.
+            if (isUnit) {
+                obj.rotation.y = Math.PI / 2; 
+            } else {
+                // Single block facing INWARD (Corrected)
+                // Side -1 (West): Needs to face East (+X).
+                // Rotation PI/2 maps Front (+Z) to +X.
+                // Side 1 (East): Needs to face West (-X).
+                // Rotation -PI/2 maps Front (+Z) to -X.
                 if (side === -1) obj.rotation.y = Math.PI / 2;
                 else obj.rotation.y = -Math.PI / 2;
             }
 
-            obj.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
             this.add(obj);
             
             if (!entry) {
@@ -281,30 +240,31 @@ export default class BlockRow extends THREE.Object3D {
 
         entry.object.visible = true;
         
-        // Adjust Dimensions
-        // We pass the RAW dimension (unscaled) to the object methods, because they apply scale internally?
-        // No, setWidth/setLength usually expect world units or logical units.
-        // In BlockUnit: setWidth(w) sets this.width = w. Then updates scale.z = (w/2)/3.28.
-        // It does NOT assume sceneScale.
-        // BUT our object instance has .scale applied (sceneScale).
-        // So we need to set the LOCAL width (unscaled).
         const targetLocalWidth = width / this.sceneScale;
         
         if (isUnit) {
-            entry.object.setLength(this.unitLength); // unitLength is already unscaled (base)
+            entry.object.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
+            entry.object.setLength(this.unitLength);
             entry.object.setWidth(targetLocalWidth);
+            // Unit is centered, so centerX works fine
+            entry.object.position.set(side * centerX, y, 0);
         } else {
-            // Block width control (Depth)
-            // Block has no setWidth. It relies on scale.
-            // Width of block is scale.z * 3.28.
-            // We want (scale.z * 3.28) * sceneScale = width
-            // scale.z = (width / sceneScale) / 3.28
-            entry.object.scale.z = targetLocalWidth / 3.28;
+            // Block (Single)
+            // Scale Z is custom Width
+            const scaleZ = targetLocalWidth / 3.28;
+            entry.object.scale.set(this.sceneScale, this.sceneScale, scaleZ * this.sceneScale);
             
-            // Scale X/Y is sceneScale. Scale Z is custom.
-            entry.object.scale.set(this.sceneScale, this.sceneScale, entry.object.scale.z * this.sceneScale);
+            // Positioning Fix for Back-Pivot
+            // Single Block origin is at BACK.
+            // We want Front to touch the road.
+            // CenterX is the center of the building volume.
+            // Distance from Center to Back (Pivot) is Width/2.
+            // We need to push the Pivot OUTWARDS by Width/2 relative to the visual center.
+            // Side -1 (Left): Center is negative. Push Left (more negative).
+            // Side 1 (Right): Center is positive. Push Right (more positive).
+            // offset = side * (width/2)
+            const pivotOffset = side * (width / 2);
+            entry.object.position.set(side * centerX + pivotOffset, y, 0);
         }
-
-        entry.object.position.set(side * centerX, y, 0);
     }
 }
