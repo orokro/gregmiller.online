@@ -138,24 +138,24 @@ async function init() {
         targetPrism.scale.x = v;
         localStorage.setItem('br_prismW', v);
         if (currentBlockRow) currentBlockRow.updateLayout();
-    });
+    }, 0.1);
     setupDraggable(prismHInput, (v) => {
         targetPrism.scale.y = v;
         targetPrism.position.y = v / 2;
         localStorage.setItem('br_prismH', v);
         if (currentBlockRow) currentBlockRow.updateLayout();
-    });
+    }, 0.1);
     setupDraggable(prismLInput, (v) => {
         targetPrism.scale.z = v;
         targetFloor.scale.y = v; // "plane height should always match the block length"
         localStorage.setItem('br_prismL', v);
         if (currentBlockRow) currentBlockRow.updateLayout();
-    });
+    }, 0.1);
     setupDraggable(floorWInput, (v) => {
         targetFloor.scale.x = v;
         localStorage.setItem('br_floorW', v);
         if (currentBlockRow) currentBlockRow.updateLayout();
-    });
+    }, 0.1);
     setupDraggable(floorXInput, (v) => {
         targetFloor.position.x = v;
         localStorage.setItem('br_floorX', v);
@@ -164,7 +164,7 @@ async function init() {
     setupDraggable(upbInput, (v) => {
         localStorage.setItem('br_upb', v);
         regenerate();
-    });
+    }, 0.1);
 
     // Sync initial sizes
     targetPrism.scale.set(parseFloat(prismWInput.value), parseFloat(prismHInput.value), parseFloat(prismLInput.value));
@@ -221,7 +221,7 @@ function regenerate() {
     scene.add(currentBlockRow);
 }
 
-function setupDraggable(input, onUpdate) {
+function setupDraggable(input, onUpdate, minVal = null) {
     let isDragging = false;
     let startX = 0;
     let startVal = 0;
@@ -237,7 +237,8 @@ function setupDraggable(input, onUpdate) {
         if (!isDragging) return;
         const delta = e.clientX - startX;
         const speed = e.shiftKey ? 0.01 : 0.1;
-        let newVal = Math.max(0.1, Math.round((startVal + delta * speed) * 100) / 100);
+        let newVal = Math.round((startVal + delta * speed) * 100) / 100;
+        if (minVal !== null) newVal = Math.max(minVal, newVal);
         input.value = newVal;
         onUpdate(newVal);
     });
