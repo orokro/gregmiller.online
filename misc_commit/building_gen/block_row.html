@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Row Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./node_modules/three/build/three.module.js",
+                "three/addons/": "./node_modules/three/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="sidebar">
+        <h2>Block Row Settings</h2>
+        
+        <div class="control-group">
+            <label for="seed">Row Seed:</label>
+            <input type="text" id="seed" value="row_seed_01">
+        </div>
+
+        <div class="control-group">
+            <label for="unitsPerBuilding">Units Per Building:</label>
+            <input type="number" id="unitsPerBuilding" value="2.5" step="0.1" min="0.1">
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="wireframe" checked> Show Wireframes
+            </label>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+        <h3>Prism Size (Target)</h3>
+        
+        <div class="control-group">
+            <label for="prismW">Prism Width (X):</label>
+            <input type="number" id="prismW" value="10" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="prismH">Prism Height (Y):</label>
+            <input type="number" id="prismH" value="5" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="prismL">Prism Length (Z):</label>
+            <input type="number" id="prismL" value="20" step="0.5">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+        <h3>Floor Size</h3>
+        
+        <div class="control-group">
+            <label for="floorW">Floor Width (Z-Row):</label>
+            <input type="number" id="floorW" value="40" step="1">
+        </div>
+
+        <div class="control-group">
+            <button id="regenerate">Regenerate Row</button>
+        </div>
+    </div>
+
+    <script type="module" src="src/main_blockrow.js"></script>
+</body>
+</html>
