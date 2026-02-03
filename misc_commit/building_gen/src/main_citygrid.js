@@ -173,11 +173,31 @@ async function init() {
         if (currentCityGrid) currentCityGrid.update();
     }, 0.1);
 
+    setupDraggable(prismWInput, (v) => {
+        targetPrisms.forEach(p => p.scale.x = v);
+        localStorage.setItem('cg_prismW', v);
+        if (currentCityGrid) currentCityGrid.update();
+    }, 0.1);
+
+    setupDraggable(prismHInput, (v) => {
+        targetPrisms.forEach(p => {
+            p.scale.y = v;
+            p.position.y = v / 2;
+        });
+        localStorage.setItem('cg_prismH', v);
+        if (currentCityGrid) currentCityGrid.update();
+    }, 0.1);
+
     setupDraggable(prismSpacingInput, (v) => {
         localStorage.setItem('cg_prismSpacing', v);
         updatePrismPositions();
         if (currentCityGrid) currentCityGrid.update();
     });
+
+    setupDraggable(upbInput, (v) => {
+        localStorage.setItem('cg_upb', v);
+        if (currentCityGrid) currentCityGrid.setUnitsPerBuilding(v);
+    }, 0.1);
 
     // Sync initial sizes
     targetFloor.position.set(parseFloat(floorXInput.value), parseFloat(floorYInput.value), parseFloat(floorZInput.value));

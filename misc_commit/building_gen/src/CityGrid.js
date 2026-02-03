@@ -33,10 +33,27 @@ export default class CityGrid extends THREE.Object3D {
             );
             this.add(blockRow);
             this.blockRows.push(blockRow);
+            
+            // Sync Position
+            blockRow.position.z = prism.position.z;
         });
     }
 
+    setUnitsPerBuilding(val) {
+        this.unitsPerBuilding = val;
+        this.blockRows.forEach(row => {
+            row.unitsPerBuilding = val;
+        });
+        this.update();
+    }
+
     update() {
-        this.blockRows.forEach(row => row.updateLayout());
+        this.blockRows.forEach((row, i) => {
+            // Sync Position in case prisms moved
+            if (this.prisms[i]) {
+                row.position.z = this.prisms[i].position.z;
+            }
+            row.updateLayout();
+        });
     }
 }
