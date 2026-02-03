@@ -15,6 +15,7 @@ const defaultBuildingSettings = {
 	awning_sat: {
 		Box_Awning_01: 1, Box_Awning_02: 1, Box_Awning_03: 0.7, Box_Awning_04: 0.4,
 	},
+    awning_value: 0.5,
 	tall_items: true,
 	fireescape_odds: 0.4,
 	window_ac_odds: 0.3,
@@ -46,8 +47,10 @@ async function init() {
     const prismHInput = document.getElementById('prismH');
     const prismLInput = document.getElementById('prismL');
     const floorWInput = document.getElementById('floorW');
+    const floorXInput = document.getElementById('floorX');
     const upbInput = document.getElementById('unitsPerBuilding');
     const rowSettingsInput = document.getElementById('rowSettingsJson');
+    const buildingSettingsInput = document.getElementById('buildingSettingsJson');
     const wireframeCheck = document.getElementById('wireframe');
     const regenBtn = document.getElementById('regenerate');
 
@@ -57,12 +60,19 @@ async function init() {
     if (localStorage.getItem('br_prismH')) prismHInput.value = localStorage.getItem('br_prismH');
     if (localStorage.getItem('br_prismL')) prismLInput.value = localStorage.getItem('br_prismL');
     if (localStorage.getItem('br_floorW')) floorWInput.value = localStorage.getItem('br_floorW');
+    if (localStorage.getItem('br_floorX')) floorXInput.value = localStorage.getItem('br_floorX');
     if (localStorage.getItem('br_upb')) upbInput.value = localStorage.getItem('br_upb');
     
     if (localStorage.getItem('br_rowSettings')) {
         rowSettingsInput.value = localStorage.getItem('br_rowSettings');
     } else {
         rowSettingsInput.value = JSON.stringify(defaultRowSettings, null, 2);
+    }
+
+    if (localStorage.getItem('br_buildingSettings')) {
+        buildingSettingsInput.value = localStorage.getItem('br_buildingSettings');
+    } else {
+        buildingSettingsInput.value = JSON.stringify(defaultBuildingSettings, null, 2);
     }
 
     // Three.js Setup
@@ -146,6 +156,11 @@ async function init() {
         localStorage.setItem('br_floorW', v);
         if (currentBlockRow) currentBlockRow.updateLayout();
     });
+    setupDraggable(floorXInput, (v) => {
+        targetFloor.position.x = v;
+        localStorage.setItem('br_floorX', v);
+        if (currentBlockRow) currentBlockRow.updateLayout();
+    });
     setupDraggable(upbInput, (v) => {
         localStorage.setItem('br_upb', v);
         regenerate();
@@ -155,6 +170,7 @@ async function init() {
     targetPrism.scale.set(parseFloat(prismWInput.value), parseFloat(prismHInput.value), parseFloat(prismLInput.value));
     targetPrism.position.y = targetPrism.scale.y / 2;
     targetFloor.scale.set(parseFloat(floorWInput.value), targetPrism.scale.z, 1);
+    targetFloor.position.x = parseFloat(floorXInput.value);
 
     regenerate();
     animate();
@@ -184,6 +200,14 @@ function regenerate() {
         rowSettings = defaultRowSettings;
     }
 
+    let buildingSettings;
+    try {
+        buildingSettings = JSON.parse(document.getElementById('buildingSettingsJson').value);
+        localStorage.setItem('br_buildingSettings', JSON.stringify(buildingSettings, null, 2));
+    } catch (e) {
+        buildingSettings = defaultBuildingSettings;
+    }
+
     currentBlockRow = new BlockRow(
         targetPrism,
         targetFloor,
@@ -192,7 +216,7 @@ function regenerate() {
         seed,
         glbAsset,
         rowSettings,
-        defaultBuildingSettings
+        buildingSettings
     );
     scene.add(currentBlockRow);
 }

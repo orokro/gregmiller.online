@@ -93,6 +93,17 @@ export default class BlockRow extends THREE.Object3D {
         const prismX = prismSize.x;
         const prismZ = prismSize.z;
 
+        // BCP (Bottom-Center of Prism) X in world space
+        const BCP_X = (box.min.x + box.max.x) / 2;
+        const floorMinX = floorBox.min.x;
+        const floorMaxX = floorBox.max.x;
+
+        const leftSpace = BCP_X - floorMinX;
+        const rightSpace = floorMaxX - BCP_X;
+
+        const availableLeft = leftSpace - (prismX / 2);
+        const availableRight = rightSpace - (prismX / 2);
+
         // Update Center Unit
         const buildingCount = Math.max(1, Math.round(prismZ / this.unitsPerBuilding));
         const baseLength = buildingCount * 2.0;
@@ -109,11 +120,10 @@ export default class BlockRow extends THREE.Object3D {
         const blockBaseWidth = (3.28 * this.sceneScale);
         const unitBaseWidth = (6.56 * this.sceneScale);
         const roadBaseWidth = prismX; // Default street width matches center block width
-        
-        const availableSide = (floorTotalWidth - prismX) / 2;
 
         const layoutSide = (side) => {
             const roadObj = this.roads.find(r => r.side === side);
+            const availableSide = side === -1 ? availableLeft : availableRight;
             
             // Priority 1: Roads always appear (min width)
             roadObj.mesh.visible = true;

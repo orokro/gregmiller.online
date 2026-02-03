@@ -219,6 +219,7 @@ export default class Building extends THREE.Object3D {
         if (pickedObj) {
             // Recolor
             const sat = this.settings.awning_sat[pickedName] || 1;
+            const val = this.settings.awning_value !== undefined ? this.settings.awning_value : 0.5;
             
             // Rejection sampling for Hue to strictly avoid Pink/Magenta
             // Range to avoid: 0.80 to 0.98
@@ -232,7 +233,7 @@ export default class Building extends THREE.Object3D {
             // Fallback if loop fails (unlikely) -> Red (0.99)
             if (hue > 0.80 && hue < 0.98) hue = 0.99;
 
-            const color = new THREE.Color().setHSL(hue, sat, 0.5); // Value middle (0.5)
+            const color = new THREE.Color().setHSL(hue, sat, val);
 
             // Awnings might be groups (Box_Awning_03) or meshes
             pickedObj.traverse((child) => {
