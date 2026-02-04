@@ -55,7 +55,7 @@ async function loadAssets() {
     glbAsset = await gltfLoader.loadAsync('models/City_v001.glb');
     signalAsset = await gltfLoader.loadAsync('models/Signal.glb');
     streetLightAsset = await gltfLoader.loadAsync('models/Street_Light.glb');
-    carAsset = await gltfLoader.loadAsync('models/Car_01.glb');
+    carAsset = await gltfLoader.loadAsync('models/Cars_Library.glb');
 }
 
 async function init() {

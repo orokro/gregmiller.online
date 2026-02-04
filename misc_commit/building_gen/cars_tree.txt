@@ -1,0 +1,52 @@
+Cars_Library.glb
+└── [G] Scene
+    ├── [G] Compact_Body_Body_0
+    │   ├── [M] Compact_Body_Body_0_1
+    │   ├── [M] Compact_Body_Body_0_2
+    │   ├── [M] Compact_Body_Body_0_3
+    │   └── [M] Compact_Body_Body_0_4
+    ├── [G] Coupe_Body_Body_0
+    │   ├── [M] Coupe_Body_Body_0_1
+    │   ├── [M] Coupe_Body_Body_0_2
+    │   ├── [M] Coupe_Body_Body_0_3
+    │   └── [M] Coupe_Body_Body_0_4
+    ├── [G] Hatchback_Body_Body_0
+    │   ├── [M] Hatchback_Body_Body_0_1
+    │   ├── [M] Hatchback_Body_Body_0_2
+    │   ├── [M] Hatchback_Body_Body_0_3
+    │   └── [M] Hatchback_Body_Body_0_4
+    ├── [G] minivan_body_Body_0
+    │   ├── [M] minivan_body_Body_0_1
+    │   ├── [M] minivan_body_Body_0_2
+    │   ├── [M] minivan_body_Body_0_3
+    │   └── [M] minivan_body_Body_0_4
+    ├── [G] Offroad_Body_Body_0
+    │   ├── [M] Offroad_Body_Body_0_1
+    │   ├── [M] Offroad_Body_Body_0_2
+    │   ├── [M] Offroad_Body_Body_0_3
+    │   └── [M] Offroad_Body_Body_0_4
+    ├── [G] Pickup_Body_Body_0
+    │   ├── [M] Pickup_Body_Body_0_1
+    │   ├── [M] Pickup_Body_Body_0_2
+    │   ├── [M] Pickup_Body_Body_0_3
+    │   └── [M] Pickup_Body_Body_0_4
+    ├── [G] Sedan_Body_Body_0
+    │   ├── [M] Sedan_Body_Body_0_1
+    │   ├── [M] Sedan_Body_Body_0_2
+    │   ├── [M] Sedan_Body_Body_0_3
+    │   └── [M] Sedan_Body_Body_0_4
+    ├── [G] Sport_body_Body_0
+    │   ├── [M] Sport_body_Body_0_1
+    │   ├── [M] Sport_body_Body_0_2
+    │   ├── [M] Sport_body_Body_0_3
+    │   └── [M] Sport_body_Body_0_4
+    ├── [G] SUV_Body_Body_0
+    │   ├── [M] SUV_Body_Body_0_1
+    │   ├── [M] SUV_Body_Body_0_2
+    │   ├── [M] SUV_Body_Body_0_3
+    │   └── [M] SUV_Body_Body_0_4
+    └── [G] Wagon_Body_Body_0
+        ├── [M] Wagon_Body_Body_0_1
+        ├── [M] Wagon_Body_Body_0_2
+        ├── [M] Wagon_Body_Body_0_3
+        └── [M] Wagon_Body_Body_0_4
