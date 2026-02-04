@@ -35,12 +35,13 @@ let scene, camera, renderer, controls;
 let glbAsset = null;
 let signalAsset = null;
 let streetLightAsset = null;
+let carAsset = null;
 let currentCity = null;
 let roadMaterial = null;
 let roadIntersectionMaterial = null;
 let roadSideMaterial = null;
 
-// Target Objects (Z-Up Environment)
+// Target Objects
 let targetPrisms = [];
 let targetFloor;
 
@@ -54,6 +55,7 @@ async function loadAssets() {
     glbAsset = await gltfLoader.loadAsync('models/City_v001.glb');
     signalAsset = await gltfLoader.loadAsync('models/Signal.glb');
     streetLightAsset = await gltfLoader.loadAsync('models/Street_Light.glb');
+    carAsset = await gltfLoader.loadAsync('models/Car_01.glb');
 }
 
 async function init() {
@@ -61,22 +63,21 @@ async function init() {
     
     // UI Elements
     const seedInput = document.getElementById('seed');
-    // Floor (Z-Up: X=Width, Y=Depth)
     const floorXInput = document.getElementById('floorX');
-    const floorYInput = document.getElementById('floorY'); // Depth Pos
-    const floorWInput = document.getElementById('floorW'); // X Size
-    const floorHInput = document.getElementById('floorH'); // Y Size (Depth Size)
+    const floorYInput = document.getElementById('floorY');
+    const floorZInput = document.getElementById('floorZ');
+    const floorWInput = document.getElementById('floorW');
+    const floorLInput = document.getElementById('floorH');
     
     const prismWInput = document.getElementById('prismW');
-    const prismDInput = document.getElementById('prismD'); // Z Size (Height) -> Wait, prompt says "Prisms Depth (Z - Height)"? 
-    // Usually Z is Height in Z-up. "Prism Depth (Z - Height)" label implies input controls Height (Z). 
-    // And "Prisms (Y sizes CSV)" implies the CSV controls spacing along Y (Depth).
-    // Let's assume prismDInput controls the Prism's Z-scale (Height).
-    
-    const prismsCSVInput = document.getElementById('prisms'); // Y sizes
+    const prismHInput = document.getElementById('prismD');
+    const prismsCSVInput = document.getElementById('prisms');
     const prismSpacingInput = document.getElementById('prismSpacing');
     const maxCapScaleInput = document.getElementById('maxCapScale');
     const lightSpacingInput = document.getElementById('lightSpacing');
+    
+    const maxCarsInput = document.getElementById('maxCars');
+    const carSizeInput = document.getElementById('carSize');
     
     const upbInput = document.getElementById('unitsPerBuilding');
     const rowSettingsInput = document.getElementById('rowSettingsJson');
@@ -84,7 +85,7 @@ async function init() {
     const wireframeCheck = document.getElementById('wireframe');
     const regenBtn = document.getElementById('regenerate');
 
-    // Persistence (Reuse cg_ keys or new c_ keys? New to avoid conflict)
+    // Persistence
     const getVal = (key, def) => localStorage.getItem('c_' + key) || def;
     const setVal = (key, val) => localStorage.setItem('c_' + key, val);
 
@@ -92,14 +93,17 @@ async function init() {
     if (getVal('floorX')) floorXInput.value = getVal('floorX');
     if (getVal('floorY')) floorYInput.value = getVal('floorY');
     if (getVal('floorW')) floorWInput.value = getVal('floorW');
-    if (getVal('floorH')) floorHInput.value = getVal('floorH');
+    if (getVal('floorH')) floorLInput.value = getVal('floorH');
     
     if (getVal('prismW')) prismWInput.value = getVal('prismW');
-    if (getVal('prismD')) prismDInput.value = getVal('prismD');
+    if (getVal('prismD')) prismHInput.value = getVal('prismD');
     if (getVal('prisms')) prismsCSVInput.value = getVal('prisms');
     if (getVal('prismSpacing')) prismSpacingInput.value = getVal('prismSpacing');
     if (getVal('maxCapScale')) maxCapScaleInput.value = getVal('maxCapScale');
     if (getVal('lightSpacing')) lightSpacingInput.value = getVal('lightSpacing');
+    
+    if (getVal('maxCars')) maxCarsInput.value = getVal('maxCars');
+    if (getVal('carSize')) carSizeInput.value = getVal('carSize');
     
     if (getVal('upb')) upbInput.value = getVal('upb');
     
@@ -109,14 +113,13 @@ async function init() {
     if (getVal('buildingSettings')) buildingSettingsInput.value = getVal('buildingSettings');
     else buildingSettingsInput.value = JSON.stringify(defaultBuildingSettings, null, 2);
 
-    // Three.js Setup (Z-Up Camera)
+    // Three.js Setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
 
-    // Camera looking down/forward in Z-up world
     camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.up.set(0, 0, 1); // Z is UP
-    camera.position.set(100, -100, 100); // Back and Up
+    camera.up.set(0, 0, 1); 
+    camera.position.set(100, -100, 100); 
     camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -130,21 +133,17 @@ async function init() {
     controls.enableDamping = true;
     controls.target.set(0, 0, 0);
 
-    // Initial Floor (Z-Up: XY Plane)
     targetFloor = new THREE.Mesh(
         new THREE.PlaneGeometry(1, 1),
         new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
     );
-    // No rotation needed for XY plane
     scene.add(targetFloor);
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(50, -50, 100); // Adjusted for Z-up
+    dirLight.position.set(50, -50, 100);
     scene.add(dirLight);
 
-    // Load Assets
     try {
         await loadAssets();
     } catch (e) {
@@ -152,7 +151,6 @@ async function init() {
         return;
     }
 
-    // Road Materials
     const textureLoader = new THREE.TextureLoader();
     const roadTex = textureLoader.load('tex/road.jpg'); 
     roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
@@ -168,21 +166,19 @@ async function init() {
     roadSideMaterial = roadMaterial.clone();
     roadSideMaterial.map = roadSideTex;
 
-    // Events
     regenBtn.addEventListener('click', regenerate);
     wireframeCheck.addEventListener('change', (e) => {
         targetFloor.material.visible = e.target.checked;
         targetPrisms.forEach(p => p.material.visible = e.target.checked);
     });
 
-    // Floor Draggables
     setupDraggable(floorXInput, (v) => {
         targetFloor.position.x = v;
         setVal('floorX', v);
         if (currentCity) currentCity.update();
     });
     setupDraggable(floorYInput, (v) => {
-        targetFloor.position.y = v; // Y is Depth pos
+        targetFloor.position.y = v;
         setVal('floorY', v);
         if (currentCity) currentCity.update();
     });
@@ -191,23 +187,22 @@ async function init() {
         setVal('floorW', v);
         if (currentCity) currentCity.update();
     }, 0.1);
-    setupDraggable(floorHInput, (v) => {
-        targetFloor.scale.y = v; // Y scale is Depth size
+    setupDraggable(floorLInput, (v) => {
+        targetFloor.scale.y = v;
         setVal('floorH', v);
         if (currentCity) currentCity.update();
     }, 0.1);
 
-    // Prism Draggables
     setupDraggable(prismWInput, (v) => {
         targetPrisms.forEach(p => p.scale.x = v);
         setVal('prismW', v);
         if (currentCity) currentCity.update();
     }, 0.1);
 
-    setupDraggable(prismDInput, (v) => { // Controls Z Scale (Height)
+    setupDraggable(prismHInput, (v) => {
         targetPrisms.forEach(p => {
             p.scale.z = v;
-            p.position.z = v / 2; // Sit on ground (Z=0)
+            p.position.z = v / 2;
         });
         setVal('prismD', v);
         if (currentCity) currentCity.update();
@@ -217,16 +212,7 @@ async function init() {
         setVal('prismSpacing', v);
         updatePrismPositions();
         if (currentCity) {
-            // City doesn't expose setPrismSpacing directly, need to route via update or settings?
-            // City.update() handles position changes.
-            // But CityGrid needs spacing for SideRoads.
-            // CityGrid gets spacing from setPrismSpacing.
-            // We need to pass this down.
-            // Ideally City.update() should handle it, but spacing is a setting.
-            // Let's rely on regenerate for settings changes? 
-            // Or access internal grid? 
-            // currentCity.cityGrid.setPrismSpacing(v);
-            if (currentCity.cityGrid) currentCity.cityGrid.setPrismSpacing(v);
+            currentCity.cityGrid.setPrismSpacing(v);
             currentCity.update();
         }
     });
@@ -235,7 +221,7 @@ async function init() {
         setVal('maxCapScale', v);
         if (currentCity) {
             currentCity.cityGrid.rowConfig.maxCapScale = v;
-            currentCity.cityGrid.update();
+            currentCity.update();
         }
     }, 0.1);
 
@@ -247,14 +233,30 @@ async function init() {
         }
     }, 0.1);
 
+    setupDraggable(maxCarsInput, (v) => {
+        setVal('maxCars', v);
+        if (currentCity) {
+            currentCity.cityTraffic.options.maxCars = v;
+            currentCity.cityTraffic.spawnInitialCars();
+        }
+    }, 1);
+
+    setupDraggable(carSizeInput, (v) => {
+        setVal('carSize', v);
+        if (currentCity) {
+            currentCity.cityTraffic.options.carSize = v;
+            // Need to update existing cars scale? Not implemented in CityTraffic update yet.
+            // For now, new cars will use it.
+        }
+    }, 0.1);
+
     setupDraggable(upbInput, (v) => {
         setVal('upb', v);
         if (currentCity) currentCity.cityGrid.setUnitsPerBuilding(v);
     }, 0.1);
 
-    // Sync initial sizes
     targetFloor.position.set(parseFloat(floorXInput.value), parseFloat(floorYInput.value), 0);
-    targetFloor.scale.set(parseFloat(floorWInput.value), parseFloat(floorHInput.value), 1);
+    targetFloor.scale.set(parseFloat(floorWInput.value), parseFloat(floorLInput.value), 1);
 
     regenerate();
     animate();
@@ -269,24 +271,25 @@ async function init() {
         const wireframe = document.getElementById('wireframe').checked;
         
         const prismW = parseFloat(document.getElementById('prismW').value) || 10;
-        const prismHeight = parseFloat(document.getElementById('prismD').value) || 5; // Z Size
+        const prismH = parseFloat(document.getElementById('prismD').value) || 5;
         const prismsCSV = document.getElementById('prisms').value;
         const spacing = parseFloat(document.getElementById('prismSpacing').value) || 5;
         const maxCapScale = parseFloat(document.getElementById('maxCapScale').value) || 1.5;
         const lightSpacing = parseFloat(document.getElementById('lightSpacing').value) || 5.0;
+        const maxCars = parseInt(document.getElementById('maxCars').value) || 20;
+        const carSize = parseFloat(document.getElementById('carSize').value) || 2.0;
     
-        // Save
         setVal('seed', seed);
         setVal('upb', upb);
         setVal('prismW', prismW);
-        setVal('prismD', prismHeight);
+        setVal('prismD', prismH);
         setVal('prisms', prismsCSV);
         setVal('prismSpacing', spacing);
         setVal('maxCapScale', maxCapScale);
         setVal('lightSpacing', lightSpacing);
+        setVal('maxCars', maxCars);
+        setVal('carSize', carSize);
     
-        // Create Prisms (Z-Up, Y-Depth Layout)
-        // Sizes in CSV are Y-lengths (Depth)
         const ySizes = prismsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
         const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * spacing;
         let currentY = -totalYLength / 2;
@@ -296,10 +299,8 @@ async function init() {
     
         ySizes.forEach((ySize, i) => {
             const prism = new THREE.Mesh(geom, mat);
-            // Scale: X=Width, Y=Depth (from CSV), Z=Height (from Input)
-            prism.scale.set(prismW, ySize, prismHeight);
-            // Pos: X=0, Y=Accumulated, Z=Height/2 (Sitting on floor)
-            prism.position.set(0, currentY + ySize / 2, prismHeight / 2);
+            prism.scale.set(prismW, ySize, prismH);
+            prism.position.set(0, currentY + ySize / 2, prismH / 2);
             scene.add(prism);
             targetPrisms.push(prism);
             currentY += ySize + spacing;
@@ -313,7 +314,6 @@ async function init() {
             rowSettings = defaultRowSettings;
         }
 
-        // Merge Cap Max Scale & Light Spacing
         rowSettings.maxCapScale = maxCapScale;
         rowSettings.street_light_spacing = lightSpacing;
     
@@ -330,6 +330,7 @@ async function init() {
             glbAsset,
             signalAsset,
             streetLightAsset,
+            carAsset,
             roadMaterial,
             roadIntersectionMaterial,
             roadSideMaterial,
@@ -339,7 +340,12 @@ async function init() {
             rowSettings,
             buildingSettings
         );
+        
         currentCity.cityGrid.setPrismSpacing(spacing);
+        currentCity.cityTraffic.options.maxCars = maxCars;
+        currentCity.cityTraffic.options.carSize = carSize;
+        currentCity.cityTraffic.spawnInitialCars();
+        
         scene.add(currentCity);
     }
 }
@@ -387,8 +393,14 @@ function setupDraggable(input, onUpdate, minVal = null) {
     input.addEventListener('input', () => onUpdate(parseFloat(input.value)));
 }
 
+const clock = new THREE.Clock();
+
 function animate() {
     requestAnimationFrame(animate);
+    
+    const dt = clock.getDelta();
+    if (currentCity) currentCity.updateTraffic(dt);
+
     controls.update();
     renderer.render(scene, camera);
 }

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import CityGrid from './CityGrid.js';
+import CityTraffic from './CityTraffic.js';
 
 export default class City extends THREE.Object3D {
-    constructor(seed, buildingModel, signalAsset, streetLightAsset, mtlRoad, mtlRoadIntersection, mtlRoadSide, floorPlane, prisms, unitsPerBuilding, rowConfig, buildingConfig) {
+    constructor(seed, buildingModel, signalAsset, streetLightAsset, carAsset, mtlRoad, mtlRoadIntersection, mtlRoadSide, floorPlane, prisms, unitsPerBuilding, rowConfig, buildingConfig) {
         super();
         
         // 1. Rotate City to align internal Y-up with external Z-up
@@ -36,6 +37,17 @@ export default class City extends THREE.Object3D {
             buildingConfig
         );
         this.add(this.cityGrid);
+
+        // 4. Create Traffic
+        this.cityTraffic = new CityTraffic(
+            this.shadowFloor,
+            this.shadowPrisms,
+            unitsPerBuilding,
+            rowConfig,
+            carAsset,
+            { maxCars: 20, carSize: 1.0 } // Config?
+        );
+        this.add(this.cityTraffic);
 
         this.update(this.inputPrisms);
     }
@@ -88,9 +100,16 @@ export default class City extends THREE.Object3D {
 
         if (listChanged) {
             this.cityGrid.setPrisms(this.shadowPrisms);
+            this.cityTraffic.setPrisms(this.shadowPrisms);
         } else {
             this.cityGrid.update();
+            this.cityTraffic.rebuildGraph(); // Force graph update on transform change?
+            // Actually CityTraffic needs to rebuild if positions change to snap cars.
         }
+    }
+
+    updateTraffic(dt) {
+        if (this.cityTraffic) this.cityTraffic.updateTraffic(dt);
     }
 
     syncShadowObject(real, shadow) {
