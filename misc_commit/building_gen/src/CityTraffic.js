@@ -96,9 +96,16 @@ export default class CityTraffic extends THREE.Object3D {
             
             // Calc Length & Vector
             if (type === 'bezier' && controlPos) {
-                const l1 = edge.start.distanceTo(controlPos);
-                const l2 = controlPos.distanceTo(edge.end);
-                edge.length = (l1 + l2) * 0.8; // Rough approx
+                // Precise length calculation via 10-point integration
+                let len = 0;
+                let lastP = edge.start.clone();
+                const tempP = new THREE.Vector3();
+                for (let i = 1; i <= 10; i++) {
+                    this.getBezier(edge.start, controlPos, edge.end, i / 10, tempP);
+                    len += tempP.distanceTo(lastP);
+                    lastP.copy(tempP);
+                }
+                edge.length = len;
             } else {
                 edge.vector = edge.end.clone().sub(edge.start);
                 edge.length = edge.vector.length();
@@ -187,7 +194,7 @@ export default class CityTraffic extends THREE.Object3D {
                     // Can turn Left (North) -> North_Out (Cross turn)
                     // Only if not Top Row (would lead to dead end)
                     if (!isFirstRow) {
-                        addEdge(ports.West_In, ports.North_Out, 'bezier', new THREE.Vector3(x, layout.floorY, z));
+                        addEdge(ports.West_In, ports.North_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
                     }
                     
                     // Can turn Right (South) -> South_Out (Short turn)
@@ -207,7 +214,7 @@ export default class CityTraffic extends THREE.Object3D {
                     
                     // Can turn Left (South) -> South_Out
                     if (!isLastRow) {
-                        addEdge(ports.East_In, ports.South_Out, 'bezier', new THREE.Vector3(x, layout.floorY, z));
+                        addEdge(ports.East_In, ports.South_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
                     }
                     
                     // Straight
@@ -325,13 +332,13 @@ export default class CityTraffic extends THREE.Object3D {
         mesh.traverse(c => {
             if (c.isMesh) {
                 c.material = c.material.clone();
-                // c.material.color.setHex(...) 
             }
         });
 
         // Wrap in container for rotation fix
         const container = new THREE.Object3D();
-        container.up.set(0, 0, 1); // Z-up fix
+        // Use Z-up with a tiny epsilon to avoid Gimbal Lock on North/South (+/- Z) travel
+        container.up.set(0.0001, 0, 1); 
         container.add(mesh);
         
         // Fix rotation: Rotate 180 degrees if model faces backwards
@@ -347,8 +354,7 @@ export default class CityTraffic extends THREE.Object3D {
             prevEdge: null,
             nextEdge: null,
             u,
-            speed: this.options.speed * (0.8 + Math.random() * 0.4), // Var speed
-            framesAlive: 0
+            speed: this.options.speed * (0.8 + Math.random() * 0.4) // Var speed
         };
 
         // Pre-calculate next edge
@@ -373,11 +379,22 @@ export default class CityTraffic extends THREE.Object3D {
         for (let i = this.cars.length - 1; i >= 0; i--) {
             const car = this.cars[i];
             
-            const du = (car.speed * delta) / car.edge.length;
+            let du;
+            if (car.edge.type === 'bezier' && car.edge.controlPos) {
+                // To maintain constant physical speed on a Bezier curve, 
+                // we must scale 'du' by the magnitude of the velocity vector at current 'u'.
+                const vel = new THREE.Vector3();
+                this.getBezierVelocity(car.edge.start, car.edge.controlPos, car.edge.end, car.u, vel);
+                const speedAtT = vel.length();
+                du = (car.speed * delta) / Math.max(0.1, speedAtT);
+            } else {
+                du = (car.speed * delta) / car.edge.length;
+            }
+            
             car.u += du;
 
             if (car.u >= 1.0) {
-                // Carry over overflow distance to the next edge to prevent teleportation/hiccups
+                // Carry over overflow distance
                 const oldLen = car.edge.length;
                 const overflowDist = (car.u - 1.0) * oldLen;
 
@@ -385,14 +402,9 @@ export default class CityTraffic extends THREE.Object3D {
                     car.prevEdge = car.edge;
                     car.edge = car.nextEdge;
                     car.edgeIndex = car.edge.index;
-                    
-                    // Convert overflow distance to new 'u' coordinate
                     car.u = overflowDist / car.edge.length;
-                    
-                    // Pick the NEXT NEXT edge
                     this.pickNextEdge(car);
                 } else {
-                    // Reached end of line
                     this.despawnCar(i);
                     this.spawnCar(false); 
                     continue;
@@ -400,7 +412,6 @@ export default class CityTraffic extends THREE.Object3D {
             }
             
             this.updateCarPos(car);
-            car.framesAlive++;
         }
     }
 
@@ -414,53 +425,42 @@ export default class CityTraffic extends THREE.Object3D {
             const p2 = car.edge.end;
             
             this.getBezier(p0, p1, p2, car.u, pos);
-            this.getBezierTangent(p0, p1, p2, car.u, lookTarget);
+            this.getBezierVelocity(p0, p1, p2, car.u, lookTarget);
             lookTarget.add(pos);
         } else {
             pos.lerpVectors(car.edge.start, car.edge.end, car.u);
-            
             if (car.edge.vector) {
                 lookTarget.copy(pos).add(car.edge.vector);
             } else {
-                // Fallback if vector missing
                 lookTarget.copy(car.edge.end);
             }
         }
 
-        // Store old rotation
-        const oldQ = car.container.quaternion.clone();
-
         car.container.position.copy(pos);
         
-        // Convert lookTarget to World for lookAt, because container is in trafficGroup (child of City)
+        // Convert to world space for lookAt
         this.localToWorld(lookTarget); 
         car.container.lookAt(lookTarget);
-
-        // Rotation Smoothing / Glitch Rejection
-        // If angle change is > 45 degrees in one frame (impossible for car), reject it.
-        // This handles the "flip back and forth" issues near turn boundaries.
-        if (car.framesAlive > 5) {
-            const angle = oldQ.angleTo(car.container.quaternion);
-            if (angle > 0.8) { // ~45 degrees
-                car.container.quaternion.copy(oldQ);
-            }
-        }
     }
 
     getBezier(p0, p1, p2, t, target) {
-        // Quadratic Bezier: (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
         const mt = 1 - t;
         target.x = mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x;
         target.y = mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y;
         target.z = mt * mt * p0.z + 2 * mt * t * p1.z + t * t * p2.z;
     }
 
-    getBezierTangent(p0, p1, p2, t, target) {
-        // Derivative: 2(1-t)(P1-P0) + 2t(P2-P1)
+    getBezierVelocity(p0, p1, p2, t, target) {
+        // Unnormalized derivative for physics/speed calculation
         const mt = 1 - t;
         const term1 = p1.clone().sub(p0).multiplyScalar(2 * mt);
         const term2 = p2.clone().sub(p1).multiplyScalar(2 * t);
-        target.copy(term1).add(term2).normalize();
+        target.copy(term1).add(term2);
+    }
+
+    getBezierTangent(p0, p1, p2, t, target) {
+        this.getBezierVelocity(p0, p1, p2, t, target);
+        target.normalize();
     }
     
     updateCarsVisuals() {
