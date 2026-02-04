@@ -347,7 +347,8 @@ export default class CityTraffic extends THREE.Object3D {
             prevEdge: null,
             nextEdge: null,
             u,
-            speed: this.options.speed * (0.8 + Math.random() * 0.4) // Var speed
+            speed: this.options.speed * (0.8 + Math.random() * 0.4), // Var speed
+            framesAlive: 0
         };
 
         // Pre-calculate next edge
@@ -399,6 +400,7 @@ export default class CityTraffic extends THREE.Object3D {
             }
             
             this.updateCarPos(car);
+            car.framesAlive++;
         }
     }
 
@@ -425,11 +427,24 @@ export default class CityTraffic extends THREE.Object3D {
             }
         }
 
+        // Store old rotation
+        const oldQ = car.container.quaternion.clone();
+
         car.container.position.copy(pos);
         
         // Convert lookTarget to World for lookAt, because container is in trafficGroup (child of City)
         this.localToWorld(lookTarget); 
         car.container.lookAt(lookTarget);
+
+        // Rotation Smoothing / Glitch Rejection
+        // If angle change is > 45 degrees in one frame (impossible for car), reject it.
+        // This handles the "flip back and forth" issues near turn boundaries.
+        if (car.framesAlive > 5) {
+            const angle = oldQ.angleTo(car.container.quaternion);
+            if (angle > 0.8) { // ~45 degrees
+                car.container.quaternion.copy(oldQ);
+            }
+        }
     }
 
     getBezier(p0, p1, p2, t, target) {
