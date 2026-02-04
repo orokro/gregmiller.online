@@ -194,16 +194,31 @@ export default class CityTraffic extends THREE.Object3D {
 
         this.trafficGroup.add(container);
         
-        this.cars.push({
+        const car = {
             container,
             mesh,
             edge,
             edgeIndex: edge.index,
+            prevEdge: null,
+            nextEdge: null,
             u,
             speed: this.options.speed * (0.8 + Math.random() * 0.4) // Var speed
-        });
+        };
+
+        // Pre-calculate next edge
+        this.pickNextEdge(car);
         
-        this.updateCarPos(this.cars[this.cars.length-1]);
+        this.cars.push(car);
+        this.updateCarPos(car);
+    }
+
+    pickNextEdge(car) {
+        const endNode = this.nodes[car.edge.to];
+        if (endNode.out.length > 0 && endNode.type !== 'endpoint') {
+            car.nextEdge = endNode.out[Math.floor(Math.random() * endNode.out.length)];
+        } else {
+            car.nextEdge = null;
+        }
     }
 
     updateTraffic(dt) {
@@ -216,17 +231,20 @@ export default class CityTraffic extends THREE.Object3D {
             car.u += du;
 
             if (car.u >= 1.0) {
-                const endNode = this.nodes[car.edge.to];
-                
-                if (endNode.out.length === 0 || endNode.type === 'endpoint') {
+                // Move to next edge
+                if (car.nextEdge) {
+                    car.prevEdge = car.edge;
+                    car.edge = car.nextEdge;
+                    car.edgeIndex = car.edge.index;
+                    car.u = 0; // Reset to start of new edge
+                    
+                    // Pick the NEXT NEXT edge
+                    this.pickNextEdge(car);
+                } else {
+                    // Reached end of line
                     this.despawnCar(i);
                     this.spawnCar(false); 
                     continue;
-                } else {
-                    const nextEdge = endNode.out[Math.floor(Math.random() * endNode.out.length)];
-                    car.edge = nextEdge;
-                    car.edgeIndex = nextEdge.index;
-                    car.u = 0;
                 }
             }
             
@@ -235,12 +253,110 @@ export default class CityTraffic extends THREE.Object3D {
     }
 
     updateCarPos(car) {
-        const p = new THREE.Vector3().lerpVectors(car.edge.start, car.edge.end, car.u);
-        car.container.position.copy(p);
+        // Curve Settings
+        const turnRadius = 2.5; // Adjustable turn radius
         
-        const targetWorld = car.edge.end.clone();
-        car.container.parent.localToWorld(targetWorld);
-        car.container.lookAt(targetWorld);
+        const currentLen = car.edge.length;
+        const distOnEdge = car.u * currentLen;
+        const distRemain = currentLen - distOnEdge;
+
+        let pos = new THREE.Vector3();
+        let lookTarget = new THREE.Vector3();
+        let turning = false;
+
+        // 1. Turning OUT (Leaving Start Node)
+        // We need a previous edge to curve from
+        if (car.prevEdge && distOnEdge < turnRadius) {
+            const prevLen = car.prevEdge.length;
+            const limit = Math.min(turnRadius, currentLen / 2, prevLen / 2);
+
+            if (distOnEdge < limit) {
+                turning = true;
+                const P1 = car.edge.start; // Corner
+                
+                // P0: Back on previous edge
+                const P0 = P1.clone().sub(car.prevEdge.vector.clone().normalize().multiplyScalar(limit));
+                
+                // P2: Forward on current edge
+                const P2 = P1.clone().add(car.edge.vector.clone().normalize().multiplyScalar(limit));
+
+                // Normalize t to 0.5 -> 1.0 (Second half of curve)
+                const localT = distOnEdge / limit; // 0 to 1
+                const t = 0.5 + (localT * 0.5);
+
+                this.getBezier(P0, P1, P2, t, pos);
+                this.getBezierTangent(P0, P1, P2, t, lookTarget);
+                lookTarget.add(pos); // Convert direction to target point
+            }
+        }
+
+        // 2. Turning IN (Approaching End Node)
+        // We need a next edge to curve into
+        if (!turning && car.nextEdge && distRemain < turnRadius) {
+            const nextLen = car.nextEdge.length;
+            const limit = Math.min(turnRadius, currentLen / 2, nextLen / 2);
+
+            if (distRemain < limit) {
+                turning = true;
+                const P1 = car.edge.end; // Corner
+
+                // P0: Back on current edge
+                const P0 = P1.clone().sub(car.edge.vector.clone().normalize().multiplyScalar(limit));
+
+                // P2: Forward on next edge
+                const P2 = P1.clone().add(car.nextEdge.vector.clone().normalize().multiplyScalar(limit));
+
+                // Normalize t to 0.0 -> 0.5 (First half of curve)
+                const localT = (limit - distRemain) / limit; // 0 (at limit) to 1 (at corner)
+                const t = localT * 0.5;
+
+                this.getBezier(P0, P1, P2, t, pos);
+                this.getBezierTangent(P0, P1, P2, t, lookTarget);
+                lookTarget.add(pos);
+            }
+        }
+
+        // 3. Linear (Straight)
+        if (!turning) {
+            pos.lerpVectors(car.edge.start, car.edge.end, car.u);
+            
+            // Look ahead
+            lookTarget.copy(pos).add(car.edge.vector);
+        }
+
+        car.container.position.copy(pos);
+        
+        // Convert lookTarget to World for lookAt, because container is in trafficGroup (child of City)
+        // But container.lookAt expects World coordinates if we want to be safe, 
+        // OR local if we are looking at something in the same space.
+        // lookTarget is in CityTraffic local space (same as car.container).
+        // car.container.lookAt(x, y, z) works in parent's space if parent has no weird transforms?
+        // Wait, Three.js Object3D.lookAt(vector) assumes vector is in WORLD space.
+        
+        // We calculated 'pos' and 'lookTarget' in CityTraffic's local space.
+        // We need to convert lookTarget to World.
+        this.localToWorld(lookTarget); // This transforms lookTarget in place
+        
+        car.container.lookAt(lookTarget);
+        
+        // Restore lookTarget for next frame? No need, it's temp.
+        // But wait, 'this.localToWorld' relies on 'this' (CityTraffic) being in the scene.
+    }
+
+    getBezier(p0, p1, p2, t, target) {
+        // Quadratic Bezier: (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
+        const mt = 1 - t;
+        target.x = mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x;
+        target.y = mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y;
+        target.z = mt * mt * p0.z + 2 * mt * t * p1.z + t * t * p2.z;
+    }
+
+    getBezierTangent(p0, p1, p2, t, target) {
+        // Derivative: 2(1-t)(P1-P0) + 2t(P2-P1)
+        const mt = 1 - t;
+        const term1 = p1.clone().sub(p0).multiplyScalar(2 * mt);
+        const term2 = p2.clone().sub(p1).multiplyScalar(2 * t);
+        target.copy(term1).add(term2).normalize();
     }
     
     updateCarsVisuals() {
