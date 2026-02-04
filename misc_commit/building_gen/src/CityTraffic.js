@@ -53,92 +53,234 @@ export default class CityTraffic extends THREE.Object3D {
         const leftRoadX = -layout.left.roadCenter;
         const rightRoadX = layout.right.roadCenter;
         const roadWidth = layout.left.roadWidth; 
-        
         const laneOffset = roadWidth * 0.25;
+        
+        // Ensure turnRadius is large enough to prevent degenerate/inverted Bezier curves on inner turns
+        // If turnRadius <= laneOffset, P1 and P2 cross, causing a 180 flip.
+        let turnRadius = this.options.turnRadius || 2.5;
+        if (turnRadius <= laneOffset) {
+            turnRadius = laneOffset + 1.0;
+        }
 
+        // 1. Calculate Z Planes (Intersection Centers)
         const zPlanes = [];
         if (this.prisms.length > 0) {
             const p0 = this.prisms[0];
             zPlanes.push(p0.position.z - (p0.scale.z / 2) - (this.options.spacing / 2));
-            
             for (let i = 0; i < this.prisms.length; i++) {
                 const p = this.prisms[i];
                 zPlanes.push(p.position.z + (p.scale.z / 2) + (this.options.spacing / 2));
             }
         }
 
-        const newNodes = [];
-        const newEdges = [];
+        this.nodes = [];
+        this.edges = [];
 
-        const createNode = (x, z, type) => {
-            newNodes.push({ pos: new THREE.Vector3(x, layout.floorY, z), type, out: [] });
-            return newNodes.length - 1;
+        // Helper to add node
+        const addNode = (pos, type) => {
+            this.nodes.push({ pos: pos.clone(), type, out: [] });
+            return this.nodes.length - 1;
         };
 
-        const gridNodes = [];
-
-        for (let i = 0; i < zPlanes.length; i++) {
-            const z = zPlanes[i];
-            const leftIdx = createNode(leftRoadX, z, 'intersection');
-            const rightIdx = createNode(rightRoadX, z, 'intersection');
-            gridNodes.push([leftIdx, rightIdx]);
+        // Helper to add edge
+        const addEdge = (from, to, type = 'linear', controlPos = null) => {
+            const edge = {
+                index: this.edges.length,
+                from,
+                to,
+                type,
+                controlPos,
+                start: this.nodes[from].pos,
+                end: this.nodes[to].pos
+            };
             
-            const extDist = 20; 
-            const leftExtIdx = createNode(leftRoadX - extDist, z, 'endpoint');
-            const rightExtIdx = createNode(rightRoadX + extDist, z, 'endpoint');
-            
-            const isLeftToRight = (i % 2 === 0);
-            
-            if (isLeftToRight) {
-                newEdges.push({ from: leftExtIdx, to: leftIdx, lanes: [0] });
-                newEdges.push({ from: leftIdx, to: rightIdx, lanes: [0] });
-                newEdges.push({ from: rightIdx, to: rightExtIdx, lanes: [0] });
+            // Calc Length & Vector
+            if (type === 'bezier' && controlPos) {
+                const l1 = edge.start.distanceTo(controlPos);
+                const l2 = controlPos.distanceTo(edge.end);
+                edge.length = (l1 + l2) * 0.8; // Rough approx
             } else {
-                newEdges.push({ from: rightExtIdx, to: rightIdx, lanes: [0] });
-                newEdges.push({ from: rightIdx, to: leftIdx, lanes: [0] });
-                newEdges.push({ from: leftIdx, to: leftExtIdx, lanes: [0] });
+                edge.vector = edge.end.clone().sub(edge.start);
+                edge.length = edge.vector.length();
             }
+
+            this.nodes[from].out.push(edge);
+            this.edges.push(edge);
+            return edge;
+        };
+
+        // Storage for intersection "Ports"
+        // gridPorts[rowIndex][colIndex] = { N_In, N_Out, S_In, S_Out, E_In, E_Out, W_In, W_Out }
+        const gridPorts = []; 
+
+        // 2. Build Intersections & Ports
+        // Columns: 0 = Left Road, 1 = Right Road
+        const roadXs = [leftRoadX, rightRoadX];
+
+        for (let r = 0; r < zPlanes.length; r++) {
+            const z = zPlanes[r];
+            const rowPorts = [];
+            
+            // Side Road Direction: Even = Left->Right (Eastbound), Odd = Right->Left (Westbound)
+            const isEastbound = (r % 2 === 0);
+            const isFirstRow = (r === 0);
+            const isLastRow = (r === zPlanes.length - 1);
+
+            for (let c = 0; c < 2; c++) {
+                const x = roadXs[c];
+                const ports = {};
+
+                // Main Road (North/South) - Always Bi-directional
+                // North Port (Top of intersection)
+                ports.North_In = addNode(new THREE.Vector3(x - laneOffset, layout.floorY, z - turnRadius), 'port'); // Southbound In
+                ports.North_Out = addNode(new THREE.Vector3(x + laneOffset, layout.floorY, z - turnRadius), 'port'); // Northbound Out
+
+                // South Port (Bottom of intersection)
+                ports.South_In = addNode(new THREE.Vector3(x + laneOffset, layout.floorY, z + turnRadius), 'port'); // Northbound In
+                ports.South_Out = addNode(new THREE.Vector3(x - laneOffset, layout.floorY, z + turnRadius), 'port'); // Southbound Out
+
+                // Side Road (East/West) - Alternating
+                if (isEastbound) {
+                    // Traffic moves West -> East
+                    ports.West_In = addNode(new THREE.Vector3(x - turnRadius, layout.floorY, z), 'port');
+                    ports.East_Out = addNode(new THREE.Vector3(x + turnRadius, layout.floorY, z), 'port');
+                } else {
+                    // Traffic moves East -> West
+                    ports.East_In = addNode(new THREE.Vector3(x + turnRadius, layout.floorY, z), 'port');
+                    ports.West_Out = addNode(new THREE.Vector3(x - turnRadius, layout.floorY, z), 'port');
+                }
+                
+                // --- INTERNAL TURNS ---
+                // Connect In-Ports to Out-Ports
+                
+                // 1. Southbound Arrival (from North_In)
+                // - Can go Straight (to South_Out) IF NOT Last Row (Bottom)
+                if (!isLastRow) {
+                    addEdge(ports.North_In, ports.South_Out, 'linear');
+                }
+                // - Can turn?
+                if (isEastbound) {
+                    // Moving Left->Right. Can turn Left (East). 
+                    addEdge(ports.North_In, ports.East_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                } else {
+                    // Moving Right->Left. Can turn Right (West).
+                    addEdge(ports.North_In, ports.West_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                }
+
+                // 2. Northbound Arrival (from South_In)
+                // - Can go Straight (to North_Out) IF NOT First Row (Top)
+                if (!isFirstRow) {
+                    addEdge(ports.South_In, ports.North_Out, 'linear');
+                }
+                // - Can turn?
+                if (isEastbound) {
+                    // Moving Left->Right. Can turn Right (East).
+                    addEdge(ports.South_In, ports.East_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                } else {
+                    // Moving Right->Left. Can turn Left (West).
+                    addEdge(ports.South_In, ports.West_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                }
+
+                // 3. Side Road Arrival
+                if (isEastbound) {
+                    // Arriving at West_In.
+                    // Can turn Left (North) -> North_Out (Cross turn)
+                    // Only if not Top Row (would lead to dead end)
+                    if (!isFirstRow) {
+                        addEdge(ports.West_In, ports.North_Out, 'bezier', new THREE.Vector3(x, layout.floorY, z));
+                    }
+                    
+                    // Can turn Right (South) -> South_Out (Short turn)
+                    // Only if not Bottom Row
+                    if (!isLastRow) {
+                        addEdge(ports.West_In, ports.South_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                    }
+                    
+                    // Can go Straight? Only if internal road exists.
+                    addEdge(ports.West_In, ports.East_Out, 'linear');
+                } else {
+                    // Arriving at East_In.
+                    // Can turn Right (North) -> North_Out
+                    if (!isFirstRow) {
+                        addEdge(ports.East_In, ports.North_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                    }
+                    
+                    // Can turn Left (South) -> South_Out
+                    if (!isLastRow) {
+                        addEdge(ports.East_In, ports.South_Out, 'bezier', new THREE.Vector3(x, layout.floorY, z));
+                    }
+                    
+                    // Straight
+                    addEdge(ports.East_In, ports.West_Out, 'linear');
+                }
+
+                rowPorts.push(ports);
+            }
+            gridPorts.push(rowPorts);
         }
 
-        for (let i = 0; i < zPlanes.length - 1; i++) {
-            const rowTopZ = i;
-            const rowBtmZ = i + 1;
-            
-            const lTop = gridNodes[rowTopZ][0];
-            const lBtm = gridNodes[rowBtmZ][0];
-            const rTop = gridNodes[rowTopZ][1];
-            const rBtm = gridNodes[rowBtmZ][1];
-
-            newEdges.push({ from: lTop, to: lBtm, offset: -laneOffset }); // South
-            newEdges.push({ from: lBtm, to: lTop, offset: laneOffset }); // North
-
-            newEdges.push({ from: rTop, to: rBtm, offset: -laneOffset }); // South
-            newEdges.push({ from: rBtm, to: rTop, offset: laneOffset }); // North
-        }
-
-        this.nodes = newNodes;
-        this.edges = newEdges;
-
-        this.edges.forEach((edge, i) => {
-            edge.index = i;
-            const n1 = this.nodes[edge.from];
-            const n2 = this.nodes[edge.to];
-            
-            const p1 = n1.pos.clone();
-            const p2 = n2.pos.clone();
-            
-            if (edge.offset !== undefined) {
-                p1.x += edge.offset;
-                p2.x += edge.offset;
+        // 3. Build Road Segments (Connecting Intersections)
+        
+        // Vertical Roads (North/South)
+        // Connect Row R South_Out to Row R+1 North_In (Southbound)
+        // Connect Row R+1 North_Out to Row R South_In (Northbound)
+        for (let c = 0; c < 2; c++) {
+            for (let r = 0; r < gridPorts.length - 1; r++) {
+                const top = gridPorts[r][c];
+                const btm = gridPorts[r+1][c];
+                
+                // Southbound
+                addEdge(top.South_Out, btm.North_In, 'linear');
+                // Northbound
+                addEdge(btm.North_Out, top.South_In, 'linear');
             }
             
-            edge.vector = p2.clone().sub(p1);
-            edge.length = edge.vector.length();
-            edge.start = p1;
-            edge.end = p2;
-            
-            n1.out.push(edge);
-        });
+            // Extensions (Top/Bottom infinity) removed for closed loop effect
+            // Only internal side roads act as spawn points now? 
+            // The prompt says "The only in/out points should be on the end of SideRoads".
+            // So we do NOT add the Top/Bottom extensions.
+        }
+
+        // Horizontal Roads (East/West)
+        for (let r = 0; r < gridPorts.length; r++) {
+            const left = gridPorts[r][0]; // Left Intersection
+            const right = gridPorts[r][1]; // Right Intersection
+            const isEastbound = (r % 2 === 0);
+
+            if (isEastbound) {
+                // Left -> Right
+                // Connect Left East_Out to Right West_In
+                addEdge(left.East_Out, right.West_In, 'linear');
+                
+                // Extensions
+                if (left.West_In !== undefined) {
+                    const lStartPos = this.nodes[left.West_In].pos.clone().add(new THREE.Vector3(-30,0,0));
+                    const lStart = addNode(lStartPos, 'endpoint');
+                    addEdge(lStart, left.West_In, 'linear');
+                }
+                if (right.East_Out !== undefined) {
+                    const rEndPos = this.nodes[right.East_Out].pos.clone().add(new THREE.Vector3(30,0,0));
+                    const rEnd = addNode(rEndPos, 'endpoint');
+                    addEdge(right.East_Out, rEnd, 'linear');
+                }
+            } else {
+                // Right -> Left
+                // Connect Right West_Out to Left East_In
+                addEdge(right.West_Out, left.East_In, 'linear');
+                
+                // Extensions
+                if (right.East_In !== undefined) {
+                    const rStartPos = this.nodes[right.East_In].pos.clone().add(new THREE.Vector3(30,0,0));
+                    const rStart = addNode(rStartPos, 'endpoint');
+                    addEdge(rStart, right.East_In, 'linear');
+                }
+                if (left.West_Out !== undefined) {
+                    const lEndPos = this.nodes[left.West_Out].pos.clone().add(new THREE.Vector3(-30,0,0));
+                    const lEnd = addNode(lEndPos, 'endpoint');
+                    addEdge(left.West_Out, lEnd, 'linear');
+                }
+            }
+        }
         
         this.updateCarsVisuals();
     }
@@ -158,16 +300,18 @@ export default class CityTraffic extends THREE.Object3D {
         let u = 0;
 
         if (randomPos) {
-            edge = this.edges[Math.floor(Math.random() * this.edges.length)];
+            // Prefer linear road segments for random spawns, avoid intersections
+            const roadEdges = this.edges.filter(e => e.type === 'linear');
+            edge = roadEdges[Math.floor(Math.random() * roadEdges.length)];
             u = Math.random();
         } else {
+            // Find edges starting from 'endpoint' nodes
             const entryEdges = this.edges.filter(e => this.nodes[e.from].type === 'endpoint');
             if (entryEdges.length === 0) return;
             edge = entryEdges[Math.floor(Math.random() * entryEdges.length)];
             u = 0;
         }
 
-        // Pick Random Car from Library
         const availableCars = this.carAsset.scene.children;
         if (!availableCars || availableCars.length === 0) return;
         
@@ -215,15 +359,8 @@ export default class CityTraffic extends THREE.Object3D {
 
     pickNextEdge(car) {
         const endNode = this.nodes[car.edge.to];
-        
-        // 1. Disable U-Turns: Filter out edges that go back to where we just came from
-        let validEdges = endNode.out.filter(e => e.to !== car.edge.from);
-        
-        // 2. Fallback: If no other choice (dead end), allow anything to keep cars moving
-        if (validEdges.length === 0) validEdges = endNode.out;
-
-        if (validEdges.length > 0 && endNode.type !== 'endpoint') {
-            car.nextEdge = validEdges[Math.floor(Math.random() * validEdges.length)];
+        if (endNode.out.length > 0) {
+            car.nextEdge = endNode.out[Math.floor(Math.random() * endNode.out.length)];
         } else {
             car.nextEdge = null;
         }
@@ -266,75 +403,26 @@ export default class CityTraffic extends THREE.Object3D {
     }
 
     updateCarPos(car) {
-        // Curve Settings
-        const turnRadius = this.options.turnRadius;
-        
-        const currentLen = car.edge.length;
-        const distOnEdge = car.u * currentLen;
-        const distRemain = currentLen - distOnEdge;
-
         let pos = new THREE.Vector3();
         let lookTarget = new THREE.Vector3();
-        let turning = false;
 
-        // 1. Turning OUT (Leaving Start Node)
-        // We need a previous edge to curve from
-        if (car.prevEdge && distOnEdge < turnRadius) {
-            const prevLen = car.prevEdge.length;
-            const limit = Math.min(turnRadius, currentLen / 2, prevLen / 2);
-
-            if (distOnEdge < limit) {
-                turning = true;
-                const P1 = car.edge.start; // Corner
-                
-                // P0: Back on previous edge
-                const P0 = P1.clone().sub(car.prevEdge.vector.clone().normalize().multiplyScalar(limit));
-                
-                // P2: Forward on current edge
-                const P2 = P1.clone().add(car.edge.vector.clone().normalize().multiplyScalar(limit));
-
-                // Normalize t to 0.5 -> 1.0 (Second half of curve)
-                const localT = distOnEdge / limit; // 0 to 1
-                const t = 0.5 + (localT * 0.5);
-
-                this.getBezier(P0, P1, P2, t, pos);
-                this.getBezierTangent(P0, P1, P2, t, lookTarget);
-                lookTarget.add(pos); // Convert direction to target point
-            }
-        }
-
-        // 2. Turning IN (Approaching End Node)
-        // We need a next edge to curve into
-        if (!turning && car.nextEdge && distRemain < turnRadius) {
-            const nextLen = car.nextEdge.length;
-            const limit = Math.min(turnRadius, currentLen / 2, nextLen / 2);
-
-            if (distRemain < limit) {
-                turning = true;
-                const P1 = car.edge.end; // Corner
-
-                // P0: Back on current edge
-                const P0 = P1.clone().sub(car.edge.vector.clone().normalize().multiplyScalar(limit));
-
-                // P2: Forward on next edge
-                const P2 = P1.clone().add(car.nextEdge.vector.clone().normalize().multiplyScalar(limit));
-
-                // Normalize t to 0.0 -> 0.5 (First half of curve)
-                const localT = (limit - distRemain) / limit; // 0 (at limit) to 1 (at corner)
-                const t = localT * 0.5;
-
-                this.getBezier(P0, P1, P2, t, pos);
-                this.getBezierTangent(P0, P1, P2, t, lookTarget);
-                lookTarget.add(pos);
-            }
-        }
-
-        // 3. Linear (Straight)
-        if (!turning) {
+        if (car.edge.type === 'bezier' && car.edge.controlPos) {
+            const p0 = car.edge.start;
+            const p1 = car.edge.controlPos;
+            const p2 = car.edge.end;
+            
+            this.getBezier(p0, p1, p2, car.u, pos);
+            this.getBezierTangent(p0, p1, p2, car.u, lookTarget);
+            lookTarget.add(pos);
+        } else {
             pos.lerpVectors(car.edge.start, car.edge.end, car.u);
             
-            // Look ahead
-            lookTarget.copy(pos).add(car.edge.vector);
+            if (car.edge.vector) {
+                lookTarget.copy(pos).add(car.edge.vector);
+            } else {
+                // Fallback if vector missing
+                lookTarget.copy(car.edge.end);
+            }
         }
 
         car.container.position.copy(pos);
