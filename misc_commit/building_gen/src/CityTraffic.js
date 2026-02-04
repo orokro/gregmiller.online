@@ -15,6 +15,7 @@ export default class CityTraffic extends THREE.Object3D {
             carSize: 2.0,
             speed: 5.0,
             spacing: 5.0, // Side road spacing default
+            turnRadius: 2.0,
             ...options
         };
 
@@ -214,8 +215,15 @@ export default class CityTraffic extends THREE.Object3D {
 
     pickNextEdge(car) {
         const endNode = this.nodes[car.edge.to];
-        if (endNode.out.length > 0 && endNode.type !== 'endpoint') {
-            car.nextEdge = endNode.out[Math.floor(Math.random() * endNode.out.length)];
+        
+        // 1. Disable U-Turns: Filter out edges that go back to where we just came from
+        let validEdges = endNode.out.filter(e => e.to !== car.edge.from);
+        
+        // 2. Fallback: If no other choice (dead end), allow anything to keep cars moving
+        if (validEdges.length === 0) validEdges = endNode.out;
+
+        if (validEdges.length > 0 && endNode.type !== 'endpoint') {
+            car.nextEdge = validEdges[Math.floor(Math.random() * validEdges.length)];
         } else {
             car.nextEdge = null;
         }
@@ -231,12 +239,17 @@ export default class CityTraffic extends THREE.Object3D {
             car.u += du;
 
             if (car.u >= 1.0) {
-                // Move to next edge
+                // Carry over overflow distance to the next edge to prevent teleportation/hiccups
+                const oldLen = car.edge.length;
+                const overflowDist = (car.u - 1.0) * oldLen;
+
                 if (car.nextEdge) {
                     car.prevEdge = car.edge;
                     car.edge = car.nextEdge;
                     car.edgeIndex = car.edge.index;
-                    car.u = 0; // Reset to start of new edge
+                    
+                    // Convert overflow distance to new 'u' coordinate
+                    car.u = overflowDist / car.edge.length;
                     
                     // Pick the NEXT NEXT edge
                     this.pickNextEdge(car);
@@ -254,7 +267,7 @@ export default class CityTraffic extends THREE.Object3D {
 
     updateCarPos(car) {
         // Curve Settings
-        const turnRadius = 2.5; // Adjustable turn radius
+        const turnRadius = this.options.turnRadius;
         
         const currentLen = car.edge.length;
         const distOnEdge = car.u * currentLen;
@@ -327,20 +340,8 @@ export default class CityTraffic extends THREE.Object3D {
         car.container.position.copy(pos);
         
         // Convert lookTarget to World for lookAt, because container is in trafficGroup (child of City)
-        // But container.lookAt expects World coordinates if we want to be safe, 
-        // OR local if we are looking at something in the same space.
-        // lookTarget is in CityTraffic local space (same as car.container).
-        // car.container.lookAt(x, y, z) works in parent's space if parent has no weird transforms?
-        // Wait, Three.js Object3D.lookAt(vector) assumes vector is in WORLD space.
-        
-        // We calculated 'pos' and 'lookTarget' in CityTraffic's local space.
-        // We need to convert lookTarget to World.
-        this.localToWorld(lookTarget); // This transforms lookTarget in place
-        
+        this.localToWorld(lookTarget); 
         car.container.lookAt(lookTarget);
-        
-        // Restore lookTarget for next frame? No need, it's temp.
-        // But wait, 'this.localToWorld' relies on 'this' (CityTraffic) being in the scene.
     }
 
     getBezier(p0, p1, p2, t, target) {
