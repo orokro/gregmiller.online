@@ -22,20 +22,79 @@ export default class CityGrid extends THREE.Object3D {
         this.blockRows = [];
         this.sideRoads = [];
         this.capBlocks = [];
-        this.spacing = 5.0; // Default, should be set externally if different
-        this.init();
+        this.blockRowMap = new Map(); // prism -> BlockRow
+        this.spacing = 5.0; 
+        
+        // Initial build
+        this.setPrisms(prisms);
     }
 
     init() {
-        // We need (prisms.length + 1) side roads
-        // Road 0 (Top), Prism 0, Road 1, Prism 1, ... Road N (Bottom)
+        // Legacy init removed, logic moved to setPrisms
+    }
 
-        // Create Side Roads
-        for (let i = 0; i <= this.prisms.length; i++) {
-            // Use the nearest prism as reference. 
-            // For i < length, use prism[i]. For last one, use prism[length-1].
-            const refPrism = (i < this.prisms.length) ? this.prisms[i] : this.prisms[this.prisms.length - 1];
+    setPrisms(newPrisms) {
+        this.prisms = newPrisms;
+        
+        const newBlockRows = [];
+        const keptPrisms = new Set(newPrisms);
+
+        // 1. Sync BlockRows
+        newPrisms.forEach((prism, index) => {
+            let blockRow = this.blockRowMap.get(prism);
             
+            if (!blockRow) {
+                // Create New
+                const rowSeed = this.seed + "_row_" + index + "_" + Math.random(); // Unique seed for new entries? 
+                // Or deterministic based on something? 
+                // If we want deterministic "nth prism" but they move, it's tricky. 
+                // Let's use index if we assume append? 
+                // If we insert in middle, index changes.
+                // ideally seed is derived from prism if prism has ID. 
+                // For now, use index or random.
+                
+                blockRow = new BlockRow(
+                    prism,
+                    this.floorPlane,
+                    this.unitsPerBuilding,
+                    this.mtlRoad,
+                    this.streetLightAsset,
+                    this.seed + "_row_" + index, // Use index-based seed for stability of "slot"
+                    this.buildingModel,
+                    this.rowConfig,
+                    this.buildingConfig
+                );
+                this.add(blockRow);
+                this.blockRowMap.set(prism, blockRow);
+            } else {
+                // Update Index/Seed? No, keep existing state.
+                // Just ensure it's in the scene
+                if (blockRow.parent !== this) this.add(blockRow);
+            }
+            newBlockRows.push(blockRow);
+            
+            // Sync Position
+            blockRow.position.z = prism.position.z;
+        });
+
+        // 2. Remove Unused
+        this.blockRowMap.forEach((row, prism) => {
+            if (!keptPrisms.has(prism)) {
+                this.remove(row);
+                this.blockRowMap.delete(prism);
+            }
+        });
+
+        this.blockRows = newBlockRows;
+
+        // 3. Recreate Side Roads (Cheap, gap dependent)
+        this.sideRoads.forEach(sr => this.remove(sr));
+        this.sideRoads = [];
+
+        for (let i = 0; i <= this.prisms.length; i++) {
+            const refPrism = (i < this.prisms.length) ? this.prisms[i] : this.prisms[this.prisms.length - 1];
+            if (!refPrism) continue; // No prisms case
+
             const sideRoad = new SideRoad(
                 this.floorPlane,
                 refPrism,
@@ -50,29 +109,11 @@ export default class CityGrid extends THREE.Object3D {
             this.sideRoads.push(sideRoad);
         }
 
-        this.prisms.forEach((prism, index) => {
-            const rowSeed = this.seed + "_row_" + index;
-            const blockRow = new BlockRow(
-                prism,
-                this.floorPlane,
-                this.unitsPerBuilding,
-                this.mtlRoad,
-                this.streetLightAsset,
-                rowSeed,
-                this.buildingModel,
-                this.rowConfig,
-                this.buildingConfig
-            );
-            this.add(blockRow);
-            this.blockRows.push(blockRow);
-            
-            // Sync Position
-            blockRow.position.z = prism.position.z;
-        });
-        
-        // Create Cap Blocks
+        // 4. Recreate Cap Blocks
+        this.capBlocks.forEach(cb => this.remove(cb));
+        this.capBlocks = [];
+
         if (this.prisms.length > 0) {
-            // Top Cap (Use first prism as neighbor)
             const topCap = new CapBlock(
                 this.floorPlane,
                 this.prisms[0],
@@ -81,12 +122,11 @@ export default class CityGrid extends THREE.Object3D {
                 this.buildingModel,
                 this.seed + "_cap_top",
                 this.buildingConfig,
-                this.rowConfig // Passing rowConfig as capConfig for now to share maxEdgeScale etc
+                this.rowConfig
             );
             this.add(topCap);
             this.capBlocks.push(topCap);
 
-            // Bottom Cap (Use last prism as neighbor)
             const bottomCap = new CapBlock(
                 this.floorPlane,
                 this.prisms[this.prisms.length - 1],
@@ -103,6 +143,9 @@ export default class CityGrid extends THREE.Object3D {
 
         this.updateSideRoadPositions();
         this.updateCapBlockPositions();
+        
+        // Force update on new layout
+        this.update();
     }
 
     setUnitsPerBuilding(val) {

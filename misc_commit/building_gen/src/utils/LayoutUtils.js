@@ -6,16 +6,47 @@ export function computeBlockRowLayout(
     unitsPerBuilding, 
     settings
 ) {
-    const box = new THREE.Box3().setFromObject(targetFitObject);
-    const prismSize = new THREE.Vector3();
-    box.getSize(prismSize);
+    // Measure target (Prism) in Local Space assuming unit box geometry
+    const prismX = targetFitObject.scale.x;
+    const prismY = targetFitObject.scale.y;
+    const prismZ = targetFitObject.scale.z;
 
-    const floorBox = new THREE.Box3().setFromObject(targetFloorObject);
-    const floorSize = new THREE.Vector3();
-    floorBox.getSize(floorSize);
+    // Measure Floor in Local Space
+    // Assuming floor is plane (x, y scale = dimensions) or box
+    const floorW = targetFloorObject.scale.x;
+    const floorH = targetFloorObject.scale.y; // Plane geometry is X/Y, rotated -90 X means Y is Z.
+    // Wait, BlockRow assumes floor is passed in.
+    // If it's a plane geometry (1x1), scale.x is width, scale.y is height.
+    // But BlockRow usually gets a floor where Z is length?
+    // Let's rely on Box3 for floor if it's world aligned, but for Prism inside rotated City, we must use scale.
+    // Actually, LayoutUtils takes objects. If they are in the same space, relative measures are fine.
+    // But 'box.min.x' is world.
+    
+    // We need 'leftSpace' and 'rightSpace'.
+    // Distance from Prism Center X to Floor Min X and Floor Max X.
+    
+    // Use local positions relative to parent (City)?
+    // Assuming targetFitObject and targetFloorObject are siblings (children of City).
+    const prismPos = targetFitObject.position;
+    const floorPos = targetFloorObject.position;
 
-    const prismX = prismSize.x;
-    const prismZ = prismSize.z;
+    const floorMinX = floorPos.x - floorW / 2;
+    const floorMaxX = floorPos.x + floorW / 2;
+    const BCP_X = prismPos.x;
+
+    const leftSpace = BCP_X - floorMinX;
+    const rightSpace = floorMaxX - BCP_X;
+
+    const availableLeft = leftSpace - (prismX / 2);
+    const availableRight = rightSpace - (prismX / 2);
+
+    // Floor Y (Level)
+    // Prism is sitting on floor?
+    // Prism Y position is center. Floor Y is surface?
+    // In BlockRow, "centerUnit.position.y = box.min.y".
+    // box.min.y is world.
+    // Local min y = prismPos.y - prismY / 2.
+    const floorY = prismPos.y - prismY / 2;
 
     // 1. Calculate Scene Scale & Base Dimensions
     const buildingCount = Math.max(1, Math.round(prismZ / unitsPerBuilding));
@@ -23,17 +54,6 @@ export function computeBlockRowLayout(
     const sceneScale = prismZ / baseLength;
     const unitLength = baseLength;
     const unitWidth = prismX / sceneScale;
-
-    // 2. Measure Spaces
-    const BCP_X = (box.min.x + box.max.x) / 2;
-    const floorMinX = floorBox.min.x;
-    const floorMaxX = floorBox.max.x;
-
-    const leftSpace = BCP_X - floorMinX;
-    const rightSpace = floorMaxX - BCP_X;
-
-    const availableLeft = leftSpace - (prismX / 2);
-    const availableRight = rightSpace - (prismX / 2);
 
     // 3. Base Widths (World Units)
     const blockBaseWidth = (3.28 * sceneScale);
@@ -112,7 +132,7 @@ export function computeBlockRowLayout(
         unitWidth,
         prismX,
         prismZ,
-        floorY: box.min.y,
+        floorY: floorY,
         left: calculateSide(-1),
         right: calculateSide(1)
     };

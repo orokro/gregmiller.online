@@ -117,7 +117,7 @@ async function loadAssets() {
     scene.environment = texture;
 
     const gltfLoader = new GLTFLoader();
-    glbAsset = await gltfLoader.loadAsync('City_v001.glb');
+    glbAsset = await gltfLoader.loadAsync('models/City_v001.glb');
 }
 
 function regenerate() {

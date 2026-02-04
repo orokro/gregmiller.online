@@ -115,7 +115,7 @@ async function loadAssets() {
 
     // Load GLB
     const gltfLoader = new GLTFLoader();
-    glbAsset = await gltfLoader.loadAsync('City_v001.glb');
+    glbAsset = await gltfLoader.loadAsync('models/City_v001.glb');
 }
 
 function regenerate() {

@@ -32,6 +32,7 @@ const defaultRowSettings = {
 // State
 let scene, camera, renderer, controls;
 let glbAsset = null;
+let streetLightAsset = null;
 let currentBlockRow = null;
 let roadMaterial = null;
 
@@ -183,7 +184,8 @@ async function loadAssets() {
     scene.environment = texture;
 
     const gltfLoader = new GLTFLoader();
-    glbAsset = await gltfLoader.loadAsync('City_v001.glb');
+    glbAsset = await gltfLoader.loadAsync('models/City_v001.glb');
+    streetLightAsset = await gltfLoader.loadAsync('models/Street_Light.glb');
 }
 
 function regenerate() {
@@ -213,6 +215,7 @@ function regenerate() {
         targetFloor,
         upb,
         roadMaterial,
+        streetLightAsset, // Added
         seed,
         glbAsset,
         rowSettings,
