@@ -4,18 +4,20 @@ import BlockUnit from './BlockUnit.js';
 import { computeBlockRowLayout } from './utils/LayoutUtils.js';
 
 export default class BlockRow extends THREE.Object3D {
-    constructor(targetFitObject, targetFloorObject, unitsPerBuilding, roadMaterial, seed, cityModel, settings = {}, buildingSettings = {}) {
+    constructor(targetFitObject, targetFloorObject, unitsPerBuilding, roadMaterial, streetLightAsset, seed, cityModel, settings = {}, buildingSettings = {}) {
         super();
         this.targetFitObject = targetFitObject;
         this.targetFloorObject = targetFloorObject;
         this.unitsPerBuilding = unitsPerBuilding;
         this.roadMaterial = roadMaterial;
+        this.streetLightAsset = streetLightAsset;
         this.seed = seed.toString();
         this.cityModel = cityModel;
         this.settings = {
             roadMinWidth: 1.0,
             roadMaxWidth: 1.5,
             maxEdgeScale: 1.5,
+            street_light_spacing: 5.0,
             ...settings
         };
         this.buildingSettings = buildingSettings;
@@ -24,6 +26,8 @@ export default class BlockRow extends THREE.Object3D {
         this.centerUnit = null;
         this.roads = []; // { mesh, side }
         this.edgeItems = []; // { object, side, isUnit }
+        this.streetLights = new THREE.Group();
+        this.add(this.streetLights);
 
         this.sceneScale = 1.0;
         this.unitLength = 0;
@@ -122,6 +126,55 @@ export default class BlockRow extends THREE.Object3D {
 
         updateSide(-1, layout.left);
         updateSide(1, layout.right);
+
+        this.updateStreetLights(layout);
+    }
+
+    updateStreetLights(layout) {
+        // Clean up
+        while(this.streetLights.children.length > 0) {
+            this.streetLights.remove(this.streetLights.children[0]);
+        }
+
+        if (!this.streetLightAsset) return;
+
+        const spacing = this.settings.street_light_spacing;
+        const halfPrismZ = layout.prismZ / 2;
+
+        const spawnLightsForRoad = (side, data) => {
+            const roadWidth = data.roadWidth;
+            const roadCenter = side * data.roadCenter;
+            
+            // We want to space along Z from -halfPrismZ to +halfPrismZ
+            const count = Math.floor(layout.prismZ / spacing);
+            const startZ = -halfPrismZ + (layout.prismZ % spacing) / 2;
+
+            for (let i = 0; i <= count; i++) {
+                const z = startZ + i * spacing;
+                const light = this.streetLightAsset.scene.clone();
+                
+                // Alternate sides of the street
+                const onRightOfStreet = (i % 2 === 0);
+                const xOffset = (roadWidth / 2) * (onRightOfStreet ? 1 : -1);
+                
+                light.position.set(roadCenter + xOffset, layout.floorY, z);
+                
+                // Left side of street: 0, Right side of street: 180
+                // Note: "Left side" relative to street direction. 
+                // If we're at roadCenter, xOffset negative is left, positive is right.
+                if (onRightOfStreet) {
+                    light.rotation.y = Math.PI;
+                } else {
+                    light.rotation.y = 0;
+                }
+
+                light.scale.set(this.sceneScale, this.sceneScale, this.sceneScale);
+                this.streetLights.add(light);
+            }
+        };
+
+        spawnLightsForRoad(-1, layout.left);
+        spawnLightsForRoad(1, layout.right);
     }
 
     updateEdgeObject(side, isUnit, width, length, y, centerX) {

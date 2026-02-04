@@ -26,12 +26,15 @@ const defaultRowSettings = {
     roadMinWidth: 1.0,
     roadMaxWidth: 1.5,
     maxEdgeScale: 1.5,
-    unitsPerBuilding: 2.5
+    unitsPerBuilding: 2.5,
+    street_light_spacing: 5.0
 };
 
 // State
 let scene, camera, renderer, controls;
 let glbAsset = null;
+let signalAsset = null;
+let streetLightAsset = null;
 let currentCityGrid = null;
 let roadMaterial = null;
 let roadIntersectionMaterial = null;
@@ -48,7 +51,9 @@ async function loadAssets() {
     scene.environment = texture;
 
     const gltfLoader = new GLTFLoader();
-    glbAsset = await gltfLoader.loadAsync('City_v001.glb');
+    glbAsset = await gltfLoader.loadAsync('models/City_v001.glb');
+    signalAsset = await gltfLoader.loadAsync('models/Signal.glb');
+    streetLightAsset = await gltfLoader.loadAsync('models/Street_Light.glb');
 }
 
 async function init() {
@@ -67,6 +72,7 @@ async function init() {
     const prismsCSVInput = document.getElementById('prisms');
     const prismSpacingInput = document.getElementById('prismSpacing');
     const maxCapScaleInput = document.getElementById('maxCapScale');
+    const lightSpacingInput = document.getElementById('lightSpacing');
     
     const upbInput = document.getElementById('unitsPerBuilding');
     const rowSettingsInput = document.getElementById('rowSettingsJson');
@@ -87,6 +93,7 @@ async function init() {
     if (localStorage.getItem('cg_prisms')) prismsCSVInput.value = localStorage.getItem('cg_prisms');
     if (localStorage.getItem('cg_prismSpacing')) prismSpacingInput.value = localStorage.getItem('cg_prismSpacing');
     if (localStorage.getItem('cg_maxCapScale')) maxCapScaleInput.value = localStorage.getItem('cg_maxCapScale');
+    if (localStorage.getItem('cg_lightSpacing')) lightSpacingInput.value = localStorage.getItem('cg_lightSpacing');
     
     if (localStorage.getItem('cg_upb')) upbInput.value = localStorage.getItem('cg_upb');
     
@@ -220,6 +227,14 @@ async function init() {
         }
     }, 0.1);
 
+    setupDraggable(lightSpacingInput, (v) => {
+        localStorage.setItem('cg_lightSpacing', v);
+        if (currentCityGrid) {
+            currentCityGrid.rowConfig.street_light_spacing = v;
+            currentCityGrid.update();
+        }
+    }, 0.1);
+
     setupDraggable(upbInput, (v) => {
         localStorage.setItem('cg_upb', v);
         if (currentCityGrid) currentCityGrid.setUnitsPerBuilding(v);
@@ -246,6 +261,7 @@ async function init() {
         const prismsCSV = document.getElementById('prisms').value;
         const spacing = parseFloat(document.getElementById('prismSpacing').value) || 5;
         const maxCapScale = parseFloat(document.getElementById('maxCapScale').value) || 1.5;
+        const lightSpacing = parseFloat(document.getElementById('lightSpacing').value) || 5.0;
     
         // Save
         localStorage.setItem('cg_seed', seed);
@@ -255,6 +271,7 @@ async function init() {
         localStorage.setItem('cg_prisms', prismsCSV);
         localStorage.setItem('cg_prismSpacing', spacing);
         localStorage.setItem('cg_maxCapScale', maxCapScale);
+        localStorage.setItem('cg_lightSpacing', lightSpacing);
     
         // Create Prisms
         const zSizes = prismsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
@@ -281,8 +298,9 @@ async function init() {
             rowSettings = defaultRowSettings;
         }
 
-        // Merge Cap Max Scale
+        // Merge Cap Max Scale & Light Spacing
         rowSettings.maxCapScale = maxCapScale;
+        rowSettings.street_light_spacing = lightSpacing;
     
         let buildingSettings;
         try {
@@ -295,6 +313,8 @@ async function init() {
         currentCityGrid = new CityGrid(
             seed,
             glbAsset,
+            signalAsset,
+            streetLightAsset,
             roadMaterial,
             roadIntersectionMaterial,
             roadSideMaterial,

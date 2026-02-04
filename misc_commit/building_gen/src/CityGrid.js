@@ -4,10 +4,12 @@ import SideRoad from './SideRoad.js';
 import CapBlock from './CapBlock.js';
 
 export default class CityGrid extends THREE.Object3D {
-    constructor(seed, buildingModel, mtlRoad, mtlRoadIntersection, mtlRoadSide, floorPlane, prisms, unitsPerBuilding, rowConfig, buildingConfig) {
+    constructor(seed, buildingModel, signalAsset, streetLightAsset, mtlRoad, mtlRoadIntersection, mtlRoadSide, floorPlane, prisms, unitsPerBuilding, rowConfig, buildingConfig) {
         super();
         this.seed = seed.toString();
         this.buildingModel = buildingModel;
+        this.signalAsset = signalAsset;
+        this.streetLightAsset = streetLightAsset;
         this.mtlRoad = mtlRoad;
         this.mtlRoadIntersection = mtlRoadIntersection;
         this.mtlRoadSide = mtlRoadSide;
@@ -40,6 +42,8 @@ export default class CityGrid extends THREE.Object3D {
                 this.mtlRoadIntersection,
                 this.mtlRoadSide,
                 this.unitsPerBuilding,
+                this.signalAsset,
+                this.streetLightAsset,
                 this.rowConfig
             );
             this.add(sideRoad);
@@ -53,6 +57,7 @@ export default class CityGrid extends THREE.Object3D {
                 this.floorPlane,
                 this.unitsPerBuilding,
                 this.mtlRoad,
+                this.streetLightAsset,
                 rowSeed,
                 this.buildingModel,
                 this.rowConfig,
