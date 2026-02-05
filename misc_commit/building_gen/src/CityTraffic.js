@@ -34,6 +34,27 @@ export default class CityTraffic extends THREE.Object3D {
         this.spawnInitialCars();
     }
 
+    dumpGraph() {
+        console.log("--- CITY TRAFFIC GRAPH DUMP ---");
+        console.log("Nodes:");
+        this.nodes.forEach((n, i) => {
+            console.log(`Node ${i}: type=${n.type}, pos=(${n.pos.x.toFixed(2)}, ${n.pos.y.toFixed(2)}, ${n.pos.z.toFixed(2)})`);
+        });
+        console.log("Edges:");
+        this.edges.forEach((e, i) => {
+            const from = e.from;
+            const to = e.to;
+            const type = e.type;
+            const len = e.length.toFixed(2);
+            let info = `Edge ${i}: from=${from}, to=${to}, type=${type}, len=${len}`;
+            if (type === 'bezier') {
+                info += `, ctrl=(${e.controlPos.x.toFixed(2)}, ${e.controlPos.y.toFixed(2)}, ${e.controlPos.z.toFixed(2)})`;
+            }
+            console.log(info);
+        });
+        console.log("--- END GRAPH DUMP ---");
+    }
+
     setPrisms(prisms) {
         this.prisms = prisms;
         this.rebuildGraph();
@@ -360,6 +381,8 @@ export default class CityTraffic extends THREE.Object3D {
         // Pre-calculate next edge
         this.pickNextEdge(car);
         
+        console.log(`Spawned car on Edge ${car.edge.index} (u=${car.u.toFixed(2)}). From Node ${car.edge.from} to Node ${car.edge.to}`);
+
         this.cars.push(car);
         this.updateCarPos(car);
     }
@@ -403,8 +426,12 @@ export default class CityTraffic extends THREE.Object3D {
                     car.edge = car.nextEdge;
                     car.edgeIndex = car.edge.index;
                     car.u = overflowDist / car.edge.length;
+                    
+                    console.log(`Car switched to Edge ${car.edge.index} (from ${car.prevEdge.index}). Node: ${car.prevEdge.to}. Type: ${car.edge.type}`);
+                    
                     this.pickNextEdge(car);
                 } else {
+                    console.log(`Car reached end of graph at Node ${car.edge.to}. Despawning.`);
                     this.despawnCar(i);
                     this.spawnCar(false); 
                     continue;
@@ -436,11 +463,24 @@ export default class CityTraffic extends THREE.Object3D {
             }
         }
 
+        const oldRotation = car.container.quaternion.clone();
+
         car.container.position.copy(pos);
         
         // Convert to world space for lookAt
-        this.localToWorld(lookTarget); 
-        car.container.lookAt(lookTarget);
+        const worldLookTarget = lookTarget.clone();
+        this.localToWorld(worldLookTarget); 
+        car.container.lookAt(worldLookTarget);
+
+        // Hiccup detector
+        const newRotation = car.container.quaternion;
+        const angle = oldRotation.angleTo(newRotation);
+        if (angle > (100 * Math.PI / 180)) {
+            console.log("!!! ERROR TRIGGER NOTICED !!!");
+            console.log(`Large rotation detected: ${(angle * 180 / Math.PI).toFixed(2)} degrees`);
+            console.log(`Car is on Edge ${car.edgeIndex} (u=${car.u.toFixed(3)}). Type: ${car.edge.type}`);
+            console.log(`From Node ${car.edge.from} to Node ${car.edge.to}`);
+        }
     }
 
     getBezier(p0, p1, p2, t, target) {

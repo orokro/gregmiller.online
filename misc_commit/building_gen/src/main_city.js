@@ -342,9 +342,12 @@ async function init() {
         );
         
         currentCity.cityGrid.setPrismSpacing(spacing);
-        currentCity.cityTraffic.options.maxCars = maxCars;
+        currentCity.cityTraffic.options.maxCars = 1; // Force 1 car for debugging
         currentCity.cityTraffic.options.carSize = carSize;
         currentCity.cityTraffic.spawnInitialCars();
+        
+        currentCity.cityTraffic.dumpGraph();
+        console.log("Single car spawned for debugging.");
         
         scene.add(currentCity);
     }
