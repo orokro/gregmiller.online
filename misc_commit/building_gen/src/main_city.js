@@ -77,7 +77,10 @@ async function init() {
     
     const maxCarsInput = document.getElementById('maxCars');
     const carSizeInput = document.getElementById('carSize');
+    const collisionDistInput = document.getElementById('collisionDistance');
+    const stopDurInput = document.getElementById('stopDuration');
     const showTrafficLogsInput = document.getElementById('showTrafficLogs');
+    const showCollidersInput = document.getElementById('showColliders');
     
     const upbInput = document.getElementById('unitsPerBuilding');
     const rowSettingsInput = document.getElementById('rowSettingsJson');
@@ -104,7 +107,10 @@ async function init() {
     
     if (getVal('maxCars')) maxCarsInput.value = getVal('maxCars');
     if (getVal('carSize')) carSizeInput.value = getVal('carSize');
+    if (getVal('collisionDistance')) collisionDistInput.value = getVal('collisionDistance');
+    if (getVal('stopDuration')) stopDurInput.value = getVal('stopDuration');
     if (getVal('showTrafficLogs')) showTrafficLogsInput.checked = getVal('showTrafficLogs') === 'true';
+    if (getVal('showColliders')) showCollidersInput.checked = getVal('showColliders') === 'true';
     
     if (getVal('upb')) upbInput.value = getVal('upb');
     
@@ -249,11 +255,36 @@ async function init() {
         }
     }, 0.1);
 
+    setupDraggable(collisionDistInput, (v) => {
+        setVal('collisionDistance', v);
+        if (currentCity) {
+            currentCity.cityTraffic.options.collisionDistance = v;
+        }
+    }, 0.1);
+
+    setupDraggable(stopDurInput, (v) => {
+        setVal('stopDuration', v);
+        if (currentCity) {
+            currentCity.cityTraffic.options.stopDuration = v;
+        }
+    }, 0.1);
+
     showTrafficLogsInput.addEventListener('change', (e) => {
         const val = e.target.checked;
         setVal('showTrafficLogs', val);
         if (currentCity) {
             currentCity.cityTraffic.options.loggingEnabled = val;
+        }
+    });
+
+    showCollidersInput.addEventListener('change', (e) => {
+        const val = e.target.checked;
+        setVal('showColliders', val);
+        if (currentCity) {
+            currentCity.cityTraffic.options.showColliders = val;
+            currentCity.cityTraffic.cars.forEach(c => {
+                if(c.sensor) c.sensor.material.visible = val;
+            });
         }
     });
 
@@ -289,6 +320,8 @@ async function init() {
         const lightSpacing = parseFloat(document.getElementById('lightSpacing').value) || 5.0;
         const maxCars = parseInt(document.getElementById('maxCars').value) || 20;
         const carSize = parseFloat(document.getElementById('carSize').value) || 2.0;
+        const colDist = parseFloat(document.getElementById('collisionDistance').value) || 1.5;
+        const stopDur = parseFloat(document.getElementById('stopDuration').value) || 0.5;
     
         setVal('seed', seed);
         setVal('upb', upb);
@@ -300,6 +333,8 @@ async function init() {
         setVal('lightSpacing', lightSpacing);
         setVal('maxCars', maxCars);
         setVal('carSize', carSize);
+        setVal('collisionDistance', colDist);
+        setVal('stopDuration', stopDur);
     
         const ySizes = prismsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
         const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * spacing;
@@ -355,7 +390,10 @@ async function init() {
         currentCity.cityGrid.setPrismSpacing(spacing);
         currentCity.cityTraffic.options.maxCars = maxCars;
         currentCity.cityTraffic.options.carSize = carSize;
+        currentCity.cityTraffic.options.collisionDistance = colDist;
+        currentCity.cityTraffic.options.stopDuration = stopDur;
         currentCity.cityTraffic.options.loggingEnabled = showTrafficLogsInput.checked;
+        currentCity.cityTraffic.options.showColliders = showCollidersInput.checked;
         currentCity.cityTraffic.spawnInitialCars();
         
         if (showTrafficLogsInput.checked) {
