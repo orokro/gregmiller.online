@@ -17,6 +17,9 @@ export default class CityTraffic extends THREE.Object3D {
             spacing: 5.0, // Side road spacing default
             turnRadius: 2.0,
             loggingEnabled: false,
+            showColliders: false, // Debug: show red collision sensors
+            collisionDistance: 1.5, // How far ahead to sense (multiplier of carSize)
+            stopDuration: 0.5, // Seconds to wait after obstruction clears
             ...options
         };
 
@@ -383,10 +386,26 @@ export default class CityTraffic extends THREE.Object3D {
         // Fix rotation: Rotate 180 degrees if model faces backwards
         mesh.rotation.y = Math.PI;
 
+        // Collision Sensor (Sphere)
+        // Positioned forward relative to car size. +Z is forward in local space.
+        const sensorDist = this.options.carSize * this.options.collisionDistance;
+        const sensorGeo = new THREE.SphereGeometry(this.options.carSize * 0.3, 8, 8);
+        const sensorMat = new THREE.MeshBasicMaterial({ 
+            color: 0xff0000, 
+            wireframe: true,
+            visible: this.options.showColliders 
+        });
+        const sensor = new THREE.Mesh(sensorGeo, sensorMat);
+        sensor.position.set(0, 0, sensorDist); 
+        container.add(sensor);
+
         this.trafficGroup.add(container);
         
         const car = {
             id: this.nextCarId++,
+            sensor,
+            blocked: false,
+            stopTime: 0,
             container,
             mesh,
             edge,
@@ -420,9 +439,51 @@ export default class CityTraffic extends THREE.Object3D {
     updateTraffic(dt) {
         const delta = dt || 0.016; 
         
+        // --- Collision Check (Every 15 frames) ---
+        this.frameCount = (this.frameCount || 0) + 1;
+        if (this.frameCount % 15 === 0) {
+            const collisionThreshold = this.options.carSize * 1.2; // Radius of sensitivity around sensor
+            const sensorWorldPos = new THREE.Vector3();
+            
+            for (const car of this.cars) {
+                car.blocked = false;
+                car.sensor.getWorldPosition(sensorWorldPos);
+
+                for (const other of this.cars) {
+                    if (car === other) continue;
+                    
+                    // Check if Sensor is inside Other Car's safety bubble
+                    // We check distance to Other Car's CENTER
+                    const dist = sensorWorldPos.distanceTo(other.container.position);
+                    
+                    if (dist < collisionThreshold) {
+                        car.blocked = true;
+                        // If blocked, ensure we wait a bit before retrying fully
+                        car.stopTime = this.options.stopDuration;
+                        break; 
+                    }
+                }
+            }
+        }
+
         for (let i = this.cars.length - 1; i >= 0; i--) {
             const car = this.cars[i];
             
+            // Handle Stop Logic
+            if (car.blocked) {
+                car.stopTime = this.options.stopDuration; // Refresh wait while blocked
+            }
+            if (car.stopTime > 0) {
+                car.stopTime -= delta;
+                if (car.stopTime <= 0) {
+                    car.stopTime = 0;
+                    car.blocked = false; // Release block
+                } else {
+                    // Skip movement
+                    continue; 
+                }
+            }
+
             let du;
             if (car.edge.type === 'bezier' && car.edge.controlPos) {
                 // To maintain constant physical speed on a Bezier curve, 
