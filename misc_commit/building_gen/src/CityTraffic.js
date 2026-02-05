@@ -33,7 +33,6 @@ export default class CityTraffic extends THREE.Object3D {
 
         // Initial Build
         this.rebuildGraph();
-        this.spawnInitialCars();
     }
 
     dumpGraph() {
@@ -502,10 +501,12 @@ export default class CityTraffic extends THREE.Object3D {
         const newRotation = car.container.quaternion;
         const angle = oldRotation.angleTo(newRotation);
         if (angle > (100 * Math.PI / 180)) {
-            console.log(`[Car ${car.id}] !!! ERROR TRIGGER NOTICED !!!`);
-            console.log(`Large rotation detected: ${(angle * 180 / Math.PI).toFixed(2)} degrees`);
-            console.log(`Car is on Edge ${car.edgeIndex} (u=${car.u.toFixed(3)}). Type: ${car.edge.type}`);
-            console.log(`From Node ${car.edge.from} to Node ${car.edge.to}`);
+            if (this.options.loggingEnabled) {
+                console.log(`[Car ${car.id}] !!! ERROR TRIGGER NOTICED !!!`);
+                console.log(`Large rotation detected: ${(angle * 180 / Math.PI).toFixed(2)} degrees`);
+                console.log(`Car is on Edge ${car.edgeIndex} (u=${car.u.toFixed(3)}). Type: ${car.edge.type}`);
+                console.log(`From Node ${car.edge.from} to Node ${car.edge.to}`);
+            }
         }
     }
 
