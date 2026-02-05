@@ -439,11 +439,12 @@ export default class CityTraffic extends THREE.Object3D {
     updateTraffic(dt) {
         const delta = dt || 0.016; 
         
-        // --- Collision Check (Every 15 frames) ---
+        // --- Collision Check (Every 5 frames for better responsiveness) ---
         this.frameCount = (this.frameCount || 0) + 1;
-        if (this.frameCount % 15 === 0) {
-            const collisionThreshold = this.options.carSize * 1.2; // Radius of sensitivity around sensor
+        if (this.frameCount % 5 === 0) {
+            const collisionThreshold = this.options.carSize * 1.5; // Bubble around other cars
             const sensorWorldPos = new THREE.Vector3();
+            const otherWorldPos = new THREE.Vector3();
             
             for (const car of this.cars) {
                 car.blocked = false;
@@ -452,13 +453,12 @@ export default class CityTraffic extends THREE.Object3D {
                 for (const other of this.cars) {
                     if (car === other) continue;
                     
-                    // Check if Sensor is inside Other Car's safety bubble
-                    // We check distance to Other Car's CENTER
-                    const dist = sensorWorldPos.distanceTo(other.container.position);
+                    // CRITICAL: Use getWorldPosition for both to ensure coordinate parity
+                    other.container.getWorldPosition(otherWorldPos);
+                    const dist = sensorWorldPos.distanceTo(otherWorldPos);
                     
                     if (dist < collisionThreshold) {
                         car.blocked = true;
-                        // If blocked, ensure we wait a bit before retrying fully
                         car.stopTime = this.options.stopDuration;
                         break; 
                     }
