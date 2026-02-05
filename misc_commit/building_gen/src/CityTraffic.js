@@ -76,13 +76,6 @@ export default class CityTraffic extends THREE.Object3D {
         const roadWidth = layout.left.roadWidth; 
         const laneOffset = roadWidth * 0.25;
         
-        // Ensure turnRadius is large enough to prevent degenerate/inverted Bezier curves on inner turns
-        // If turnRadius <= laneOffset, P1 and P2 cross, causing a 180 flip.
-        let turnRadius = this.options.turnRadius || 2.5;
-        if (turnRadius <= laneOffset) {
-            turnRadius = laneOffset + 1.0;
-        }
-
         // 1. Calculate Z Planes (Intersection Centers)
         const zPlanes = [];
         if (this.prisms.length > 0) {
@@ -92,6 +85,30 @@ export default class CityTraffic extends THREE.Object3D {
                 const p = this.prisms[i];
                 zPlanes.push(p.position.z + (p.scale.z / 2) + (this.options.spacing / 2));
             }
+        }
+
+        // 2. Dynamic Turn Radius Clamping
+        // We must ensure that a port from one intersection does not "cross over" 
+        // the port of the next intersection. This happens if 2 * turnRadius > gap.
+        let baseTurnRadius = this.options.turnRadius || 2.5;
+        let minGap = Infinity;
+        for (let i = 0; i < zPlanes.length - 1; i++) {
+            const gap = Math.abs(zPlanes[i+1] - zPlanes[i]);
+            if (gap < minGap) minGap = gap;
+        }
+        
+        // Clamp turnRadius to slightly less than half the smallest gap 
+        // to ensure we always have a positive-length connector segment.
+        let turnRadius = Math.min(baseTurnRadius, minGap * 0.45);
+
+        // 3. Dynamic Lane Offset (The Fix for the "Backward Turn")
+        // If the turnRadius is forced to be smaller than the laneOffset (due to small gaps),
+        // the geometric turn becomes "inverted" (target is behind the start).
+        // To fix this, we must effectively narrow the lanes at the intersection so they fit within the radius.
+        // We ensure effectiveLaneOffset is always slightly smaller than turnRadius.
+        let effectiveLaneOffset = laneOffset;
+        if (effectiveLaneOffset >= turnRadius) {
+            effectiveLaneOffset = Math.max(0.1, turnRadius - 0.1); 
         }
 
         this.nodes = [];
@@ -160,12 +177,12 @@ export default class CityTraffic extends THREE.Object3D {
 
                 // Main Road (North/South) - Always Bi-directional
                 // North Port (Top of intersection)
-                ports.North_In = addNode(new THREE.Vector3(x - laneOffset, layout.floorY, z - turnRadius), 'port'); // Southbound In
-                ports.North_Out = addNode(new THREE.Vector3(x + laneOffset, layout.floorY, z - turnRadius), 'port'); // Northbound Out
+                ports.North_In = addNode(new THREE.Vector3(x - effectiveLaneOffset, layout.floorY, z - turnRadius), 'port'); // Southbound In
+                ports.North_Out = addNode(new THREE.Vector3(x + effectiveLaneOffset, layout.floorY, z - turnRadius), 'port'); // Northbound Out
 
                 // South Port (Bottom of intersection)
-                ports.South_In = addNode(new THREE.Vector3(x + laneOffset, layout.floorY, z + turnRadius), 'port'); // Northbound In
-                ports.South_Out = addNode(new THREE.Vector3(x - laneOffset, layout.floorY, z + turnRadius), 'port'); // Southbound Out
+                ports.South_In = addNode(new THREE.Vector3(x + effectiveLaneOffset, layout.floorY, z + turnRadius), 'port'); // Northbound In
+                ports.South_Out = addNode(new THREE.Vector3(x - effectiveLaneOffset, layout.floorY, z + turnRadius), 'port'); // Southbound Out
 
                 // Side Road (East/West) - Alternating
                 if (isEastbound) {
@@ -189,10 +206,10 @@ export default class CityTraffic extends THREE.Object3D {
                 // - Can turn?
                 if (isEastbound) {
                     // Moving Left->Right. Can turn Left (East). 
-                    addEdge(ports.North_In, ports.East_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                    addEdge(ports.North_In, ports.East_Out, 'bezier', new THREE.Vector3(x - effectiveLaneOffset, layout.floorY, z));
                 } else {
                     // Moving Right->Left. Can turn Right (West).
-                    addEdge(ports.North_In, ports.West_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                    addEdge(ports.North_In, ports.West_Out, 'bezier', new THREE.Vector3(x - effectiveLaneOffset, layout.floorY, z));
                 }
 
                 // 2. Northbound Arrival (from South_In)
@@ -203,10 +220,10 @@ export default class CityTraffic extends THREE.Object3D {
                 // - Can turn?
                 if (isEastbound) {
                     // Moving Left->Right. Can turn Right (East).
-                    addEdge(ports.South_In, ports.East_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                    addEdge(ports.South_In, ports.East_Out, 'bezier', new THREE.Vector3(x + effectiveLaneOffset, layout.floorY, z));
                 } else {
                     // Moving Right->Left. Can turn Left (West).
-                    addEdge(ports.South_In, ports.West_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                    addEdge(ports.South_In, ports.West_Out, 'bezier', new THREE.Vector3(x + effectiveLaneOffset, layout.floorY, z));
                 }
 
                 // 3. Side Road Arrival
@@ -215,13 +232,13 @@ export default class CityTraffic extends THREE.Object3D {
                     // Can turn Left (North) -> North_Out (Cross turn)
                     // Only if not Top Row (would lead to dead end)
                     if (!isFirstRow) {
-                        addEdge(ports.West_In, ports.North_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                        addEdge(ports.West_In, ports.North_Out, 'bezier', new THREE.Vector3(x + effectiveLaneOffset, layout.floorY, z));
                     }
                     
                     // Can turn Right (South) -> South_Out (Short turn)
                     // Only if not Bottom Row
                     if (!isLastRow) {
-                        addEdge(ports.West_In, ports.South_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                        addEdge(ports.West_In, ports.South_Out, 'bezier', new THREE.Vector3(x - effectiveLaneOffset, layout.floorY, z));
                     }
                     
                     // Can go Straight? Only if internal road exists.
@@ -230,12 +247,12 @@ export default class CityTraffic extends THREE.Object3D {
                     // Arriving at East_In.
                     // Can turn Right (North) -> North_Out
                     if (!isFirstRow) {
-                        addEdge(ports.East_In, ports.North_Out, 'bezier', new THREE.Vector3(x + laneOffset, layout.floorY, z));
+                        addEdge(ports.East_In, ports.North_Out, 'bezier', new THREE.Vector3(x + effectiveLaneOffset, layout.floorY, z));
                     }
                     
                     // Can turn Left (South) -> South_Out
                     if (!isLastRow) {
-                        addEdge(ports.East_In, ports.South_Out, 'bezier', new THREE.Vector3(x - laneOffset, layout.floorY, z));
+                        addEdge(ports.East_In, ports.South_Out, 'bezier', new THREE.Vector3(x - effectiveLaneOffset, layout.floorY, z));
                     }
                     
                     // Straight
