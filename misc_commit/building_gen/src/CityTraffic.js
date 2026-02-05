@@ -16,10 +16,12 @@ export default class CityTraffic extends THREE.Object3D {
             speed: 5.0,
             spacing: 5.0, // Side road spacing default
             turnRadius: 2.0,
+            loggingEnabled: false,
             ...options
         };
 
-        this.cars = []; // { container, edgeIndex, u, speed }
+        this.cars = []; // { container, edgeIndex, u, speed, id }
+        this.nextCarId = 0;
         this.nodes = []; // { id, pos: Vector3, out: [] }
         this.edges = []; // { id, from, to, len, vectors: [v1, v2] }
         
@@ -385,6 +387,7 @@ export default class CityTraffic extends THREE.Object3D {
         this.trafficGroup.add(container);
         
         const car = {
+            id: this.nextCarId++,
             container,
             mesh,
             edge,
@@ -398,7 +401,9 @@ export default class CityTraffic extends THREE.Object3D {
         // Pre-calculate next edge
         this.pickNextEdge(car);
         
-        console.log(`Spawned car on Edge ${car.edge.index} (u=${car.u.toFixed(2)}). From Node ${car.edge.from} to Node ${car.edge.to}`);
+        if (this.options.loggingEnabled) {
+            console.log(`[Car ${car.id}] Spawned on Edge ${car.edge.index} (u=${car.u.toFixed(2)}). From Node ${car.edge.from} to Node ${car.edge.to}`);
+        }
 
         this.cars.push(car);
         this.updateCarPos(car);
@@ -444,11 +449,15 @@ export default class CityTraffic extends THREE.Object3D {
                     car.edgeIndex = car.edge.index;
                     car.u = overflowDist / car.edge.length;
                     
-                    console.log(`Car switched to Edge ${car.edge.index} (from ${car.prevEdge.index}). Node: ${car.prevEdge.to}. Type: ${car.edge.type}`);
+                    if (this.options.loggingEnabled) {
+                        console.log(`[Car ${car.id}] Switched to Edge ${car.edge.index} (from ${car.prevEdge.index}). Node: ${car.prevEdge.to}. Type: ${car.edge.type}`);
+                    }
                     
                     this.pickNextEdge(car);
                 } else {
-                    console.log(`Car reached end of graph at Node ${car.edge.to}. Despawning.`);
+                    if (this.options.loggingEnabled) {
+                        console.log(`[Car ${car.id}] Reached end of graph at Node ${car.edge.to}. Despawning.`);
+                    }
                     this.despawnCar(i);
                     this.spawnCar(false); 
                     continue;
@@ -493,7 +502,7 @@ export default class CityTraffic extends THREE.Object3D {
         const newRotation = car.container.quaternion;
         const angle = oldRotation.angleTo(newRotation);
         if (angle > (100 * Math.PI / 180)) {
-            console.log("!!! ERROR TRIGGER NOTICED !!!");
+            console.log(`[Car ${car.id}] !!! ERROR TRIGGER NOTICED !!!`);
             console.log(`Large rotation detected: ${(angle * 180 / Math.PI).toFixed(2)} degrees`);
             console.log(`Car is on Edge ${car.edgeIndex} (u=${car.u.toFixed(3)}). Type: ${car.edge.type}`);
             console.log(`From Node ${car.edge.from} to Node ${car.edge.to}`);

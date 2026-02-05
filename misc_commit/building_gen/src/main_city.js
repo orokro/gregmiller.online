@@ -65,9 +65,8 @@ async function init() {
     const seedInput = document.getElementById('seed');
     const floorXInput = document.getElementById('floorX');
     const floorYInput = document.getElementById('floorY');
-    const floorZInput = document.getElementById('floorZ');
     const floorWInput = document.getElementById('floorW');
-    const floorLInput = document.getElementById('floorH');
+    const floorHInput = document.getElementById('floorH');
     
     const prismWInput = document.getElementById('prismW');
     const prismHInput = document.getElementById('prismD');
@@ -78,6 +77,7 @@ async function init() {
     
     const maxCarsInput = document.getElementById('maxCars');
     const carSizeInput = document.getElementById('carSize');
+    const showTrafficLogsInput = document.getElementById('showTrafficLogs');
     
     const upbInput = document.getElementById('unitsPerBuilding');
     const rowSettingsInput = document.getElementById('rowSettingsJson');
@@ -93,7 +93,7 @@ async function init() {
     if (getVal('floorX')) floorXInput.value = getVal('floorX');
     if (getVal('floorY')) floorYInput.value = getVal('floorY');
     if (getVal('floorW')) floorWInput.value = getVal('floorW');
-    if (getVal('floorH')) floorLInput.value = getVal('floorH');
+    if (getVal('floorH')) floorHInput.value = getVal('floorH');
     
     if (getVal('prismW')) prismWInput.value = getVal('prismW');
     if (getVal('prismD')) prismHInput.value = getVal('prismD');
@@ -104,6 +104,7 @@ async function init() {
     
     if (getVal('maxCars')) maxCarsInput.value = getVal('maxCars');
     if (getVal('carSize')) carSizeInput.value = getVal('carSize');
+    if (getVal('showTrafficLogs')) showTrafficLogsInput.checked = getVal('showTrafficLogs') === 'true';
     
     if (getVal('upb')) upbInput.value = getVal('upb');
     
@@ -187,7 +188,7 @@ async function init() {
         setVal('floorW', v);
         if (currentCity) currentCity.update();
     }, 0.1);
-    setupDraggable(floorLInput, (v) => {
+    setupDraggable(floorHInput, (v) => {
         targetFloor.scale.y = v;
         setVal('floorH', v);
         if (currentCity) currentCity.update();
@@ -245,18 +246,28 @@ async function init() {
         setVal('carSize', v);
         if (currentCity) {
             currentCity.cityTraffic.options.carSize = v;
-            // Need to update existing cars scale? Not implemented in CityTraffic update yet.
-            // For now, new cars will use it.
         }
     }, 0.1);
 
+    showTrafficLogsInput.addEventListener('change', (e) => {
+        const val = e.target.checked;
+        setVal('showTrafficLogs', val);
+        if (currentCity) {
+            currentCity.cityTraffic.options.loggingEnabled = val;
+        }
+    });
+
     setupDraggable(upbInput, (v) => {
         setVal('upb', v);
-        if (currentCity) currentCity.cityGrid.setUnitsPerBuilding(v);
+        if (currentCity) {
+            currentCity.cityGrid.setUnitsPerBuilding(v);
+            currentCity.cityTraffic.unitsPerBuilding = v;
+            currentCity.cityTraffic.rebuildGraph();
+        }
     }, 0.1);
 
     targetFloor.position.set(parseFloat(floorXInput.value), parseFloat(floorYInput.value), 0);
-    targetFloor.scale.set(parseFloat(floorWInput.value), parseFloat(floorLInput.value), 1);
+    targetFloor.scale.set(parseFloat(floorWInput.value), parseFloat(floorHInput.value), 1);
 
     regenerate();
     animate();
@@ -342,12 +353,14 @@ async function init() {
         );
         
         currentCity.cityGrid.setPrismSpacing(spacing);
-        currentCity.cityTraffic.options.maxCars = 1; // Force 1 car for debugging
+        currentCity.cityTraffic.options.maxCars = maxCars;
         currentCity.cityTraffic.options.carSize = carSize;
+        currentCity.cityTraffic.options.loggingEnabled = showTrafficLogsInput.checked;
         currentCity.cityTraffic.spawnInitialCars();
         
-        currentCity.cityTraffic.dumpGraph();
-        console.log("Single car spawned for debugging.");
+        if (showTrafficLogsInput.checked) {
+            currentCity.cityTraffic.dumpGraph();
+        }
         
         scene.add(currentCity);
     }

@@ -112,6 +112,12 @@ export default class City extends THREE.Object3D {
         if (this.cityTraffic) this.cityTraffic.updateTraffic(dt);
     }
 
+    toggleTrafficLogging(enabled) {
+        if (this.cityTraffic) {
+            this.cityTraffic.options.loggingEnabled = enabled;
+        }
+    }
+
     syncShadowObject(real, shadow) {
         // Map Z-up Left-Handed (Prod) to Y-up Right-Handed (Gen) inside rotated container.
         // City rotation: Rx(90).
