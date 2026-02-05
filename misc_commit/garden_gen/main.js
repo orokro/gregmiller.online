@@ -8,6 +8,10 @@ let targetPrisms = [];
 let wireframeEnabled = true;
 let clock = new THREE.Clock();
 
+// Persistence helpers
+const getVal = (key, def) => localStorage.getItem('g_' + key) !== null ? localStorage.getItem('g_' + key) : def;
+const setVal = (key, val) => localStorage.setItem('g_' + key, val);
+
 async function init() {
     const container = document.getElementById('canvas-container');
 
@@ -41,6 +45,33 @@ async function init() {
     const prismSpacingInput = document.getElementById('prismSpacing');
     const prismHeightsInput = document.getElementById('prismHeights');
 
+    // Load Persistence
+    wireframeInput.checked = getVal('wireframe', 'true') === 'true';
+    wireframeEnabled = wireframeInput.checked;
+    hdrIntensityInput.value = getVal('hdrIntensity', '1.0');
+    groundWidthInput.value = getVal('groundWidth', '18');
+    groundHeightInput.value = getVal('groundHeight', '15');
+    grassDensityInput.value = getVal('grassDensity', '50000');
+    bladeMinLengthInput.value = getVal('bladeMinLength', '0.2');
+    bladeMaxLengthInput.value = getVal('bladeMaxLength', '0.5');
+    bladeMinWidthInput.value = getVal('bladeMinWidth', '0.02');
+    bladeMaxWidthInput.value = getVal('bladeMaxWidth', '0.05');
+    bladeMinTipWidthInput.value = getVal('bladeMinTipWidth', '0.0');
+    bladeMaxTipWidthInput.value = getVal('bladeMaxTipWidth', '0.01');
+    bladeSegmentsInput.value = getVal('bladeSegments', '4');
+    bendIntensityInput.value = getVal('bendIntensity', '0.5');
+    noiseScaleInput.value = getVal('noiseScale', '2.0');
+    windIntensityInput.value = getVal('windIntensity', '0.3');
+    windXInput.value = getVal('windX', '1.0');
+    windYInput.value = getVal('windY', '1.0');
+    planeColorInput.value = getVal('planeColor', '#3d2b1f');
+    grassColor1Input.value = getVal('grassColor1', '#4da83b');
+    grassColor2Input.value = getVal('grassColor2', '#83da4a');
+    prismWidthInput.value = getVal('prismWidth', '10');
+    prismDepthInput.value = getVal('prismDepth', '5');
+    prismSpacingInput.value = getVal('prismSpacing', '2');
+    prismHeightsInput.value = getVal('prismHeights', '10, 6, 7');
+
     // Three.js Setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
@@ -52,7 +83,7 @@ async function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = parseFloat(hdrIntensityInput.value);
     container.appendChild(renderer.domElement);
 
     controls = new OrbitControls(camera, renderer.domElement);
@@ -133,6 +164,7 @@ async function init() {
                 vHeightPercent = uv.y;
                 vRandom = aAngle;
 
+                // local position
                 vec3 pos = position;
                 
                 // Taper width
@@ -142,27 +174,64 @@ async function init() {
                 // Scale length
                 pos.y *= aSize;
                 
-                // Wind and Sway
+                // Random rotation around local Y (before we rotate the whole blade)
+                float angle = aAngle;
+                float s = sin(angle);
+                float c = cos(angle);
+                float rx = pos.x * c - pos.z * s;
+                float rz = pos.x * s + pos.z * c;
+                pos.x = rx;
+                pos.z = rz;
+
+                // WIND AND SWAY
                 float windFactor = uv.y * uv.y;
                 float noiseVal = noise(vec3(aOffset.xy * uNoiseScale, uTime * 0.5));
                 vec2 windMove = uWindDirection * uWindIntensity * (noiseVal + 0.5);
                 
-                // Random rotation
-                float angle = aAngle;
-                float s = sin(angle);
-                float c = cos(angle);
-                float localX = pos.x * c - pos.z * s;
-                float localZ = pos.x * s + pos.z * c;
-                pos.x = localX;
-                pos.z = localZ;
-
-                // Apply movements
+                // Apply wind (X/Y because plane is XY)
                 pos.x += windMove.x * windFactor;
                 pos.y += windMove.y * windFactor;
-                pos.x += sin(aAngle) * uBendIntensity * windFactor;
-                pos.y += cos(aAngle) * uBendIntensity * windFactor;
 
-                vec3 worldPos = aOffset + pos;
+                // BENDING
+                // Initially bend away from normal (Z)
+                // We'll bend them randomly in X/Y but also give them some Z depth
+                float bendX = sin(aAngle * 1.5) * uBendIntensity;
+                float bendY = cos(aAngle * 1.5) * uBendIntensity;
+                pos.x += bendX * windFactor;
+                pos.y += bendY * windFactor;
+
+                // GIVE IT DEPTH: Offset Z based on height and bending
+                // As it bends, it should move away from the plane in Z
+                pos.z += windFactor * uBendIntensity * 0.5;
+
+                // Final World position
+                // Plane is XY, normal is Z. 
+                // We want blades to stick out in Z slightly but mostly be oriented along the normal initially?
+                // Wait, PlaneGeometry(1,1) is in XY plane. position.y is the length of the blade.
+                // So the blade is GROWING along the Y axis of the WORLD if not rotated.
+                // We want it to grow along the Z axis (Normal).
+                
+                vec3 orientedPos;
+                orientedPos.x = pos.x;
+                orientedPos.y = pos.z; // Move local Z (depth/thickness) to world Y? No.
+                orientedPos.z = pos.y; // Move local Y (length) to world Z (Normal)!
+                
+                // Actually, let's just swap them simply:
+                // Local Y (length) -> World Z
+                // Local X (width) -> World X
+                // Local Z (thickness) -> World Y
+                vec3 finalLocal;
+                finalLocal.x = pos.x;
+                finalLocal.y = pos.y; // This is the length!
+                finalLocal.z = pos.z; // This is the thickness/bend-depth
+
+                // Rotate 90 deg around X to make it point in Z
+                vec3 normalOriented;
+                normalOriented.x = finalLocal.x;
+                normalOriented.y = -finalLocal.z;
+                normalOriented.z = finalLocal.y;
+
+                vec3 worldPos = aOffset + normalOriented;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
             }
         `,
@@ -184,6 +253,7 @@ async function init() {
     // Setup UI Events
     wireframeInput.addEventListener('change', (e) => {
         wireframeEnabled = e.target.checked;
+        setVal('wireframe', wireframeEnabled);
         targetPrisms.forEach(p => {
             p.material.wireframe = wireframeEnabled;
             p.visible = wireframeEnabled;
@@ -192,41 +262,69 @@ async function init() {
 
     setupDraggable(hdrIntensityInput, (v) => {
         renderer.toneMappingExposure = v;
+        setVal('hdrIntensity', v);
     });
 
     setupDraggable(groundWidthInput, (v) => {
         ground.scale.x = v;
+        setVal('groundWidth', v);
         initGrass();
     }, 0.1);
 
     setupDraggable(groundHeightInput, (v) => {
         ground.scale.y = v;
+        setVal('groundHeight', v);
         initGrass();
     }, 0.1);
 
     // Grass UI Listeners
-    setupDraggable(grassDensityInput, (v) => initGrass(), 0);
-    setupDraggable(bladeMinLengthInput, (v) => initGrass(), 0);
-    setupDraggable(bladeMaxLengthInput, (v) => initGrass(), 0);
-    setupDraggable(bladeMinWidthInput, (v) => initGrass(), 0);
-    setupDraggable(bladeMaxWidthInput, (v) => initGrass(), 0);
-    setupDraggable(bladeMinTipWidthInput, (v) => initGrass(), 0);
-    setupDraggable(bladeMaxTipWidthInput, (v) => initGrass(), 0);
-    setupDraggable(bladeSegmentsInput, (v) => initGrass(), 1);
+    setupDraggable(grassDensityInput, (v) => { setVal('grassDensity', v); initGrass(); }, 0);
+    setupDraggable(bladeMinLengthInput, (v) => { setVal('bladeMinLength', v); initGrass(); }, 0);
+    setupDraggable(bladeMaxLengthInput, (v) => { setVal('bladeMaxLength', v); initGrass(); }, 0);
+    setupDraggable(bladeMinWidthInput, (v) => { setVal('bladeMinWidth', v); initGrass(); }, 0);
+    setupDraggable(bladeMaxWidthInput, (v) => { setVal('bladeMaxWidth', v); initGrass(); }, 0);
+    setupDraggable(bladeMinTipWidthInput, (v) => { setVal('bladeMinTipWidth', v); initGrass(); }, 0);
+    setupDraggable(bladeMaxTipWidthInput, (v) => { setVal('bladeMaxTipWidth', v); initGrass(); }, 0);
+    setupDraggable(bladeSegmentsInput, (v) => { setVal('bladeSegments', v); initGrass(); }, 1);
     
-    setupDraggable(bendIntensityInput, (v) => { grassMaterial.uniforms.uBendIntensity.value = v; });
-    setupDraggable(noiseScaleInput, (v) => { grassMaterial.uniforms.uNoiseScale.value = v; });
-    setupDraggable(windIntensityInput, (v) => { grassMaterial.uniforms.uWindIntensity.value = v; });
-    setupDraggable(windXInput, (v) => { grassMaterial.uniforms.uWindDirection.value.x = v; });
-    setupDraggable(windYInput, (v) => { grassMaterial.uniforms.uWindDirection.value.y = v; });
+    setupDraggable(bendIntensityInput, (v) => { 
+        grassMaterial.uniforms.uBendIntensity.value = v; 
+        setVal('bendIntensity', v);
+    });
+    setupDraggable(noiseScaleInput, (v) => { 
+        grassMaterial.uniforms.uNoiseScale.value = v; 
+        setVal('noiseScale', v);
+    });
+    setupDraggable(windIntensityInput, (v) => { 
+        grassMaterial.uniforms.uWindIntensity.value = v; 
+        setVal('windIntensity', v);
+    });
+    setupDraggable(windXInput, (v) => { 
+        grassMaterial.uniforms.uWindDirection.value.x = v; 
+        setVal('windX', v);
+    });
+    setupDraggable(windYInput, (v) => { 
+        grassMaterial.uniforms.uWindDirection.value.y = v; 
+        setVal('windY', v);
+    });
     
-    planeColorInput.addEventListener('input', (e) => { ground.material.color.set(e.target.value); });
-    grassColor1Input.addEventListener('input', (e) => { grassMaterial.uniforms.uColor1.value.set(e.target.value); });
-    grassColor2Input.addEventListener('input', (e) => { grassMaterial.uniforms.uColor2.value.set(e.target.value); });
+    planeColorInput.addEventListener('input', (e) => { 
+        ground.material.color.set(e.target.value); 
+        setVal('planeColor', e.target.value);
+    });
+    grassColor1Input.addEventListener('input', (e) => { 
+        grassMaterial.uniforms.uColor1.value.set(e.target.value); 
+        setVal('grassColor1', e.target.value);
+    });
+    grassColor2Input.addEventListener('input', (e) => { 
+        grassMaterial.uniforms.uColor2.value.set(e.target.value); 
+        setVal('grassColor2', e.target.value);
+    });
 
     // Prism UI Events
     setupDraggable(prismWidthInput, (v) => {
         targetPrisms.forEach(p => p.scale.x = v);
+        setVal('prismWidth', v);
     }, 0.1);
 
     setupDraggable(prismDepthInput, (v) => {
@@ -234,14 +332,17 @@ async function init() {
             p.scale.z = v;
             p.position.z = v / 2;
         });
+        setVal('prismDepth', v);
     }, 0.1);
 
     setupDraggable(prismSpacingInput, (v) => {
         updatePrismPositions();
+        setVal('prismSpacing', v);
     });
 
     prismHeightsInput.addEventListener('input', () => {
         regeneratePrisms();
+        setVal('prismHeights', prismHeightsInput.value);
     });
 
     window.addEventListener('resize', onWindowResize);
@@ -265,7 +366,6 @@ async function init() {
         const gW = ground.scale.x;
         const gH = ground.scale.y;
 
-        // Base blade geometry (unit width/height, scaled in shader)
         const baseGeom = new THREE.PlaneGeometry(1, 1, 1, segments);
         baseGeom.translate(0, 0.5, 0); 
 
@@ -283,7 +383,7 @@ async function init() {
         for (let i = 0; i < count; i++) {
             offsets[i * 3] = (Math.random() - 0.5) * gW;
             offsets[i * 3 + 1] = (Math.random() - 0.5) * gH;
-            offsets[i * 3 + 2] = 0; 
+            offsets[i * 3 + 2] = 0.01; // Slightly in front of plane
 
             sizes[i] = minLen + Math.random() * (maxLen - minLen);
             widths[i] = minWid + Math.random() * (maxWid - minWid);
