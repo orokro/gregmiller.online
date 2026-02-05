@@ -257,6 +257,9 @@ async function init() {
         targetPrisms.forEach(p => {
             p.material.wireframe = wireframeEnabled;
             p.visible = wireframeEnabled;
+            // Sync occluder visibility if we want it to ONLY occlude when prism is active
+            const occluder = p.getObjectByName("occluder");
+            if (occluder) occluder.visible = wireframeEnabled;
         });
     });
 
@@ -323,7 +326,9 @@ async function init() {
 
     // Prism UI Events
     setupDraggable(prismWidthInput, (v) => {
-        targetPrisms.forEach(p => p.scale.x = v);
+        targetPrisms.forEach(p => {
+            p.scale.x = v;
+        });
         setVal('prismWidth', v);
     }, 0.1);
 
@@ -399,6 +404,7 @@ async function init() {
 
         grassMesh = new THREE.Mesh(instancedGeom, grassMaterial);
         grassMesh.frustumCulled = false; 
+        grassMesh.renderOrder = 2; // Render after occluders
         scene.add(grassMesh);
     }
 
@@ -435,10 +441,22 @@ function regeneratePrisms() {
         const prism = new THREE.Mesh(boxGeom, mat);
         prism.scale.set(prismWidth, ySize, prismDepth);
         prism.position.set(0, currentY + ySize / 2, prismDepth / 2);
+        prism.renderOrder = 1; // Render before grass (which will be 2)
         
         prism.visible = wireframeEnabled;
         scene.add(prism);
         targetPrisms.push(prism);
+
+        // Add an invisible occluder that always writes to depth
+        const occluderMat = new THREE.MeshBasicMaterial({
+            colorWrite: false,
+            depthWrite: true
+        });
+        const occluder = new THREE.Mesh(boxGeom, occluderMat);
+        // Do not copy scale/pos, it inherits from parent
+        occluder.renderOrder = 0; // Render first
+        occluder.name = "occluder";
+        prism.add(occluder); // Parent it so it follows transforms
         
         currentY += ySize + prismSpacing;
     });
