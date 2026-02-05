@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural City Demos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #222;
+            color: #eee;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        
+        h1 {
+            margin-bottom: 2rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .card-container {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+        }
+
+        .card {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 2rem;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s, background-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #444;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            background-color: #3d3d3d;
+            border-color: #666;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: #4da6ff;
+        }
+
+        .card p {
+            color: #aaa;
+            line-height: 1.5;
+        }
+
+        footer {
+            margin-top: 4rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Procedural Building Generator Demos</h1>
+
+    <div class="card-container">
+        <a href="building.html" class="card">
+            <h2>Single Building</h2>
+            <p>Test the individual building generation.</p>
+        </a>
+
+        <a href="block.html" class="card">
+            <h2>City Block</h2>
+            <p>Test out the new block object.</p>
+        </a>
+
+        <a href="block_unit.html" class="card">
+            <h2>Block Unit</h2>
+            <p>Test the back-to-back block unit.</p>
+        </a>
+
+        <a href="block_row.html" class="card">
+            <h2>Block Row</h2>
+            <p>Test the responsive block row and roads.</p>
+        </a>
+
+        <a href="city_grid.html" class="card">
+            <h2>City Grid</h2>
+            <p>Test the responsive grid of multiple block rows.</p>
+        </a>
+
+        <a href="city.html" class="card">
+            <h2>City (Final)</h2>
+            <p>Production-ready City class with Z-up coordinates.</p>
+        </a>
+    </div>
+
+    <footer>
+        Gemini CLI Generated Project
+    </footer>
+
+</body>
+</html>

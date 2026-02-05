@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Generator (Z-Up)</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./node_modules/three/build/three.module.js",
+                "three/addons/": "./node_modules/three/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="sidebar">
+        <h2>City Settings (Z-Up)</h2>
+        
+        <div class="control-group">
+            <label for="seed">City Seed:</label>
+            <input type="text" id="seed" value="city_seed_01">
+        </div>
+
+        <div class="control-group">
+            <label for="unitsPerBuilding">Units Per Building:</label>
+            <input type="number" id="unitsPerBuilding" value="2.5" step="0.1" min="0.1">
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="wireframe" checked> Show Wireframes
+            </label>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+        <h3>Floor Plane (Vertical XY)</h3>
+        <div class="control-group">
+            <label for="floorX">Floor Position (X):</label>
+            <input type="number" id="floorX" value="0" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="floorY">Floor Position (Y - Depth):</label>
+            <input type="number" id="floorY" value="0" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="floorW">Floor Width (X):</label>
+            <input type="number" id="floorW" value="40" step="1">
+        </div>
+        <div class="control-group">
+            <label for="floorH">Floor Height (Y - Depth):</label>
+            <input type="number" id="floorH" value="40" step="1">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+        <h3>Prisms Config</h3>
+        <div class="control-group">
+            <label for="prismW">Prisms Width (X):</label>
+            <input type="number" id="prismW" value="10" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="prismD">Prisms Depth (Z - Height):</label>
+            <input type="number" id="prismD" value="5" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="prisms">Prisms (Y sizes CSV):</label>
+            <input type="text" id="prisms" value="10, 6, 7, 4">
+        </div>
+        <div class="control-group">
+            <label for="prismSpacing">Prism Spacing:</label>
+            <input type="number" id="prismSpacing" value="5" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="maxCapScale">Cap Max Scale:</label>
+            <input type="number" id="maxCapScale" value="1.5" step="0.1">
+        </div>
+        <div class="control-group">
+            <label for="lightSpacing">Street Light Spacing:</label>
+            <input type="number" id="lightSpacing" value="5.0" step="0.5">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+        <h3>Traffic Config</h3>
+        <div class="control-group">
+            <label for="maxCars">Max Cars:</label>
+            <input type="number" id="maxCars" value="20" step="1">
+        </div>
+        <div class="control-group">
+            <label for="carSize">Car Size:</label>
+            <input type="number" id="carSize" value="2.0" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label for="collisionDistance">Collision Dist:</label>
+            <input type="number" id="collisionDistance" value="1.5" step="0.1">
+        </div>
+        <div class="control-group">
+            <label for="stopDuration">Stop Duration:</label>
+            <input type="number" id="stopDuration" value="0.5" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="showTrafficLogs"> Show Traffic Logs
+            </label>
+        </div>
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="showColliders"> Show Colliders
+            </label>
+        </div>
+
+        <div class="control-group">
+            <button id="regenerate">Regenerate City</button>
+        </div>
+
+        <div class="control-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <label for="rowSettingsJson">Row Config (JSON):</label>
+            <textarea id="rowSettingsJson" style="height: 100px;"></textarea>
+        </div>
+
+        <div class="control-group" style="flex-grow: 2; display: flex; flex-direction: column; margin-top: 10px;">
+            <label for="buildingSettingsJson">Building Config (JSON):</label>
+            <textarea id="buildingSettingsJson" style="height: 250px; font-size: 11px;"></textarea>
+        </div>
+    </div>
+
+    <script type="module" src="src/main_city.js"></script>
+</body>
+</html>

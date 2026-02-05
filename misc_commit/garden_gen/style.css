@@ -1,0 +1,90 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #111;
+    color: #eee;
+}
+
+#canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#sidebar {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 250px;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(5px);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    border: 1px solid #444;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+h2, h3 {
+    margin: 0;
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+h2 {
+    color: #4da83b;
+    border-bottom: 1px solid #4da83b;
+    padding-bottom: 5px;
+}
+
+h3 {
+    font-size: 1rem;
+    color: #83da4a;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #444;
+    width: 100%;
+    margin: 5px 0;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+label {
+    font-size: 0.85rem;
+    color: #aaa;
+}
+
+input[type="number"] {
+    background: #222;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    cursor: ew-resize; /* Indicating it's draggable */
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: #4da83b;
+}
+
+/* Draggable input state */
+input.dragging {
+    background: #333;
+    border-color: #4da83b;
+}

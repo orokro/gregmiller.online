@@ -1,0 +1,229 @@
+Spawned car on Edge 54 (u=0.62). From Node 9 to Node 18
+CityTraffic.js:38 --- CITY TRAFFIC GRAPH DUMP ---
+CityTraffic.js:39 Nodes:
+CityTraffic.js:41 Node 0: type=port, pos=(-16.25, 0.00, -11.00)
+CityTraffic.js:41 Node 1: type=port, pos=(-8.75, 0.00, -11.00)
+CityTraffic.js:41 Node 2: type=port, pos=(-8.75, 0.00, -7.00)
+CityTraffic.js:41 Node 3: type=port, pos=(-16.25, 0.00, -7.00)
+CityTraffic.js:41 Node 4: type=port, pos=(-14.50, 0.00, -9.00)
+CityTraffic.js:41 Node 5: type=port, pos=(-10.50, 0.00, -9.00)
+CityTraffic.js:41 Node 6: type=port, pos=(8.75, 0.00, -11.00)
+CityTraffic.js:41 Node 7: type=port, pos=(16.25, 0.00, -11.00)
+CityTraffic.js:41 Node 8: type=port, pos=(16.25, 0.00, -7.00)
+CityTraffic.js:41 Node 9: type=port, pos=(8.75, 0.00, -7.00)
+CityTraffic.js:41 Node 10: type=port, pos=(10.50, 0.00, -9.00)
+CityTraffic.js:41 Node 11: type=port, pos=(14.50, 0.00, -9.00)
+CityTraffic.js:41 Node 12: type=port, pos=(-16.25, 0.00, -5.00)
+CityTraffic.js:41 Node 13: type=port, pos=(-8.75, 0.00, -5.00)
+CityTraffic.js:41 Node 14: type=port, pos=(-8.75, 0.00, -1.00)
+CityTraffic.js:41 Node 15: type=port, pos=(-16.25, 0.00, -1.00)
+CityTraffic.js:41 Node 16: type=port, pos=(-10.50, 0.00, -3.00)
+CityTraffic.js:41 Node 17: type=port, pos=(-14.50, 0.00, -3.00)
+CityTraffic.js:41 Node 18: type=port, pos=(8.75, 0.00, -5.00)
+CityTraffic.js:41 Node 19: type=port, pos=(16.25, 0.00, -5.00)
+CityTraffic.js:41 Node 20: type=port, pos=(16.25, 0.00, -1.00)
+CityTraffic.js:41 Node 21: type=port, pos=(8.75, 0.00, -1.00)
+CityTraffic.js:41 Node 22: type=port, pos=(14.50, 0.00, -3.00)
+CityTraffic.js:41 Node 23: type=port, pos=(10.50, 0.00, -3.00)
+CityTraffic.js:41 Node 24: type=port, pos=(-16.25, 0.00, 1.00)
+CityTraffic.js:41 Node 25: type=port, pos=(-8.75, 0.00, 1.00)
+CityTraffic.js:41 Node 26: type=port, pos=(-8.75, 0.00, 5.00)
+CityTraffic.js:41 Node 27: type=port, pos=(-16.25, 0.00, 5.00)
+CityTraffic.js:41 Node 28: type=port, pos=(-14.50, 0.00, 3.00)
+CityTraffic.js:41 Node 29: type=port, pos=(-10.50, 0.00, 3.00)
+CityTraffic.js:41 Node 30: type=port, pos=(8.75, 0.00, 1.00)
+CityTraffic.js:41 Node 31: type=port, pos=(16.25, 0.00, 1.00)
+CityTraffic.js:41 Node 32: type=port, pos=(16.25, 0.00, 5.00)
+CityTraffic.js:41 Node 33: type=port, pos=(8.75, 0.00, 5.00)
+CityTraffic.js:41 Node 34: type=port, pos=(10.50, 0.00, 3.00)
+CityTraffic.js:41 Node 35: type=port, pos=(14.50, 0.00, 3.00)
+CityTraffic.js:41 Node 36: type=port, pos=(-16.25, 0.00, 7.00)
+CityTraffic.js:41 Node 37: type=port, pos=(-8.75, 0.00, 7.00)
+CityTraffic.js:41 Node 38: type=port, pos=(-8.75, 0.00, 11.00)
+CityTraffic.js:41 Node 39: type=port, pos=(-16.25, 0.00, 11.00)
+CityTraffic.js:41 Node 40: type=port, pos=(-10.50, 0.00, 9.00)
+CityTraffic.js:41 Node 41: type=port, pos=(-14.50, 0.00, 9.00)
+CityTraffic.js:41 Node 42: type=port, pos=(8.75, 0.00, 7.00)
+CityTraffic.js:41 Node 43: type=port, pos=(16.25, 0.00, 7.00)
+CityTraffic.js:41 Node 44: type=port, pos=(16.25, 0.00, 11.00)
+CityTraffic.js:41 Node 45: type=port, pos=(8.75, 0.00, 11.00)
+CityTraffic.js:41 Node 46: type=port, pos=(14.50, 0.00, 9.00)
+CityTraffic.js:41 Node 47: type=port, pos=(10.50, 0.00, 9.00)
+CityTraffic.js:41 Node 48: type=endpoint, pos=(-44.50, 0.00, -9.00)
+CityTraffic.js:41 Node 49: type=endpoint, pos=(44.50, 0.00, -9.00)
+CityTraffic.js:41 Node 50: type=endpoint, pos=(44.50, 0.00, -3.00)
+CityTraffic.js:41 Node 51: type=endpoint, pos=(-44.50, 0.00, -3.00)
+CityTraffic.js:41 Node 52: type=endpoint, pos=(-44.50, 0.00, 3.00)
+CityTraffic.js:41 Node 53: type=endpoint, pos=(44.50, 0.00, 3.00)
+CityTraffic.js:41 Node 54: type=endpoint, pos=(44.50, 0.00, 9.00)
+CityTraffic.js:41 Node 55: type=endpoint, pos=(-44.50, 0.00, 9.00)
+CityTraffic.js:43 Edges:
+CityTraffic.js:53 Edge 0: from=0, to=3, type=linear, len=4.00
+CityTraffic.js:53 Edge 1: from=0, to=5, type=bezier, len=6.58, ctrl=(-16.25, 0.00, -9.00)
+CityTraffic.js:53 Edge 2: from=2, to=5, type=bezier, len=3.04, ctrl=(-8.75, 0.00, -9.00)
+CityTraffic.js:53 Edge 3: from=4, to=3, type=bezier, len=3.04, ctrl=(-16.25, 0.00, -9.00)
+CityTraffic.js:53 Edge 4: from=4, to=5, type=linear, len=4.00
+CityTraffic.js:53 Edge 5: from=6, to=9, type=linear, len=4.00
+CityTraffic.js:53 Edge 6: from=6, to=11, type=bezier, len=6.58, ctrl=(8.75, 0.00, -9.00)
+CityTraffic.js:53 Edge 7: from=8, to=11, type=bezier, len=3.04, ctrl=(16.25, 0.00, -9.00)
+CityTraffic.js:53 Edge 8: from=10, to=9, type=bezier, len=3.04, ctrl=(8.75, 0.00, -9.00)
+CityTraffic.js:53 Edge 9: from=10, to=11, type=linear, len=4.00
+CityTraffic.js:53 Edge 10: from=12, to=15, type=linear, len=4.00
+CityTraffic.js:53 Edge 11: from=12, to=17, type=bezier, len=3.04, ctrl=(-16.25, 0.00, -3.00)
+CityTraffic.js:53 Edge 12: from=14, to=13, type=linear, len=4.00
+CityTraffic.js:53 Edge 13: from=14, to=17, type=bezier, len=6.58, ctrl=(-8.75, 0.00, -3.00)
+CityTraffic.js:53 Edge 14: from=16, to=13, type=bezier, len=3.04, ctrl=(-8.75, 0.00, -3.00)
+CityTraffic.js:53 Edge 15: from=16, to=15, type=bezier, len=6.58, ctrl=(-16.25, 0.00, -3.00)
+CityTraffic.js:53 Edge 16: from=16, to=17, type=linear, len=4.00
+CityTraffic.js:53 Edge 17: from=18, to=21, type=linear, len=4.00
+CityTraffic.js:53 Edge 18: from=18, to=23, type=bezier, len=3.04, ctrl=(8.75, 0.00, -3.00)
+CityTraffic.js:53 Edge 19: from=20, to=19, type=linear, len=4.00
+CityTraffic.js:53 Edge 20: from=20, to=23, type=bezier, len=6.58, ctrl=(16.25, 0.00, -3.00)
+CityTraffic.js:53 Edge 21: from=22, to=19, type=bezier, len=3.04, ctrl=(16.25, 0.00, -3.00)
+CityTraffic.js:53 Edge 22: from=22, to=21, type=bezier, len=6.58, ctrl=(8.75, 0.00, -3.00)
+CityTraffic.js:53 Edge 23: from=22, to=23, type=linear, len=4.00
+CityTraffic.js:53 Edge 24: from=24, to=27, type=linear, len=4.00
+CityTraffic.js:53 Edge 25: from=24, to=29, type=bezier, len=6.58, ctrl=(-16.25, 0.00, 3.00)
+CityTraffic.js:53 Edge 26: from=26, to=25, type=linear, len=4.00
+CityTraffic.js:53 Edge 27: from=26, to=29, type=bezier, len=3.04, ctrl=(-8.75, 0.00, 3.00)
+CityTraffic.js:53 Edge 28: from=28, to=25, type=bezier, len=6.58, ctrl=(-8.75, 0.00, 3.00)
+CityTraffic.js:53 Edge 29: from=28, to=27, type=bezier, len=3.04, ctrl=(-16.25, 0.00, 3.00)
+CityTraffic.js:53 Edge 30: from=28, to=29, type=linear, len=4.00
+CityTraffic.js:53 Edge 31: from=30, to=33, type=linear, len=4.00
+CityTraffic.js:53 Edge 32: from=30, to=35, type=bezier, len=6.58, ctrl=(8.75, 0.00, 3.00)
+CityTraffic.js:53 Edge 33: from=32, to=31, type=linear, len=4.00
+CityTraffic.js:53 Edge 34: from=32, to=35, type=bezier, len=3.04, ctrl=(16.25, 0.00, 3.00)
+CityTraffic.js:53 Edge 35: from=34, to=31, type=bezier, len=6.58, ctrl=(16.25, 0.00, 3.00)
+CityTraffic.js:53 Edge 36: from=34, to=33, type=bezier, len=3.04, ctrl=(8.75, 0.00, 3.00)
+CityTraffic.js:53 Edge 37: from=34, to=35, type=linear, len=4.00
+CityTraffic.js:53 Edge 38: from=36, to=41, type=bezier, len=3.04, ctrl=(-16.25, 0.00, 9.00)
+CityTraffic.js:53 Edge 39: from=38, to=37, type=linear, len=4.00
+CityTraffic.js:53 Edge 40: from=38, to=41, type=bezier, len=6.58, ctrl=(-8.75, 0.00, 9.00)
+CityTraffic.js:53 Edge 41: from=40, to=37, type=bezier, len=3.04, ctrl=(-8.75, 0.00, 9.00)
+CityTraffic.js:53 Edge 42: from=40, to=41, type=linear, len=4.00
+CityTraffic.js:53 Edge 43: from=42, to=47, type=bezier, len=3.04, ctrl=(8.75, 0.00, 9.00)
+CityTraffic.js:53 Edge 44: from=44, to=43, type=linear, len=4.00
+CityTraffic.js:53 Edge 45: from=44, to=47, type=bezier, len=6.58, ctrl=(16.25, 0.00, 9.00)
+CityTraffic.js:53 Edge 46: from=46, to=43, type=bezier, len=3.04, ctrl=(16.25, 0.00, 9.00)
+CityTraffic.js:53 Edge 47: from=46, to=47, type=linear, len=4.00
+CityTraffic.js:53 Edge 48: from=3, to=12, type=linear, len=2.00
+CityTraffic.js:53 Edge 49: from=13, to=2, type=linear, len=2.00
+CityTraffic.js:53 Edge 50: from=15, to=24, type=linear, len=2.00
+CityTraffic.js:53 Edge 51: from=25, to=14, type=linear, len=2.00
+CityTraffic.js:53 Edge 52: from=27, to=36, type=linear, len=2.00
+CityTraffic.js:53 Edge 53: from=37, to=26, type=linear, len=2.00
+CityTraffic.js:53 Edge 54: from=9, to=18, type=linear, len=2.00
+CityTraffic.js:53 Edge 55: from=19, to=8, type=linear, len=2.00
+CityTraffic.js:53 Edge 56: from=21, to=30, type=linear, len=2.00
+CityTraffic.js:53 Edge 57: from=31, to=20, type=linear, len=2.00
+CityTraffic.js:53 Edge 58: from=33, to=42, type=linear, len=2.00
+CityTraffic.js:53 Edge 59: from=43, to=32, type=linear, len=2.00
+CityTraffic.js:53 Edge 60: from=5, to=10, type=linear, len=21.00
+CityTraffic.js:53 Edge 61: from=48, to=4, type=linear, len=30.00
+CityTraffic.js:53 Edge 62: from=11, to=49, type=linear, len=30.00
+CityTraffic.js:53 Edge 63: from=23, to=16, type=linear, len=21.00
+CityTraffic.js:53 Edge 64: from=50, to=22, type=linear, len=30.00
+CityTraffic.js:53 Edge 65: from=17, to=51, type=linear, len=30.00
+CityTraffic.js:53 Edge 66: from=29, to=34, type=linear, len=21.00
+CityTraffic.js:53 Edge 67: from=52, to=28, type=linear, len=30.00
+CityTraffic.js:53 Edge 68: from=35, to=53, type=linear, len=30.00
+CityTraffic.js:53 Edge 69: from=47, to=40, type=linear, len=21.00
+CityTraffic.js:53 Edge 70: from=54, to=46, type=linear, len=30.00
+CityTraffic.js:53 Edge 71: from=41, to=55, type=linear, len=30.00
+CityTraffic.js:55 --- END GRAPH DUMP ---
+main_city.js:350 Single car spawned for debugging.
+CityTraffic.js:448 Car switched to Edge 17 (from 54). Node: 18. Type: linear
+CityTraffic.js:448 Car switched to Edge 56 (from 17). Node: 21. Type: linear
+CityTraffic.js:448 Car switched to Edge 31 (from 56). Node: 30. Type: linear
+CityTraffic.js:448 Car switched to Edge 58 (from 31). Node: 33. Type: linear
+CityTraffic.js:448 Car switched to Edge 43 (from 58). Node: 42. Type: bezier
+CityTraffic.js:448 Car switched to Edge 69 (from 43). Node: 47. Type: linear
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.98 degrees
+CityTraffic.js:499 Car is on Edge 69 (u=0.002). Type: linear
+CityTraffic.js:500 From Node 47 to Node 40
+CityTraffic.js:448 Car switched to Edge 41 (from 69). Node: 40. Type: bezier
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.39 degrees
+CityTraffic.js:499 Car is on Edge 41 (u=0.009). Type: bezier
+CityTraffic.js:500 From Node 40 to Node 37
+CityTraffic.js:448 Car switched to Edge 53 (from 41). Node: 37. Type: linear
+CityTraffic.js:448 Car switched to Edge 26 (from 53). Node: 26. Type: linear
+CityTraffic.js:448 Car switched to Edge 51 (from 26). Node: 25. Type: linear
+CityTraffic.js:448 Car switched to Edge 13 (from 51). Node: 14. Type: bezier
+CityTraffic.js:448 Car switched to Edge 65 (from 13). Node: 17. Type: linear
+CityTraffic.js:452 Car reached end of graph at Node 51. Despawning.
+CityTraffic.js:402 Spawned car on Edge 61 (u=0.00). From Node 48 to Node 4
+CityTraffic.js:448 Car switched to Edge 3 (from 61). Node: 4. Type: bezier
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.75 degrees
+CityTraffic.js:499 Car is on Edge 3 (u=0.004). Type: bezier
+CityTraffic.js:500 From Node 4 to Node 3
+CityTraffic.js:448 Car switched to Edge 48 (from 3). Node: 3. Type: linear
+CityTraffic.js:448 Car switched to Edge 11 (from 48). Node: 12. Type: bezier
+CityTraffic.js:448 Car switched to Edge 65 (from 11). Node: 17. Type: linear
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 178.83 degrees
+CityTraffic.js:499 Car is on Edge 65 (u=0.000). Type: linear
+CityTraffic.js:500 From Node 17 to Node 51
+CityTraffic.js:452 Car reached end of graph at Node 51. Despawning.
+CityTraffic.js:402 Spawned car on Edge 61 (u=0.00). From Node 48 to Node 4
+CityTraffic.js:448 Car switched to Edge 4 (from 61). Node: 4. Type: linear
+CityTraffic.js:448 Car switched to Edge 60 (from 4). Node: 5. Type: linear
+CityTraffic.js:448 Car switched to Edge 8 (from 60). Node: 10. Type: bezier
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 178.40 degrees
+CityTraffic.js:499 Car is on Edge 8 (u=0.024). Type: bezier
+CityTraffic.js:500 From Node 10 to Node 9
+CityTraffic.js:448 Car switched to Edge 54 (from 8). Node: 9. Type: linear
+CityTraffic.js:448 Car switched to Edge 18 (from 54). Node: 18. Type: bezier
+CityTraffic.js:448 Car switched to Edge 63 (from 18). Node: 23. Type: linear
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.21 degrees
+CityTraffic.js:499 Car is on Edge 63 (u=0.001). Type: linear
+CityTraffic.js:500 From Node 23 to Node 16
+CityTraffic.js:448 Car switched to Edge 15 (from 63). Node: 16. Type: bezier
+CityTraffic.js:448 Car switched to Edge 50 (from 15). Node: 15. Type: linear
+CityTraffic.js:448 Car switched to Edge 25 (from 50). Node: 24. Type: bezier
+CityTraffic.js:448 Car switched to Edge 66 (from 25). Node: 29. Type: linear
+CityTraffic.js:448 Car switched to Edge 37 (from 66). Node: 34. Type: linear
+CityTraffic.js:448 Car switched to Edge 68 (from 37). Node: 35. Type: linear
+CityTraffic.js:452 Car reached end of graph at Node 53. Despawning.
+CityTraffic.js:402 Spawned car on Edge 61 (u=0.00). From Node 48 to Node 4
+CityTraffic.js:448 Car switched to Edge 4 (from 61). Node: 4. Type: linear
+CityTraffic.js:448 Car switched to Edge 60 (from 4). Node: 5. Type: linear
+CityTraffic.js:448 Car switched to Edge 8 (from 60). Node: 10. Type: bezier
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.64 degrees
+CityTraffic.js:499 Car is on Edge 8 (u=0.005). Type: bezier
+CityTraffic.js:500 From Node 10 to Node 9
+CityTraffic.js:448 Car switched to Edge 54 (from 8). Node: 9. Type: linear
+CityTraffic.js:448 Car switched to Edge 17 (from 54). Node: 18. Type: linear
+CityTraffic.js:448 Car switched to Edge 56 (from 17). Node: 21. Type: linear
+CityTraffic.js:448 Car switched to Edge 31 (from 56). Node: 30. Type: linear
+CityTraffic.js:448 Car switched to Edge 58 (from 31). Node: 33. Type: linear
+CityTraffic.js:448 Car switched to Edge 43 (from 58). Node: 42. Type: bezier
+CityTraffic.js:448 Car switched to Edge 69 (from 43). Node: 47. Type: linear
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.55 degrees
+CityTraffic.js:499 Car is on Edge 69 (u=0.001). Type: linear
+CityTraffic.js:500 From Node 47 to Node 40
+CityTraffic.js:448 Car switched to Edge 41 (from 69). Node: 40. Type: bezier
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.33 degrees
+CityTraffic.js:499 Car is on Edge 41 (u=0.010). Type: bezier
+CityTraffic.js:500 From Node 40 to Node 37
+CityTraffic.js:448 Car switched to Edge 53 (from 41). Node: 37. Type: linear
+CityTraffic.js:448 Car switched to Edge 26 (from 53). Node: 26. Type: linear
+CityTraffic.js:448 Car switched to Edge 51 (from 26). Node: 25. Type: linear
+CityTraffic.js:448 Car switched to Edge 13 (from 51). Node: 14. Type: bezier
+CityTraffic.js:448 Car switched to Edge 65 (from 13). Node: 17. Type: linear
+CityTraffic.js:452 Car reached end of graph at Node 51. Despawning.
+CityTraffic.js:402 Spawned car on Edge 70 (u=0.00). From Node 54 to Node 46
+CityTraffic.js:448 Car switched to Edge 46 (from 70). Node: 46. Type: bezier
+CityTraffic.js:497 !!! ERROR TRIGGER NOTICED !!!
+CityTraffic.js:498 Large rotation detected: 179.11 degrees
+CityTraffic.js:499 Car is on Edge 46 (u=0.013). Type: bezier
+CityTraffic.js:500 From Node 46 to Node 43
+CityTraffic.js:448 Car switched to Edge 59 (from 46). Node: 43. Type: linear
+CityTraffic.js:448 Car switched to Edge 33 (from 59). Node: 32. Type: linear

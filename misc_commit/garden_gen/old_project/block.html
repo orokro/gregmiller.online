@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./node_modules/three/build/three.module.js",
+                "three/addons/": "./node_modules/three/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="sidebar">
+        <h2>Block Settings</h2>
+        
+        <div class="control-group">
+            <label for="seed">Block Seed:</label>
+            <input type="text" id="seed" value="city_block_01">
+        </div>
+
+        <div class="control-group">
+            <label for="blockSize">Block Size (units):</label>
+            <input type="number" id="blockSize" value="10.0" step="0.1" min="0.5">
+            <small style="color: #888;">(Click & drag to resize)</small>
+        </div>
+
+        <div class="control-group">
+            <label for="tallBlock" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="tallBlock" checked> Tall Block
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label for="hdrIntensity">HDR Intensity:</label>
+            <input type="range" id="hdrIntensity" min="0" max="2" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+            <button id="regenerate">Full Regenerate</button>
+        </div>
+
+        <div class="control-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <label for="settingsJson">Building Defaults (JSON):</label>
+            <textarea id="settingsJson"></textarea>
+        </div>
+    </div>
+
+    <script type="module" src="src/main_block.js"></script>
+</body>
+</html>
