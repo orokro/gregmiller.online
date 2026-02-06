@@ -8,6 +8,7 @@ export class GardenBlock extends THREE.Object3D {
         this.settings = settings || {};
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
+        this.centerScaler = this.settings.centerScaler || 1.0;
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
         this.pieces = {};
@@ -49,6 +50,7 @@ export class GardenBlock extends THREE.Object3D {
 
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
+        this.centerScaler = this.settings.centerScaler || 1.0;
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
         const currentScale = this.prism.scale;
@@ -68,27 +70,26 @@ export class GardenBlock extends THREE.Object3D {
         
         const s = this.scaleSize;
         const osd = this.overScaleDepth;
+        const cs = this.centerScaler;
 
         // 1. Measure reference margins
-        // With 90X rotation:
-        // Local X -> World X (Width)
-        // Local Y -> World Z (Depth) -> uses GLTF Y
-        // Local Z -> World Y (Height) -> uses GLTF Z
         const dimTL = this.baseDimensions['TL'] || new THREE.Vector3(1, 1, 1);
         const worldCornerW = dimTL.x * s;
-        const worldCornerH = dimTL.z * s; // Use Z for vertical height
+        const worldCornerH = dimTL.z * s; // Use Z for vertical height after 90X rotation
         
         const worldInnerW = Math.max(0, pW - (2 * worldCornerW));
         const worldInnerH = Math.max(0, pH - (2 * worldCornerH));
 
-        // 2. Scale Helper Functions (Proper Axis Mapping)
+        // 2. Scale Helper Functions
         const getLocalWidthScale = (name, targetWorldW) => {
             const baseW = this.baseDimensions[name] ? this.baseDimensions[name].x : 1;
             return baseW > 0.001 ? targetWorldW / (pW * baseW) : s / pW;
         };
         const getLocalDepthScale = (name) => {
             const baseD = this.baseDimensions[name] ? this.baseDimensions[name].y : 1; // GLTF Y is world Depth after 90X
-            return baseD > 0.001 ? (osd / baseD) : osd;
+            let scale = baseD > 0.001 ? (osd / baseD) : osd;
+            if (name === 'C') scale *= cs; // Apply center scaler
+            return scale;
         };
         const getLocalHeightScale = (name, targetWorldH) => {
             const baseH = this.baseDimensions[name] ? this.baseDimensions[name].z : 1; // GLTF Z is world Height after 90X
@@ -177,7 +178,7 @@ export class GardenBlock extends THREE.Object3D {
             }
 
             const scaleX = worldW / dim.x;
-            const scaleY = worldH / dim.z; // Reproject vertical UV using geometry Z
+            const scaleY = worldH / dim.z; 
 
             for (let i = 0; i < uvAttr.count; i++) {
                 uvAttr.setXY(i, 
