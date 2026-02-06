@@ -96,6 +96,7 @@ async function init() {
         blockHasSnailsOdds: 0.7,
         maxSnails: 2,
         snailScale: 1.0,
+        snailYOffset: 0.0,
         debugSnails: true,
         snailAnimationSpeed: 1,
         snailRotationMultiplier: [0, 1, 0],
@@ -230,6 +231,7 @@ async function init() {
             prngSeedInput.value
         );
         scene.add(gardenSystem);
+        scene.updateMatrixWorld(true);
     }
 
     // Grass Material
@@ -532,6 +534,7 @@ function updatePrismPositions() {
         prism.position.y = currentY + ySize / 2;
         currentY += ySize + prismSpacing;
     });
+    if (gardenSystem) gardenSystem.update(targetPrisms);
 }
 
 function onWindowResize() {

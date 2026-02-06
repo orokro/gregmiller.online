@@ -24,6 +24,7 @@ export class GardenBlock extends THREE.Object3D {
         this.lastPrismScale = new THREE.Vector3();
 
         this.snails = [];
+        this.snailData = []; // Store local pos and orientation for updating world pos
 
         console.log(`GardenBlock: Initialized with seed ${this.seed}, has snailModel: ${!!this.snailModel}`);
         this.parseModel(modelScene);
@@ -66,6 +67,8 @@ export class GardenBlock extends THREE.Object3D {
         const currentScale = this.prism.scale;
         
         if (!force && currentScale.equals(this.lastPrismScale)) {
+            // Even if scale hasn't changed, position might have
+            this.updateSnails();
             return;
         }
 
@@ -161,6 +164,7 @@ export class GardenBlock extends THREE.Object3D {
             s.cleanup();
         });
         this.snails = [];
+        this.snailData = [];
 
         if (!this.snailModel) {
             console.warn("GardenBlock: No snail model provided");
@@ -169,12 +173,15 @@ export class GardenBlock extends THREE.Object3D {
 
         const odds = this.settings.blockHasSnailsOdds !== undefined ? this.settings.blockHasSnailsOdds : 0.7;
         const maxSnails = this.settings.maxSnails !== undefined ? this.settings.maxSnails : 2;
-        const rotationMultiplier = this.settings.snailRotationMultiplier || [0, 1, 0];
         const snailScale = this.settings.snailScale !== undefined ? this.settings.snailScale : 1.0;
+        const snailYOffset = this.settings.snailYOffset !== undefined ? this.settings.snailYOffset : 0.0;
         const debugSnails = this.settings.debugSnails !== undefined ? this.settings.debugSnails : true;
         const rotXOffset = this.settings.snailRotationXOffset !== undefined ? this.settings.snailRotationXOffset : 0;
         const rotYOffset = this.settings.snailRotationYOffset !== undefined ? this.settings.snailRotationYOffset : 0;
         const rotZOffset = this.settings.snailRotationZOffset !== undefined ? this.settings.snailRotationZOffset : 0;
+
+        // Force matrix update to ensure worldPos is correct
+        this.prism.updateMatrixWorld(true);
 
         // Reset PRNG to ensure deterministic placement based on seed
         this.prng = new PRNG(this.seed);
@@ -188,34 +195,18 @@ export class GardenBlock extends THREE.Object3D {
                 
                 let attempts = 0;
                 let validPlacement = false;
-                let pos = new THREE.Vector3();
+                let localPos = new THREE.Vector3();
                 let worldPos = new THREE.Vector3();
-                let worldQuat = new THREE.Quaternion();
-
-                // Target the "Top Edge" of the prism.
-                // Prism Y is up. Top is Y=0.5.
-                // User wants "front depth (z) edge". Front is Z=0.5.
-                // So we want Y=0.5 and Z=0.5 roughly.
-                // We vary X across the width.
 
                 while (!validPlacement && attempts < 10) {
                     const edgeX = this.prng.range(-0.45, 0.45); 
-                    
-                    // Local position on the prism's top-front edge
-                    // Nudge Y up and Z out slightly to sit on top/edge
-                    pos.set(edgeX, 0.5, 0.5);
+                    localPos.set(edgeX, 0.5 + snailYOffset, 0.5);
 
-                    // Check distance to other snails (in local space roughly ok)
                     validPlacement = true;
-                    // Note: We haven't added this snail yet, so checking against existing world positions
-                    // requires calculating this one's world pos first.
-                    
-                    // Convert to World Space
-                    // We need to clone the vector to apply matrix, or just use applyMatrix4
-                    worldPos.copy(pos).applyMatrix4(this.prism.matrixWorld);
+                    worldPos.copy(localPos).applyMatrix4(this.prism.matrixWorld);
 
                     for (const other of this.snails) {
-                        if (worldPos.distanceTo(other.position) < 0.5) { // Check world distance
+                        if (worldPos.distanceTo(other.position) < 0.5) { 
                             validPlacement = false;
                             break;
                         }
@@ -225,25 +216,33 @@ export class GardenBlock extends THREE.Object3D {
 
                 if (validPlacement) {
                     snail.position.copy(worldPos);
-
-                    // Orientation
-                    // Apply user defined rotation offsets
                     const baseRot = new THREE.Euler(rotXOffset, rotYOffset, rotZOffset); 
-                    
                     snail.quaternion.setFromEuler(baseRot);
-                    
                     snail.scale.set(snailScale, snailScale, snailScale);
 
                     if (this.snailGroup) {
                         this.snailGroup.add(snail);
                     } else {
-                        // Fallback if no group (shouldn't happen with new system)
                         this.add(snail); 
                     }
                     this.snails.push(snail);
+                    this.snailData.push({ localPos: localPos.clone(), baseRot: baseRot.clone() });
                 }
             }
         }
+    }
+
+    updateSnails() {
+        this.prism.updateMatrixWorld(true);
+        this.snails.forEach((snail, i) => {
+            const data = this.snailData[i];
+            if (data) {
+                snail.position.copy(data.localPos).applyMatrix4(this.prism.matrixWorld);
+                // Orientation might also need updating if prism rotates, 
+                // but for now we assume mostly upright.
+                // If prism rotates, we'd need to combine rotations.
+            }
+        });
     }
 
     updateAnimation(time) {
@@ -302,5 +301,6 @@ export class GardenBlock extends THREE.Object3D {
             s.cleanup();
         });
         this.snails = [];
+        this.snailData = [];
     }
 }
