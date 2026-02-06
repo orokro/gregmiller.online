@@ -89,7 +89,9 @@ export class GardenBlock extends THREE.Object3D {
 
         const dimTL = this.baseDimensions['TL'] || new THREE.Vector3(1, 1, 1);
         const worldCornerW = dimTL.x * s;
-        const worldCornerH = dimTL.z * s; 
+        const worldCornerH = dimTL.z * s; // Z is height due to rotation
+        
+        const isShort = pH < (2 * worldCornerH);
         
         const worldInnerW = Math.max(0, pW - (2 * worldCornerW));
         const worldInnerH = Math.max(0, pH - (2 * worldCornerH));
@@ -109,44 +111,94 @@ export class GardenBlock extends THREE.Object3D {
             return baseH > 0.001 ? targetWorldH / (pH * baseH) : s / pH;
         };
 
-        ['TL', 'TR', 'BL', 'BR'].forEach(n => {
-            if (this.pieces[n]) this.pieces[n].scale.set(s / pW, getLocalDepthScale(n), s / pH);
+        // Visibility
+        ['L', 'C', 'R'].forEach(name => {
+            if (this.pieces[name]) this.pieces[name].visible = !isShort;
+        });
+        ['TL', 'T', 'TR', 'BL', 'B', 'BR'].forEach(name => {
+            if (this.pieces[name]) this.pieces[name].visible = true;
         });
 
-        const sideHeightScale = getLocalHeightScale('L', worldInnerH);
-        const topWidthScale = getLocalWidthScale('T', worldInnerW);
+        if (isShort) {
+            // Short Case: 50% height split
+            const halfHeightScale = (baseH) => (baseH > 0.001 ? 0.5 / baseH : 1);
 
-        if (this.pieces['T']) this.pieces['T'].scale.set(topWidthScale, getLocalDepthScale('T'), s / pH);
-        if (this.pieces['B']) this.pieces['B'].scale.set(topWidthScale, getLocalDepthScale('B'), s / pH);
-        if (this.pieces['L']) this.pieces['L'].scale.set(s / pW, getLocalDepthScale('L'), sideHeightScale);
-        if (this.pieces['R']) this.pieces['R'].scale.set(s / pW, getLocalDepthScale('R'), sideHeightScale);
-        
-        if (this.pieces['C']) {
-            this.pieces['C'].scale.set(
-                getLocalWidthScale('C', worldInnerW), 
-                getLocalDepthScale('C'), 
-                getLocalHeightScale('C', worldInnerH)
-            );
+            // Row 1 (Top)
+            ['TL', 'TR'].forEach(n => {
+                const baseH = this.baseDimensions[n].z;
+                if (this.pieces[n]) this.pieces[n].scale.set(s / pW, getLocalDepthScale(n), halfHeightScale(baseH));
+            });
+            if (this.pieces['T']) {
+                const baseH = this.baseDimensions['T'].z;
+                this.pieces['T'].scale.set(getLocalWidthScale('T', worldInnerW), getLocalDepthScale('T'), halfHeightScale(baseH));
+            }
+
+            // Row 3 (Bottom)
+            ['BL', 'BR'].forEach(n => {
+                const baseH = this.baseDimensions[n].z;
+                if (this.pieces[n]) this.pieces[n].scale.set(s / pW, getLocalDepthScale(n), halfHeightScale(baseH));
+            });
+            if (this.pieces['B']) {
+                const baseH = this.baseDimensions['B'].z;
+                this.pieces['B'].scale.set(getLocalWidthScale('B', worldInnerW), getLocalDepthScale('B'), halfHeightScale(baseH));
+            }
+
+            // Placement
+            const topY = 0.5;
+            const botY = -0.5;
+            const left = -0.5;
+            const right = 0.5;
+            const back = -0.5;
+
+            this.place('TL', left, topY, back);
+            this.place('TR', right, topY, back);
+            this.place('T', 0, topY, back);
+
+            this.place('BL', left, botY, back);
+            this.place('BR', right, botY, back);
+            this.place('B', 0, botY, back);
+
+        } else {
+            // Normal Case
+            ['TL', 'TR', 'BL', 'BR'].forEach(n => {
+                if (this.pieces[n]) this.pieces[n].scale.set(s / pW, getLocalDepthScale(n), s / pH);
+            });
+
+            const sideHeightScale = getLocalHeightScale('L', worldInnerH);
+            const topWidthScale = getLocalWidthScale('T', worldInnerW);
+
+            if (this.pieces['T']) this.pieces['T'].scale.set(topWidthScale, getLocalDepthScale('T'), s / pH);
+            if (this.pieces['B']) this.pieces['B'].scale.set(topWidthScale, getLocalDepthScale('B'), s / pH);
+            if (this.pieces['L']) this.pieces['L'].scale.set(s / pW, getLocalDepthScale('L'), sideHeightScale);
+            if (this.pieces['R']) this.pieces['R'].scale.set(s / pW, getLocalDepthScale('R'), sideHeightScale);
+            
+            if (this.pieces['C']) {
+                this.pieces['C'].scale.set(
+                    getLocalWidthScale('C', worldInnerW), 
+                    getLocalDepthScale('C'), 
+                    getLocalHeightScale('C', worldInnerH)
+                );
+            }
+
+            const left = -0.5;
+            const right = 0.5;
+            const top = 0.5;
+            const bottom = -0.5;
+            const back = -0.5; 
+
+            this.place('TL', left, top, back);
+            this.place('TR', right, top, back);
+            this.place('BL', left, bottom, back);
+            this.place('BR', right, bottom, back);
+            this.place('T', 0, top, back);
+            this.place('B', 0, bottom, back);
+            this.place('L', left, 0, back);
+            this.place('R', right, 0, back);
+            this.place('C', 0, 0, back);
         }
 
-        const left = -0.5;
-        const right = 0.5;
-        const top = 0.5;
-        const bottom = -0.5;
-        const back = -0.5; 
-
-        this.place('TL', left, top, back);
-        this.place('TR', right, top, back);
-        this.place('BL', left, bottom, back);
-        this.place('BR', right, bottom, back);
-        this.place('T', 0, top, back);
-        this.place('B', 0, bottom, back);
-        this.place('L', left, 0, back);
-        this.place('R', right, 0, back);
-        this.place('C', 0, 0, back);
-
         if (this.reprojectUVs) {
-            this.reproject(pW, pH);
+            this.reproject(pW, pH, isShort);
         }
     }
 
@@ -260,11 +312,11 @@ export class GardenBlock extends THREE.Object3D {
         this.snails.forEach(s => s.update(time, speed));
     }
 
-    reproject(pW, pH) {
+    reproject(pW, pH, isShort) {
         const uvScale = this.uvScale;
         Object.keys(this.pieces).forEach(name => {
             const mesh = this.pieces[name];
-            if (!mesh.geometry || !mesh.geometry.attributes.uv) return;
+            if (!mesh.visible || !mesh.geometry || !mesh.geometry.attributes.uv) return;
 
             const uvAttr = mesh.geometry.attributes.uv;
             const originalUV = mesh.userData.originalUV || uvAttr.array.slice();
@@ -275,18 +327,32 @@ export class GardenBlock extends THREE.Object3D {
             const dim = this.baseDimensions[name];
             const dimTL = this.baseDimensions['TL'];
             
-            if (['TL', 'TR', 'BL', 'BR'].includes(name)) {
-                worldW = dim.x * s;
-                worldH = dim.z * s;
-            } else if (name === 'T' || name === 'B') {
-                worldW = pW - (2 * dimTL.x * s);
-                worldH = dim.z * s;
-            } else if (name === 'L' || name === 'R') {
-                worldW = dim.x * s;
-                worldH = pH - (2 * dimTL.z * s);
-            } else if (name === 'C') {
-                worldW = pW - (2 * dimTL.x * s);
-                worldH = pH - (2 * dimTL.z * s);
+            if (isShort) {
+                // Short case UVs
+                if (['TL', 'TR', 'BL', 'BR'].includes(name)) {
+                    worldW = dim.x * s;
+                    worldH = pH / 2;
+                } else if (name === 'T' || name === 'B') {
+                    worldW = pW - (2 * dimTL.x * s);
+                    worldH = pH / 2;
+                } else {
+                    worldW = 0; worldH = 0; // Should be hidden
+                }
+            } else {
+                // Normal case UVs
+                if (['TL', 'TR', 'BL', 'BR'].includes(name)) {
+                    worldW = dim.x * s;
+                    worldH = dim.z * s;
+                } else if (name === 'T' || name === 'B') {
+                    worldW = pW - (2 * dimTL.x * s);
+                    worldH = dim.z * s;
+                } else if (name === 'L' || name === 'R') {
+                    worldW = dim.x * s;
+                    worldH = pH - (2 * dimTL.z * s);
+                } else if (name === 'C') {
+                    worldW = pW - (2 * dimTL.x * s);
+                    worldH = pH - (2 * dimTL.z * s);
+                }
             }
 
             const scaleX = (worldW / dim.x) * uvScale;
