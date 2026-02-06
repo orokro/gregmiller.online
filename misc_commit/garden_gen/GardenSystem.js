@@ -54,8 +54,8 @@ export class GardenSystem extends THREE.Object3D {
 
         // 2. Update Scatterers
         // Snails handled by GardenBlock now
-        this.updateScatter('flowers', this.models.sunflower, this.gardenSettings.flowers, prisms);
-        this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms);
+        this.updateScatter('flowers', this.models.sunflower, this.gardenSettings.flowers, prisms, `${this.seed}_flowers`);
+        this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms, `${this.seed}_leaves`);
     }
 
     updateAnimation(time) {
@@ -64,7 +64,7 @@ export class GardenSystem extends THREE.Object3D {
         }
     }
 
-    updateScatter(key, model, settings, prisms) {
+    updateScatter(key, model, settings, prisms, seed) {
         if (!settings || !model || settings.density <= 0) {
             if (this.scatterers[key]) {
                 this.remove(this.scatterers[key]);
@@ -74,13 +74,15 @@ export class GardenSystem extends THREE.Object3D {
             return;
         }
 
+        const mergedSettings = { ...settings, seed: seed || settings.seed };
+
         if (!this.scatterers[key]) {
-            this.scatterers[key] = new GardenScatter(model, this.bgPlane, prisms, settings);
+            this.scatterers[key] = new GardenScatter(model, this.bgPlane, prisms, mergedSettings);
             this.add(this.scatterers[key]);
         } else {
             // Check if settings or prisms changed significantly to warrant regen
             // For now, always update when called (since it's UI driven)
-            this.scatterers[key].update(prisms, settings);
+            this.scatterers[key].update(prisms, mergedSettings);
         }
     }
 

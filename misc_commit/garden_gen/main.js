@@ -82,9 +82,17 @@ async function init() {
     prngSeedInput.value = getVal('prngSeed', 'garden_seed_123');
     
     const defaultGardenSettings = {
-        snails: { density: 10, minScale: 0.5, maxScale: 1.2, seed: "snail_v1", yOffset: 0.1, randomRotation: true },
-        flowers: { density: 30, minScale: 5.8, maxScale: 8.5, seed: "flower_v1", yOffset: 2, randomRotation: true, rotationAxis: 'y' },
-        leaves: { density: 50, minScale: 35.3, maxScale: 50.8, seed: "leaf_v1", yOffset: 3, randomRotation: true, rotationAxis: 'z' }
+        flowers: { density: 30, minScale: 5.8, maxScale: 8.5, yOffset: 2, randomRotation: true, rotationAxis: 'y' },
+        leaves: { 
+            density: 50, 
+            minScale: 35.3, 
+            maxScale: 50.8, 
+            yOffset: 3, 
+            randomRotation: true,
+            xRot: [-30, 30],
+            yRot: [0, 360],
+            zRot: [-30, 30]
+        }
     };
 
     const defaultBlockSettings = {

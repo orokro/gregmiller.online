@@ -32,8 +32,11 @@ export class GardenScatter extends THREE.Object3D {
             maxScale = 1, 
             seed = 'default', 
             yOffset = 0, 
-            randomRotation = true, // Legacy boolean or string?
-            rotationAxis = 'z'     // Default for backward compat
+            randomRotation = true,
+            rotationAxis = 'z',
+            xRot = null,
+            yRot = null,
+            zRot = null
         } = this.settings;
         
         // Simple deterministic PRNG
@@ -42,6 +45,8 @@ export class GardenScatter extends THREE.Object3D {
             seedNum = (seedNum * 16807) % 2147483647;
             return (seedNum - 1) / 2147483646;
         };
+
+        const degToRad = THREE.MathUtils.degToRad;
 
         const gW = this.bgPlane.scale.x;
         const gH = this.bgPlane.scale.y;
@@ -60,7 +65,6 @@ export class GardenScatter extends THREE.Object3D {
                 maxBY = Math.max(maxBY, p.position.y + h/2);
             });
         } else {
-            // No blocks, no exclusion
             minBX = maxBX = 0;
             minBY = maxBY = 0;
         }
@@ -68,9 +72,6 @@ export class GardenScatter extends THREE.Object3D {
         const margin = 0.5;
         minBX -= margin;
         maxBX += margin;
-        // Extend Y to cover the full column logic "space between blocks"
-        // Actually the loop above covers the extent from bottom block to top block.
-        // It effectively covers the "space between" because we take min/max of the whole set.
 
         let spawned = 0;
         let attempts = 0;
@@ -79,7 +80,6 @@ export class GardenScatter extends THREE.Object3D {
         while (spawned < density && attempts < maxAttempts) {
             attempts++;
             
-            // Random position on the plane
             const x = (random() - 0.5) * gW;
             const y = (random() - 0.5) * gH;
 
@@ -94,48 +94,37 @@ export class GardenScatter extends THREE.Object3D {
             if (!inside) {
                 let item;
                 if (this.library.length > 0) {
-                    // Pick random from library
                     const template = this.library[Math.floor(random() * this.library.length)];
                     item = template.clone();
                 } else {
                     item = this.model.clone();
                 }
 
-                // Position: X/Y on plane, yOffset for Z (Vertical depth)
                 item.position.set(x, y, yOffset);
                 
-                // Orientation
-                // Standard upright for wall garden: Rotate -90 X to point Up
-                item.rotation.x = Math.PI / 2; // Blender Z -> World Y?
-                // Wait, PI/2 is +90. 
-                // Z -> -Y. Y -> Z.
-                // If we want Z-up model to point Y-up, we need -PI/2 (-90).
-                // Let's stick to what was there if it worked visually, but user complained about sideways.
-                // Previous code: item.rotation.x = Math.PI / 2;
-                // I'll try that.
+                // Base Orientation (Pointing Up/Out)
+                item.rotation.x = Math.PI / 2; 
                 
                 if (randomRotation) {
-                    const angle = random() * Math.PI * 2;
-                    // User requested specific axis control
-                    // If settings has rotationAxis, use it.
-                    // For flowers: 'y'. For leaves: 'z' (default?).
-                    
-                    // Logic hack based on settings structure
-                    // If randomRotation is boolean, use rotationAxis or default 'z'
-                    
-                    let axis = rotationAxis;
-                    // Auto-detect based on "sideways" complaint?
-                    // User said: "make the random rotation only on the Y axis"
-                    
-                    if (this.settings.rotationAxis === 'y') {
-                        item.rotation.y = angle;
-                        // Reset Z if it was set by something else?
-                        item.rotation.z = 0; 
-                    } else if (this.settings.rotationAxis === 'z') {
-                        item.rotation.z = angle;
+                    // Check if we have specific range settings (Leaves)
+                    if (xRot || yRot || zRot) {
+                        const rx = xRot ? degToRad(xRot[0] + random() * (xRot[1] - xRot[0])) : 0;
+                        const ry = yRot ? degToRad(yRot[0] + random() * (yRot[1] - yRot[0])) : 0;
+                        const rz = zRot ? degToRad(zRot[0] + random() * (zRot[1] - zRot[0])) : 0;
+                        
+                        // Apply as local additions or absolute if base is zero?
+                        // If base is PI/2 X, we should probably use a dummy or rotate in order
+                        item.rotateX(rx);
+                        item.rotateY(ry);
+                        item.rotateZ(rz);
                     } else {
-                         // Default behavior (likely Z for legacy)
-                         item.rotation.z = angle;
+                        // Simple axis logic (Flowers)
+                        const angle = random() * Math.PI * 2;
+                        if (rotationAxis === 'y') {
+                            item.rotation.y = angle;
+                        } else {
+                            item.rotation.z = angle;
+                        }
                     }
                 }
 
