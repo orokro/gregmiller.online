@@ -60,7 +60,6 @@ export class GardenBlock extends THREE.Object3D {
 
     layout() {
         // Since we are a child of the scaled prism, our parent's scale is applied to us.
-        // The prism's scale in world units:
         const pW = this.prism.scale.x;
         const pH = this.prism.scale.y;
         const pD = this.prism.scale.z;
@@ -70,55 +69,53 @@ export class GardenBlock extends THREE.Object3D {
         // Base unscaled dimensions of TL
         const dimTL = this.baseDimensions['TL'] || new THREE.Vector3(1, 1, 1);
         
-        // Desired WORLD sizes
+        // Desired WORLD sizes for margins (Corners)
         const worldCornerW = dimTL.x * s;
-        const worldCornerH = dimTL.z * s; // Z is vertical in unrotated space? 
-        // Wait, if rotated 90X: World Y is Local Z. So worldCornerH is dimTL.z * s.
+        const worldCornerH = dimTL.z * s; // Local Z is world Height
         
         // Inner world dimensions
         const worldInnerW = Math.max(0, pW - (2 * worldCornerW));
         const worldInnerH = Math.max(0, pH - (2 * worldCornerH));
 
         // LOCAL scales (relative to parent prism's scale)
-        // Local Scale = World Size / (Parent World Scale * Mesh Base Size)
-        const localCornerScaleX = (dimTL.x * s) / (pW * dimTL.x); // = s / pW
-        const localCornerScaleZ = (dimTL.z * s) / (pH * dimTL.z); // = s / pH
-        const localDepthScale = s / pD;
+        // For depth: Local Y * Parent Z * Base Y = Target Z
+        // We want Target Z = Parent Z (pD)
+        // So Local Y = 1 / Base Y
+        const getLocalDepthScale = (name) => {
+            const baseDepth = this.baseDimensions[name] ? this.baseDimensions[name].y : 1;
+            return baseDepth > 0 ? (1.0 / baseDepth) : 1;
+        };
 
         // --- CORNERS ---
         ['TL', 'TR', 'BL', 'BR'].forEach(n => {
             const p = this.pieces[n];
             if (p) {
-                // Local X scale = cornerW / prismW
-                // Local Z scale = cornerH / prismH
-                // Local Y scale = s / prismD
-                p.scale.set(s / pW, s / pD, s / pH);
+                // Local X scale = worldCornerW / (pW * baseW) = (baseW * s) / (pW * baseW) = s / pW
+                p.scale.set(s / pW, getLocalDepthScale(n), s / pH);
             }
         });
 
         // --- EDGES ---
         if (this.pieces['T'] && this.baseDimensions['T']) {
             const baseW = this.baseDimensions['T'].x;
-            // Target world width = worldInnerW
-            // Local scale X = worldInnerW / (pW * baseW)
-            this.pieces['T'].scale.set(worldInnerW / (pW * baseW), s / pD, s / pH);
+            this.pieces['T'].scale.set(worldInnerW / (pW * baseW), getLocalDepthScale('T'), s / pH);
         }
         if (this.pieces['B'] && this.baseDimensions['B']) {
             const baseW = this.baseDimensions['B'].x;
-            this.pieces['B'].scale.set(worldInnerW / (pW * baseW), s / pD, s / pH);
+            this.pieces['B'].scale.set(worldInnerW / (pW * baseW), getLocalDepthScale('B'), s / pH);
         }
         if (this.pieces['L'] && this.baseDimensions['L']) {
             const baseH = this.baseDimensions['L'].z;
-            this.pieces['L'].scale.set(s / pW, s / pD, worldInnerH / (pH * baseH));
+            this.pieces['L'].scale.set(s / pW, getLocalDepthScale('L'), worldInnerH / (pH * baseH));
         }
         if (this.pieces['R'] && this.baseDimensions['R']) {
             const baseH = this.baseDimensions['R'].z;
-            this.pieces['R'].scale.set(s / pW, s / pD, worldInnerH / (pH * baseH));
+            this.pieces['R'].scale.set(s / pW, getLocalDepthScale('R'), worldInnerH / (pH * baseH));
         }
         if (this.pieces['C'] && this.baseDimensions['C']) {
             const baseW = this.baseDimensions['C'].x;
             const baseH = this.baseDimensions['C'].z;
-            this.pieces['C'].scale.set(worldInnerW / (pW * baseW), s / pD, worldInnerH / (pH * baseH));
+            this.pieces['C'].scale.set(worldInnerW / (pW * baseW), getLocalDepthScale('C'), worldInnerH / (pH * baseH));
         }
 
         // --- PLACEMENT ---

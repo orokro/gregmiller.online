@@ -49,6 +49,9 @@ async function init() {
     const prismSpacingInput = document.getElementById('prismSpacing');
     const prismHeightsInput = document.getElementById('prismHeights');
 
+    const gardenSettingsInput = document.getElementById('gardenSettings');
+    const blockSettingsInput = document.getElementById('blockSettings');
+
     // Load Persistence
     wireframeInput.checked = getVal('wireframe', 'true') === 'true';
     wireframeEnabled = wireframeInput.checked;
@@ -75,6 +78,9 @@ async function init() {
     prismDepthInput.value = getVal('prismDepth', '5');
     prismSpacingInput.value = getVal('prismSpacing', '2');
     prismHeightsInput.value = getVal('prismHeights', '10, 6, 7');
+    
+    if (localStorage.getItem('g_gardenSettings')) gardenSettingsInput.value = localStorage.getItem('g_gardenSettings');
+    if (localStorage.getItem('g_blockSettings')) blockSettingsInput.value = localStorage.getItem('g_blockSettings');
 
     // Three.js Setup
     scene = new THREE.Scene();
@@ -119,7 +125,6 @@ async function init() {
         const texture = await rgbeLoader.loadAsync('env.hdr');
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
-        // scene.background = texture; // Use dark gradient instead
 
         // Dark gradient background
         const canvas = document.createElement('canvas');
@@ -149,17 +154,35 @@ async function init() {
         };
 
         // Initialize GardenSystem
+        rebuildGarden();
+
+    } catch (e) {
+        console.error("Failed to load assets", e);
+    }
+
+    function rebuildGarden() {
+        if (gardenSystem) {
+            gardenSystem.cleanup();
+            scene.remove(gardenSystem);
+        }
+
+        let gSettings = {};
+        let bSettings = {};
+        try {
+            gSettings = JSON.parse(gardenSettingsInput.value);
+            bSettings = JSON.parse(blockSettingsInput.value);
+        } catch(e) {
+            console.warn("Invalid JSON settings", e);
+        }
+
         gardenSystem = new GardenSystem(
             loadedModels,
             ground,
             targetPrisms,
-            {}, // gardenSettings
-            { blockScaleSize: 1.0 } // blockSettings
+            gSettings,
+            bSettings
         );
         scene.add(gardenSystem);
-
-    } catch (e) {
-        console.error("Failed to load assets", e);
     }
 
     // Grass Material
@@ -189,7 +212,6 @@ async function init() {
             varying float vHeightPercent;
             varying float vRandom;
 
-            // Simple noise function
             float hash(float n) { return fract(sin(n) * 43758.5453123); }
             float noise(vec3 x) {
                 vec3 p = floor(x);
@@ -205,18 +227,10 @@ async function init() {
             void main() {
                 vHeightPercent = uv.y;
                 vRandom = aAngle;
-
-                // local position
                 vec3 pos = position;
-                
-                // Taper width
                 float currentWidth = mix(aWidth, aTipWidth, uv.y);
                 pos.x *= currentWidth;
-
-                // Scale length
                 pos.y *= aSize;
-                
-                // Random rotation around local Y (before we rotate the whole blade)
                 float angle = aAngle;
                 float s = sin(angle);
                 float c = cos(angle);
@@ -224,55 +238,24 @@ async function init() {
                 float rz = pos.x * s + pos.z * c;
                 pos.x = rx;
                 pos.z = rz;
-
-                // WIND AND SWAY
                 float windFactor = uv.y * uv.y;
                 float noiseVal = noise(vec3(aOffset.xy * uNoiseScale, uTime * 0.5));
                 vec2 windMove = uWindDirection * uWindIntensity * (noiseVal + 0.5);
-                
-                // Apply wind (X/Y because plane is XY)
                 pos.x += windMove.x * windFactor;
                 pos.y += windMove.y * windFactor;
-
-                // BENDING
-                // Initially bend away from normal (Z)
-                // We'll bend them randomly in X/Y but also give them some Z depth
                 float bendX = sin(aAngle * 1.5) * uBendIntensity;
                 float bendY = cos(aAngle * 1.5) * uBendIntensity;
                 pos.x += bendX * windFactor;
                 pos.y += bendY * windFactor;
-
-                // GIVE IT DEPTH: Offset Z based on height and bending
-                // As it bends, it should move away from the plane in Z
                 pos.z += windFactor * uBendIntensity * 0.5;
-
-                // Final World position
-                // Plane is XY, normal is Z. 
-                // We want blades to stick out in Z slightly but mostly be oriented along the normal initially?
-                // Wait, PlaneGeometry(1,1) is in XY plane. position.y is the length of the blade.
-                // So the blade is GROWING along the Y axis of the WORLD if not rotated.
-                // We want it to grow along the Z axis (Normal).
-                
-                vec3 orientedPos;
-                orientedPos.x = pos.x;
-                orientedPos.y = pos.z; // Move local Z (depth/thickness) to world Y? No.
-                orientedPos.z = pos.y; // Move local Y (length) to world Z (Normal)!
-                
-                // Actually, let's just swap them simply:
-                // Local Y (length) -> World Z
-                // Local X (width) -> World X
-                // Local Z (thickness) -> World Y
                 vec3 finalLocal;
                 finalLocal.x = pos.x;
-                finalLocal.y = pos.y; // This is the length!
-                finalLocal.z = pos.z; // This is the thickness/bend-depth
-
-                // Rotate 90 deg around X to make it point in Z
+                finalLocal.y = pos.y;
+                finalLocal.z = pos.z;
                 vec3 normalOriented;
                 normalOriented.x = finalLocal.x;
                 normalOriented.y = -finalLocal.z;
                 normalOriented.z = finalLocal.y;
-
                 vec3 worldPos = aOffset + normalOriented;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
             }
@@ -282,7 +265,6 @@ async function init() {
             uniform vec3 uColor2;
             varying float vHeightPercent;
             varying float vRandom;
-
             void main() {
                 float shade = mix(0.2, 1.0, vHeightPercent);
                 vec3 baseColor = mix(uColor1, uColor2, fract(vRandom * 7.0));
@@ -299,7 +281,6 @@ async function init() {
         targetPrisms.forEach(p => {
             p.material.wireframe = wireframeEnabled;
             p.visible = wireframeEnabled;
-            // Sync occluder visibility if we want it to ONLY occlude when prism is active
             const occluder = p.getObjectByName("occluder");
             if (occluder) occluder.visible = wireframeEnabled;
         });
@@ -322,7 +303,6 @@ async function init() {
         initGrass();
     }, 0.1);
 
-    // Grass UI Listeners
     setupDraggable(grassDensityInput, (v) => { setVal('grassDensity', v); initGrass(); }, 0);
     setupDraggable(bladeMinLengthInput, (v) => { setVal('bladeMinLength', v); initGrass(); }, 0);
     setupDraggable(bladeMaxLengthInput, (v) => { setVal('bladeMaxLength', v); initGrass(); }, 0);
@@ -366,11 +346,8 @@ async function init() {
         setVal('grassColor2', e.target.value);
     });
 
-    // Prism UI Events
     setupDraggable(prismWidthInput, (v) => {
-        targetPrisms.forEach(p => {
-            p.scale.x = v;
-        });
+        targetPrisms.forEach(p => p.scale.x = v);
         setVal('prismWidth', v);
         if (gardenSystem) gardenSystem.update(targetPrisms);
     }, 0.1);
@@ -395,15 +372,22 @@ async function init() {
         setVal('prismHeights', prismHeightsInput.value);
     });
 
+    gardenSettingsInput.addEventListener('input', () => {
+        setVal('gardenSettings', gardenSettingsInput.value);
+        rebuildGarden();
+    });
+    blockSettingsInput.addEventListener('input', () => {
+        setVal('blockSettings', blockSettingsInput.value);
+        rebuildGarden();
+    });
+
     window.addEventListener('resize', onWindowResize);
 
-    // Initialization
     function initGrass() {
         if (grassMesh) {
             scene.remove(grassMesh);
             grassMesh.geometry.dispose();
         }
-
         const count = parseInt(grassDensityInput.value);
         const minLen = parseFloat(bladeMinLengthInput.value);
         const maxLen = parseFloat(bladeMaxLengthInput.value);
@@ -412,70 +396,56 @@ async function init() {
         const minTipWid = parseFloat(bladeMinTipWidthInput.value);
         const maxTipWid = parseFloat(bladeMaxTipWidthInput.value);
         const segments = parseInt(bladeSegmentsInput.value);
-        
         const gW = ground.scale.x;
         const gH = ground.scale.y;
-
         const baseGeom = new THREE.PlaneGeometry(1, 1, 1, segments);
         baseGeom.translate(0, 0.5, 0); 
-
         const instancedGeom = new THREE.InstancedBufferGeometry();
         instancedGeom.index = baseGeom.index;
         instancedGeom.attributes.position = baseGeom.attributes.position;
         instancedGeom.attributes.uv = baseGeom.attributes.uv;
-
         const offsets = new Float32Array(count * 3);
         const sizes = new Float32Array(count);
         const widths = new Float32Array(count);
         const tipWidths = new Float32Array(count);
         const angles = new Float32Array(count);
-
         for (let i = 0; i < count; i++) {
             offsets[i * 3] = (Math.random() - 0.5) * gW;
             offsets[i * 3 + 1] = (Math.random() - 0.5) * gH;
-            offsets[i * 3 + 2] = 0.01; // Slightly in front of plane
-
+            offsets[i * 3 + 2] = 0.01;
             sizes[i] = minLen + Math.random() * (maxLen - minLen);
             widths[i] = minWid + Math.random() * (maxWid - minWid);
             tipWidths[i] = minTipWid + Math.random() * (maxTipWid - minTipWid);
             angles[i] = Math.random() * Math.PI * 2;
         }
-
         instancedGeom.setAttribute('aOffset', new THREE.InstancedBufferAttribute(offsets, 3));
         instancedGeom.setAttribute('aSize', new THREE.InstancedBufferAttribute(sizes, 1));
         instancedGeom.setAttribute('aWidth', new THREE.InstancedBufferAttribute(widths, 1));
         instancedGeom.setAttribute('aTipWidth', new THREE.InstancedBufferAttribute(tipWidths, 1));
         instancedGeom.setAttribute('aAngle', new THREE.InstancedBufferAttribute(angles, 1));
-
         grassMesh = new THREE.Mesh(instancedGeom, grassMaterial);
         grassMesh.frustumCulled = false; 
-        grassMesh.renderOrder = 2; // Render after occluders
+        grassMesh.renderOrder = 2;
         scene.add(grassMesh);
     }
 
     initGrass();
     regeneratePrisms();
-
     animate();
 }
 
 function regeneratePrisms() {
     targetPrisms.forEach(p => scene.remove(p));
     targetPrisms = [];
-
     const prismWidth = parseFloat(document.getElementById('prismWidth').value) || 10;
     const prismDepth = parseFloat(document.getElementById('prismDepth').value) || 5;
     const prismSpacing = parseFloat(document.getElementById('prismSpacing').value) || 2;
     const heightsCSV = document.getElementById('prismHeights').value;
-
     const ySizes = heightsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
     if (ySizes.length === 0) return;
-
     const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * prismSpacing;
     let currentY = -totalYLength / 2;
-
     const boxGeom = new THREE.BoxGeometry(1, 1, 1);
-
     ySizes.forEach((ySize) => {
         const mat = new THREE.MeshStandardMaterial({ 
             color: 0x83da4a, 
@@ -486,26 +456,17 @@ function regeneratePrisms() {
         const prism = new THREE.Mesh(boxGeom, mat);
         prism.scale.set(prismWidth, ySize, prismDepth);
         prism.position.set(0, currentY + ySize / 2, prismDepth / 2);
-        prism.renderOrder = 1; // Render before grass (which will be 2)
-        
+        prism.renderOrder = 1;
         prism.visible = wireframeEnabled;
         scene.add(prism);
         targetPrisms.push(prism);
-
-        // Add an invisible occluder that always writes to depth
-        const occluderMat = new THREE.MeshBasicMaterial({
-            colorWrite: false,
-            depthWrite: true
-        });
+        const occluderMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
         const occluder = new THREE.Mesh(boxGeom, occluderMat);
-        // Do not copy scale/pos, it inherits from parent
-        occluder.renderOrder = 0; // Render first
+        occluder.renderOrder = 0;
         occluder.name = "occluder";
-        prism.add(occluder); // Parent it so it follows transforms
-        
+        prism.add(occluder);
         currentY += ySize + prismSpacing;
     });
-
     if (gardenSystem) gardenSystem.update(targetPrisms);
 }
 
@@ -514,7 +475,6 @@ function updatePrismPositions() {
     const ySizes = targetPrisms.map(p => p.scale.y);
     const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * prismSpacing;
     let currentY = -totalYLength / 2;
-
     targetPrisms.forEach((prism, i) => {
         const ySize = ySizes[i];
         prism.position.y = currentY + ySize / 2;
@@ -533,7 +493,6 @@ function setupDraggable(input, onUpdate, minVal = null) {
     let isDragging = false;
     let startX = 0;
     let startVal = 0;
-
     input.addEventListener('mousedown', (e) => {
         isDragging = true;
         startX = e.clientX;
@@ -541,7 +500,6 @@ function setupDraggable(input, onUpdate, minVal = null) {
         input.classList.add('dragging');
         document.body.style.cursor = 'ew-resize';
     });
-
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         const delta = e.clientX - startX;
@@ -551,7 +509,6 @@ function setupDraggable(input, onUpdate, minVal = null) {
         input.value = newVal;
         onUpdate(newVal);
     });
-
     window.addEventListener('mouseup', () => {
         if (isDragging) {
             isDragging = false;
@@ -559,7 +516,6 @@ function setupDraggable(input, onUpdate, minVal = null) {
             document.body.style.cursor = 'default';
         }
     });
-
     input.addEventListener('input', () => {
         const val = parseFloat(input.value);
         if (!isNaN(val)) onUpdate(val);
@@ -569,11 +525,9 @@ function setupDraggable(input, onUpdate, minVal = null) {
 function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
-    
     if (grassMesh && grassMesh.material.uniforms.uTime) {
         grassMesh.material.uniforms.uTime.value = time;
     }
-
     controls.update();
     renderer.render(scene, camera);
 }
