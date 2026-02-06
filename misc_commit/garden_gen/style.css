@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     overflow: hidden;
@@ -18,7 +22,8 @@ body {
     position: fixed;
     top: 10px;
     right: 10px;
-    width: 280px;
+    bottom: 10px;
+    width: 420px;
     background: rgba(30, 30, 30, 0.9);
     backdrop-filter: blur(10px);
     padding: 20px;
@@ -29,7 +34,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    max-height: calc(100vh - 40px);
     overflow-y: auto;
 }
 
@@ -42,7 +46,7 @@ textarea {
     padding: 8px;
     border-radius: 4px;
     resize: vertical;
-    min-height: 100px;
+    min-height: 250px;
 }
 
 h2, h3 {

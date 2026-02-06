@@ -48,6 +48,7 @@ async function init() {
     const prismDepthInput = document.getElementById('prismDepth');
     const prismSpacingInput = document.getElementById('prismSpacing');
     const prismHeightsInput = document.getElementById('prismHeights');
+    const prngSeedInput = document.getElementById('prngSeed');
 
     const gardenSettingsInput = document.getElementById('gardenSettings');
     const blockSettingsInput = document.getElementById('blockSettings');
@@ -78,9 +79,54 @@ async function init() {
     prismDepthInput.value = getVal('prismDepth', '5');
     prismSpacingInput.value = getVal('prismSpacing', '2');
     prismHeightsInput.value = getVal('prismHeights', '10, 6, 7');
+    prngSeedInput.value = getVal('prngSeed', 'garden_seed_123');
     
-    if (localStorage.getItem('g_gardenSettings')) gardenSettingsInput.value = localStorage.getItem('g_gardenSettings');
-    if (localStorage.getItem('g_blockSettings')) blockSettingsInput.value = localStorage.getItem('g_blockSettings');
+    const defaultGardenSettings = {
+        snails: { density: 10, minScale: 0.5, maxScale: 1.2, seed: "snail_v1", yOffset: 0.1, randomRotation: true },
+        flowers: { density: 30, minScale: 0.8, maxScale: 1.5, seed: "flower_v1", yOffset: 0.0, randomRotation: true },
+        leaves: { density: 50, minScale: 0.3, maxScale: 0.8, seed: "leaf_v1", yOffset: 0.0, randomRotation: true }
+    };
+
+    const defaultBlockSettings = {
+        blockScaleSize: 1.0,
+        overScaleDepth: 1.1,
+        centerScaler: 1.666666667,
+        uvScale: 1.0,
+        reprojectUVs: true,
+        blockHasSnailsOdds: 0.7,
+        maxSnails: 2,
+        snailScale: 1.0,
+        debugSnails: true,
+        snailAnimationSpeed: 1,
+        snailRotationMultiplier: [0, 1, 0],
+        snailRotationXOffset: 0,
+        snailRotationYOffset: 0,
+        snailRotationZOffset: 0
+    };
+
+    if (localStorage.getItem('g_gardenSettings')) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('g_gardenSettings'));
+            const merged = { ...defaultGardenSettings, ...saved };
+            gardenSettingsInput.value = JSON.stringify(merged, null, 2);
+        } catch (e) {
+            gardenSettingsInput.value = JSON.stringify(defaultGardenSettings, null, 2);
+        }
+    } else {
+        gardenSettingsInput.value = JSON.stringify(defaultGardenSettings, null, 2);
+    }
+
+    if (localStorage.getItem('g_blockSettings')) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('g_blockSettings'));
+            const merged = { ...defaultBlockSettings, ...saved };
+            blockSettingsInput.value = JSON.stringify(merged, null, 2);
+        } catch (e) {
+            blockSettingsInput.value = JSON.stringify(defaultBlockSettings, null, 2);
+        }
+    } else {
+        blockSettingsInput.value = JSON.stringify(defaultBlockSettings, null, 2);
+    }
 
     // Three.js Setup
     scene = new THREE.Scene();
@@ -180,7 +226,8 @@ async function init() {
             ground,
             targetPrisms,
             gSettings,
-            bSettings
+            bSettings,
+            prngSeedInput.value
         );
         scene.add(gardenSystem);
     }
@@ -372,6 +419,11 @@ async function init() {
         setVal('prismHeights', prismHeightsInput.value);
     });
 
+    prngSeedInput.addEventListener('input', () => {
+        setVal('prngSeed', prngSeedInput.value);
+        rebuildGarden();
+    });
+
     gardenSettingsInput.addEventListener('input', () => {
         setVal('gardenSettings', gardenSettingsInput.value);
         rebuildGarden();
@@ -527,6 +579,9 @@ function animate() {
     const time = clock.getElapsedTime();
     if (grassMesh && grassMesh.material.uniforms.uTime) {
         grassMesh.material.uniforms.uTime.value = time;
+    }
+    if (gardenSystem) {
+        gardenSystem.updateAnimation(time);
     }
     controls.update();
     renderer.render(scene, camera);

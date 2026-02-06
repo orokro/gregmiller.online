@@ -1,11 +1,18 @@
 import * as THREE from 'three';
+import PRNG from './utils/PRNG.js';
+import { Snail } from './Snail.js';
 
 export class GardenBlock extends THREE.Object3D {
-    constructor(modelScene, prism, settings) {
+    constructor(modelScene, prism, settings, seed = 'default_block_seed', snailModel = null, snailGroup = null) {
         super();
 
         this.prism = prism;
         this.settings = settings || {};
+        this.seed = seed;
+        this.prng = new PRNG(this.seed);
+        this.snailModel = snailModel;
+        this.snailGroup = snailGroup;
+
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
         this.centerScaler = this.settings.centerScaler !== undefined ? this.settings.centerScaler : 1.666666667;
@@ -16,6 +23,9 @@ export class GardenBlock extends THREE.Object3D {
         this.baseDimensions = {}; 
         this.lastPrismScale = new THREE.Vector3();
 
+        this.snails = [];
+
+        console.log(`GardenBlock: Initialized with seed ${this.seed}, has snailModel: ${!!this.snailModel}`);
         this.parseModel(modelScene);
         this.update(true);
     }
@@ -61,6 +71,8 @@ export class GardenBlock extends THREE.Object3D {
 
         this.layout();
         this.lastPrismScale.copy(currentScale);
+
+        this.spawnSnails();
     }
 
     layout() {
@@ -142,6 +154,103 @@ export class GardenBlock extends THREE.Object3D {
         }
     }
 
+    spawnSnails() {
+        // Clear existing snails
+        this.snails.forEach(s => {
+            if (s.parent) s.parent.remove(s);
+            s.cleanup();
+        });
+        this.snails = [];
+
+        if (!this.snailModel) {
+            console.warn("GardenBlock: No snail model provided");
+            return;
+        }
+
+        const odds = this.settings.blockHasSnailsOdds !== undefined ? this.settings.blockHasSnailsOdds : 0.7;
+        const maxSnails = this.settings.maxSnails !== undefined ? this.settings.maxSnails : 2;
+        const rotationMultiplier = this.settings.snailRotationMultiplier || [0, 1, 0];
+        const snailScale = this.settings.snailScale !== undefined ? this.settings.snailScale : 1.0;
+        const debugSnails = this.settings.debugSnails !== undefined ? this.settings.debugSnails : true;
+        const rotXOffset = this.settings.snailRotationXOffset !== undefined ? this.settings.snailRotationXOffset : 0;
+        const rotYOffset = this.settings.snailRotationYOffset !== undefined ? this.settings.snailRotationYOffset : 0;
+        const rotZOffset = this.settings.snailRotationZOffset !== undefined ? this.settings.snailRotationZOffset : 0;
+
+        // Reset PRNG to ensure deterministic placement based on seed
+        this.prng = new PRNG(this.seed);
+
+        if (this.prng.bool(odds)) {
+            const count = Math.floor(this.prng.range(1, maxSnails + 1));
+            console.log(`GardenBlock: Spawning ${count} snails for seed ${this.seed}`);
+            
+            for (let i = 0; i < count; i++) {
+                const snail = new Snail(this.snailModel, debugSnails);
+                
+                let attempts = 0;
+                let validPlacement = false;
+                let pos = new THREE.Vector3();
+                let worldPos = new THREE.Vector3();
+                let worldQuat = new THREE.Quaternion();
+
+                // Target the "Top Edge" of the prism.
+                // Prism Y is up. Top is Y=0.5.
+                // User wants "front depth (z) edge". Front is Z=0.5.
+                // So we want Y=0.5 and Z=0.5 roughly.
+                // We vary X across the width.
+
+                while (!validPlacement && attempts < 10) {
+                    const edgeX = this.prng.range(-0.45, 0.45); 
+                    
+                    // Local position on the prism's top-front edge
+                    // Nudge Y up and Z out slightly to sit on top/edge
+                    pos.set(edgeX, 0.5, 0.5);
+
+                    // Check distance to other snails (in local space roughly ok)
+                    validPlacement = true;
+                    // Note: We haven't added this snail yet, so checking against existing world positions
+                    // requires calculating this one's world pos first.
+                    
+                    // Convert to World Space
+                    // We need to clone the vector to apply matrix, or just use applyMatrix4
+                    worldPos.copy(pos).applyMatrix4(this.prism.matrixWorld);
+
+                    for (const other of this.snails) {
+                        if (worldPos.distanceTo(other.position) < 0.5) { // Check world distance
+                            validPlacement = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+
+                if (validPlacement) {
+                    snail.position.copy(worldPos);
+
+                    // Orientation
+                    // Apply user defined rotation offsets
+                    const baseRot = new THREE.Euler(rotXOffset, rotYOffset, rotZOffset); 
+                    
+                    snail.quaternion.setFromEuler(baseRot);
+                    
+                    snail.scale.set(snailScale, snailScale, snailScale);
+
+                    if (this.snailGroup) {
+                        this.snailGroup.add(snail);
+                    } else {
+                        // Fallback if no group (shouldn't happen with new system)
+                        this.add(snail); 
+                    }
+                    this.snails.push(snail);
+                }
+            }
+        }
+    }
+
+    updateAnimation(time) {
+        const speed = this.settings.snailAnimationSpeed !== undefined ? this.settings.snailAnimationSpeed : 1.0;
+        this.snails.forEach(s => s.update(time, speed));
+    }
+
     reproject(pW, pH) {
         const uvScale = this.uvScale;
         Object.keys(this.pieces).forEach(name => {
@@ -188,5 +297,10 @@ export class GardenBlock extends THREE.Object3D {
         Object.values(this.pieces).forEach(p => {
             if (p.geometry) p.geometry.dispose();
         });
+        this.snails.forEach(s => {
+            if (s.parent) s.parent.remove(s);
+            s.cleanup();
+        });
+        this.snails = [];
     }
 }

@@ -1,16 +1,21 @@
 import * as THREE from 'three';
 import { GardenBlock } from './GardenBlock.js';
 import { GardenScatter } from './GardenScatter.js';
+import PRNG from './utils/PRNG.js';
 
 export class GardenSystem extends THREE.Object3D {
-    constructor(models, bgPlane, prisms, gardenSettings, blockSettings) {
+    constructor(models, bgPlane, prisms, gardenSettings, blockSettings, seed = 'default_seed') {
         super();
         this.models = models;
         this.bgPlane = bgPlane;
         this.gardenSettings = gardenSettings || {};
         this.blockSettings = blockSettings || {};
+        this.seed = seed;
+        this.prng = new PRNG(this.seed);
         
         this.gardenBlocks = new Map(); // Map prism -> GardenBlock
+        this.snailGroup = new THREE.Group();
+        this.add(this.snailGroup);
         
         this.scatterers = {
             snails: null,
@@ -35,9 +40,10 @@ export class GardenSystem extends THREE.Object3D {
         }
 
         // Add or Update blocks
-        prisms.forEach(prism => {
+        prisms.forEach((prism, index) => {
             if (!this.gardenBlocks.has(prism)) {
-                const block = new GardenBlock(this.models.block, prism, this.blockSettings);
+                const blockSeed = `${this.seed}_${index}`;
+                const block = new GardenBlock(this.models.block, prism, this.blockSettings, blockSeed, this.models.snail, this.snailGroup);
                 prism.add(block);
                 this.gardenBlocks.set(prism, block);
             } else {
@@ -51,6 +57,12 @@ export class GardenSystem extends THREE.Object3D {
         this.updateScatter('snails', this.models.snail, this.gardenSettings.snails, prisms);
         this.updateScatter('flowers', this.models.sunflower, this.gardenSettings.flowers, prisms);
         this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms);
+    }
+
+    updateAnimation(time) {
+        for (const block of this.gardenBlocks.values()) {
+            block.updateAnimation(time);
+        }
     }
 
     updateScatter(key, model, settings, prisms) {
@@ -79,6 +91,13 @@ export class GardenSystem extends THREE.Object3D {
             if (block.parent) block.parent.remove(block);
         }
         this.gardenBlocks.clear();
+        
+        // Clear global snail group
+        while(this.snailGroup.children.length > 0){ 
+            const child = this.snailGroup.children[0];
+            this.snailGroup.remove(child);
+            if (child.cleanup) child.cleanup();
+        }
 
         Object.keys(this.scatterers).forEach(key => {
             if (this.scatterers[key]) {
