@@ -205,6 +205,7 @@ async function init() {
             butterflyXOffset: 0,
             butterflyYOffset: 0,
             butterflyZOffset: 0,
+            butterflyBodyScale: 1,
             baseRotation: [0, 0, 0],
             showDebugTarget: true
         }
@@ -392,6 +393,30 @@ async function init() {
 
     createGardenBtn.addEventListener('click', rebuildGarden);
     destroyGardenBtn.addEventListener('click', destroyGarden);
+
+    // DEBUG RAYCASTER
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    window.addEventListener('mousedown', (e) => {
+        if (e.target !== container.querySelector('canvas')) return;
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children, true);
+        if (intersects.length > 0) {
+            const obj = intersects[0].object;
+            console.log("--- CLICKED OBJECT ---");
+            console.log("Name:", obj.name);
+            console.log("Type:", obj.type);
+            console.log("Parent:", obj.parent ? obj.parent.name : "none");
+            console.log("Scale:", obj.scale.toArray());
+            console.log("World Pos:", obj.getWorldPosition(new THREE.Vector3()).toArray());
+            if (obj.geometry) {
+                obj.geometry.computeBoundingBox();
+                console.log("Geom Bounds Size:", obj.geometry.boundingBox.getSize(new THREE.Vector3()).toArray());
+            }
+        }
+    });
 
     // Setup UI Events
     wireframeInput.addEventListener('change', (e) => {
