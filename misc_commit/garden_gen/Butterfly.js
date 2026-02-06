@@ -23,33 +23,66 @@ export class Butterfly extends THREE.Object3D {
             action.timeScale = this.settings.animationSpeed || 1;
         }
 
-        // Auto-normalize scale based on MESHES ONLY
+        // Auto-normalize scale based on VALID MESHES ONLY
         const box = new THREE.Box3();
-        const debugMat = new THREE.MeshStandardMaterial({ color: 0xff00ff }); // Magenta fallback
+        let foundValidMesh = false;
         
+        // Force update of internal matrices before measurement
+        this.mesh.updateMatrixWorld(true);
+
         this.mesh.traverse((child) => {
             if (child.isMesh) {
-                box.expandByObject(child);
+                if (child.geometry) {
+                    child.geometry.computeBoundingBox();
+                    const geomBox = child.geometry.boundingBox.clone();
+                    
+                    const rootInv = this.mesh.matrixWorld.clone().invert();
+                    const localMatrix = child.matrixWorld.clone().premultiply(rootInv);
+                    geomBox.applyMatrix4(localMatrix);
+
+                    const width = geomBox.max.x - geomBox.min.x;
+                    const height = geomBox.max.y - geomBox.min.y;
+                    const depth = geomBox.max.z - geomBox.min.z;
+                    const maxSide = Math.max(width, height, depth);
+                    
+                    const center = new THREE.Vector3();
+                    geomBox.getCenter(center);
+                    const distFromOrigin = center.length();
+
+                    // Heuristics:
+                    // 1. Not massive (> 500 units)
+                    // 2. Not far from origin (> 500 units) - catches the exploded parts at -1720
+                    if (maxSide < 500 && maxSide > 0.001 && distFromOrigin < 500) {
+                        box.union(geomBox);
+                        foundValidMesh = true;
+                        child.visible = true;
+                    } else {
+                        child.visible = false;
+                    }
+                }
                 child.frustumCulled = false;
-                // TEMPORARY: Force visibility with simple material
-                // child.material = debugMat; 
+                
+                if (child.material) {
+                    child.material.side = THREE.DoubleSide;
+                }
             }
         });
 
         const size = new THREE.Vector3();
         box.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
         
         this.meshContainer = new THREE.Group();
         this.add(this.meshContainer);
         this.meshContainer.add(this.mesh);
 
         if (maxDim > 0) {
+            // Scale to be size 1
             const scaleFactor = 1.0 / maxDim;
             this.mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
-            this.mesh.position.sub(center.multiplyScalar(scaleFactor));
+            this.mesh.position.sub(center.clone().multiplyScalar(scaleFactor));
         }
 
         const baseRot = this.settings.baseRotation || [0, 0, 0];
@@ -81,7 +114,6 @@ export class Butterfly extends THREE.Object3D {
             curve: null,
             curveT: 0,
             lastPickAt: 0,
-            lastLogAt: 0,
             lastUpdate: performance.now()
         };
 
@@ -156,8 +188,8 @@ export class Butterfly extends THREE.Object3D {
 
         if (this.debugSphere) {
             this.debugSphere.position.copy(this.state.target);
-            if (!this.debugSphere.parent && this.parent) {
-                this.parent.add(this.debugSphere); 
+            if (!this.debugSphere.parent && this.parent && this.parent.parent) {
+                this.parent.parent.add(this.debugSphere); 
             }
         }
 
@@ -189,7 +221,6 @@ export class Butterfly extends THREE.Object3D {
     }
 
     update(time, dt) {
-        // Robust dt calculation if passed one is zero
         const now = performance.now();
         let safeDt = dt;
         if (safeDt <= 0) {
@@ -237,11 +268,6 @@ export class Butterfly extends THREE.Object3D {
 
         this.position.copy(this.state.worldPos);
         this.rotation.z = this.state.angle - Math.PI / 2; 
-
-        if (now - this.state.lastLogAt > 1000) {
-            console.log(`Butterfly [${this.side}]: T=${this.state.curveT.toFixed(2)}, Pos=${this.position.toArray().map(v=>v.toFixed(2))}, dt=${safeDt.toFixed(4)}`);
-            this.state.lastLogAt = now;
-        }
     }
 
     getBezierDerivative(curve, t) {
