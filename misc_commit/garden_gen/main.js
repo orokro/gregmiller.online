@@ -202,6 +202,9 @@ async function init() {
             speed: 1,
             animationSpeed: 1,
             yOffset: 3,
+            butterflyXOffset: 0,
+            butterflyYOffset: 0,
+            butterflyZOffset: 0,
             baseRotation: [0, 0, 0],
             showDebugTarget: true
         }
@@ -231,7 +234,14 @@ async function init() {
     if (localStorage.getItem('g_gardenSettings')) {
         try {
             const saved = JSON.parse(localStorage.getItem('g_gardenSettings'));
-            const merged = { ...defaultGardenSettings, ...saved };
+            // Deep merge for butterfly settings
+            const merged = { 
+                ...defaultGardenSettings, 
+                ...saved,
+                flowers: { ...defaultGardenSettings.flowers, ...(saved.flowers || {}) },
+                leaves: { ...defaultGardenSettings.leaves, ...(saved.leaves || {}) },
+                butterfly: { ...defaultGardenSettings.butterfly, ...(saved.butterfly || {}) }
+            };
             gardenSettingsInput.value = JSON.stringify(merged, null, 2);
         } catch (e) {
             gardenSettingsInput.value = JSON.stringify(defaultGardenSettings, null, 2);

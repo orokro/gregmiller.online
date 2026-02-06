@@ -19,20 +19,13 @@ export class Butterfly extends THREE.Object3D {
         this.mixer = new THREE.AnimationMixer(this.mesh);
         if (gltf.animations && gltf.animations.length > 0) {
             const clip = gltf.animations[0];
-            
-            // Remove position tracks to prevent root motion (flying out of box)
             const tracks = clip.tracks.filter(t => !t.name.includes('.position'));
             const cleanClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
-
             const action = this.mixer.clipAction(cleanClip);
             action.play();
             action.timeScale = this.settings.animationSpeed || 1;
-            
-            console.log(`Butterfly [${this.side}]: Playing sanitized animation ${clip.name}. Tracks: ${tracks.length}/${clip.tracks.length}`);
         }
 
-        // Auto-normalize scale based on VALID MESHES ONLY
-        // We separate "valid for bounds" vs "valid for visibility"
         const box = new THREE.Box3();
         let foundValidMesh = false;
         
@@ -57,21 +50,20 @@ export class Butterfly extends THREE.Object3D {
                     geomBox.getCenter(center);
                     const distFromOrigin = center.length();
 
-                    // Heuristics:
-                    // 1. Is it a "part" of the butterfly? (Size < 500)
-                    if (maxSide < 500 && maxSide > 0.001) {
+                    // Relaxed visibility: Allow the spine (1700 units)
+                    if (maxSide < 2500 && maxSide > 0.001) {
                         child.visible = true;
                         
-                        // 2. Should it drive the bounding box centering/scale?
-                        // Only if it's near the origin (not exploded bind pose)
-                        if (distFromOrigin < 500) {
+                        // Strict Bounds: Only use compact parts (Wings) to drive scale
+                        // Spine (1700) or exploded parts (-1700) should not drive scale
+                        if (maxSide < 500 && distFromOrigin < 500) {
                             box.union(geomBox);
                             foundValidMesh = true;
                         } else {
-                            console.log(`Butterfly [${this.side}]: Mesh ${child.name} visible but excluded from bounds (Dist: ${distFromOrigin.toFixed(2)})`);
+                            console.log(`Butterfly [${this.side}]: Mesh ${child.name} visible but excluded from bounds. Size: ${maxSide.toFixed(0)}, Dist: ${distFromOrigin.toFixed(0)}`);
                         }
                     } else {
-                        // Massive rig parts or helpers
+                        // 11k outlier
                         child.visible = false;
                     }
                 }
@@ -79,8 +71,6 @@ export class Butterfly extends THREE.Object3D {
                 
                 if (child.material) {
                     child.material.side = THREE.DoubleSide;
-                    // child.material.transparent = false; 
-                    // child.material.opacity = 1.0;
                 }
             }
         });
@@ -91,7 +81,7 @@ export class Butterfly extends THREE.Object3D {
         const center = new THREE.Vector3();
         box.getCenter(center);
         
-        console.log(`Butterfly [${this.side}]: Bounds Center: ${center.toArray()}, MaxDim: ${maxDim}`);
+        console.log(`Butterfly [${this.side}]: Bounds Center: ${center.toArray()}, MaxDim: ${maxDim}, Offsets: [${this.settings.butterflyXOffset}, ${this.settings.butterflyYOffset}, ${this.settings.butterflyZOffset}]`);
 
         this.meshContainer = new THREE.Group();
         this.add(this.meshContainer);
@@ -100,8 +90,13 @@ export class Butterfly extends THREE.Object3D {
         if (maxDim > 0) {
             const scaleFactor = 1.0 / maxDim;
             this.mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-            // Center based on the calculated box of "valid" meshes
+            // Center visual mass
             this.mesh.position.sub(center.clone().multiplyScalar(scaleFactor));
+            
+            // Apply user offsets (in local container space, so scale 1 units)
+            this.mesh.position.x += (this.settings.butterflyXOffset || 0);
+            this.mesh.position.y += (this.settings.butterflyYOffset || 0);
+            this.mesh.position.z += (this.settings.butterflyZOffset || 0);
         }
 
         const baseRot = this.settings.baseRotation || [0, 0, 0];
