@@ -305,6 +305,10 @@ export class GardenBlock extends THREE.Object3D {
     cleanup() {
         Object.values(this.pieces).forEach(p => {
             if (p.geometry) p.geometry.dispose();
+            if (p.material) {
+                if (Array.isArray(p.material)) p.material.forEach(m => m.dispose());
+                else p.material.dispose();
+            }
         });
         this.snails.forEach(s => {
             if (s.parent) s.parent.remove(s);

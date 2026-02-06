@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GardenSystem } from './GardenSystem.js';
 
 let scene, camera, renderer, controls;
-let ground, grassMesh;
+let ground;
 let targetPrisms = [];
 let wireframeEnabled = true;
 let clock = new THREE.Clock();
@@ -20,6 +20,9 @@ async function init() {
     const container = document.getElementById('canvas-container');
 
     // UI Elements
+    const createGardenBtn = document.getElementById('createGarden');
+    const destroyGardenBtn = document.getElementById('destroyGarden');
+
     const wireframeInput = document.getElementById('wireframe');
     const hdrIntensityInput = document.getElementById('hdrIntensity');
     const groundWidthInput = document.getElementById('groundWidth');
@@ -129,6 +132,10 @@ async function init() {
         };
         grassSettingsInput.value = JSON.stringify(settings, null, 2);
         localStorage.setItem('g_grassSettings', grassSettingsInput.value);
+        
+        if (gardenSystem) {
+            gardenSystem.updateShader(settings);
+        }
     }
 
     grassSettingsInput.addEventListener('input', () => {
@@ -154,17 +161,9 @@ async function init() {
 
             localStorage.setItem('g_grassSettings', grassSettingsInput.value);
             
-            // Trigger updates
-            initGrass();
-            // Update uniforms directly for shader props
-            if (grassMesh) {
-                grassMaterial.uniforms.uNoiseScale.value = parseFloat(noiseScaleInput.value);
-                grassMaterial.uniforms.uWindIntensity.value = parseFloat(windIntensityInput.value);
-                grassMaterial.uniforms.uWindDirection.value.set(parseFloat(windXInput.value), parseFloat(windYInput.value));
-                grassMaterial.uniforms.uColor1.value.set(grassColor1Input.value);
-                grassMaterial.uniforms.uColor2.value.set(grassColor2Input.value);
+            if (gardenSystem) {
+                gardenSystem.updateShader(settings);
             }
-            ground.material.color.set(planeColorInput.value);
 
         } catch (e) {
             // Ignore invalid JSON while typing
@@ -263,8 +262,9 @@ async function init() {
 
     // Ground Plane
     const groundGeometry = new THREE.PlaneGeometry(1, 1);
+    // DEBUG BLUE MATERIAL
     const groundMaterial = new THREE.MeshStandardMaterial({ 
-        color: planeColorInput.value, 
+        color: 0x00ABAE, 
         side: THREE.DoubleSide 
     });
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -323,15 +323,18 @@ async function init() {
 
     function rebuildGarden() {
         if (gardenSystem) {
-            gardenSystem.cleanup();
+            gardenSystem.destroy();
             scene.remove(gardenSystem);
+            gardenSystem = null;
         }
 
         let gSettings = {};
         let bSettings = {};
+        let grSettings = {};
         try {
             gSettings = JSON.parse(gardenSettingsInput.value);
             bSettings = JSON.parse(blockSettingsInput.value);
+            grSettings = JSON.parse(grassSettingsInput.value);
         } catch(e) {
             console.warn("Invalid JSON settings", e);
         }
@@ -342,100 +345,33 @@ async function init() {
             targetPrisms,
             gSettings,
             bSettings,
+            grSettings,
             prngSeedInput.value
         );
         scene.add(gardenSystem);
         scene.updateMatrixWorld(true);
+        updateButtonStates();
     }
 
-    // Grass Material
-    const grassMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            uTime: { value: 0 },
-            uNoiseScale: { value: parseFloat(noiseScaleInput.value) },
-            uWindIntensity: { value: parseFloat(windIntensityInput.value) },
-            uWindDirection: { value: new THREE.Vector2(parseFloat(windXInput.value), parseFloat(windYInput.value)) },
-            uColor1: { value: new THREE.Color(grassColor1Input.value) },
-            uColor2: { value: new THREE.Color(grassColor2Input.value) },
-            uBendIntensity: { value: parseFloat(bendIntensityInput.value) }
-        },
-        vertexShader: `
-            uniform float uTime;
-            uniform float uNoiseScale;
-            uniform float uWindIntensity;
-            uniform vec2 uWindDirection;
-            uniform float uBendIntensity;
+    function destroyGarden() {
+        if (gardenSystem) {
+            gardenSystem.destroy();
+            scene.remove(gardenSystem);
+            gardenSystem = null;
+            updateButtonStates();
+        }
+    }
 
-            attribute float aSize;
-            attribute float aWidth;
-            attribute float aTipWidth;
-            attribute vec3 aOffset;
-            attribute float aAngle;
+    function updateButtonStates() {
+        createGardenBtn.disabled = !!gardenSystem;
+        destroyGardenBtn.disabled = !gardenSystem;
+        
+        createGardenBtn.style.opacity = createGardenBtn.disabled ? "0.5" : "1";
+        destroyGardenBtn.style.opacity = destroyGardenBtn.disabled ? "0.5" : "1";
+    }
 
-            varying float vHeightPercent;
-            varying float vRandom;
-
-            float hash(float n) { return fract(sin(n) * 43758.5453123); }
-            float noise(vec3 x) {
-                vec3 p = floor(x);
-                vec3 f = fract(x);
-                f = f*f*(3.0-2.0*f);
-                float n = p.x + p.y*57.0 + 113.0*p.z;
-                return mix(mix(mix( hash(n+  0.0), hash(n+  1.0),f.x),
-                               mix( hash(n+ 57.0), hash(n+ 58.0),f.x),f.y),
-                           mix(mix( hash(n+113.0), hash(n+114.0),f.x),
-                               mix( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
-            }
-
-            void main() {
-                vHeightPercent = uv.y;
-                vRandom = aAngle;
-                vec3 pos = position;
-                float currentWidth = mix(aWidth, aTipWidth, uv.y);
-                pos.x *= currentWidth;
-                pos.y *= aSize;
-                float angle = aAngle;
-                float s = sin(angle);
-                float c = cos(angle);
-                float rx = pos.x * c - pos.z * s;
-                float rz = pos.x * s + pos.z * c;
-                pos.x = rx;
-                pos.z = rz;
-                float windFactor = uv.y * uv.y;
-                float noiseVal = noise(vec3(aOffset.xy * uNoiseScale, uTime * 0.5));
-                vec2 windMove = uWindDirection * uWindIntensity * (noiseVal + 0.5);
-                pos.x += windMove.x * windFactor;
-                pos.y += windMove.y * windFactor;
-                float bendX = sin(aAngle * 1.5) * uBendIntensity;
-                float bendY = cos(aAngle * 1.5) * uBendIntensity;
-                pos.x += bendX * windFactor;
-                pos.y += bendY * windFactor;
-                pos.z += windFactor * uBendIntensity * 0.5;
-                vec3 finalLocal;
-                finalLocal.x = pos.x;
-                finalLocal.y = pos.y;
-                finalLocal.z = pos.z;
-                vec3 normalOriented;
-                normalOriented.x = finalLocal.x;
-                normalOriented.y = -finalLocal.z;
-                normalOriented.z = finalLocal.y;
-                vec3 worldPos = aOffset + normalOriented;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 uColor1;
-            uniform vec3 uColor2;
-            varying float vHeightPercent;
-            varying float vRandom;
-            void main() {
-                float shade = mix(0.2, 1.0, vHeightPercent);
-                vec3 baseColor = mix(uColor1, uColor2, fract(vRandom * 7.0));
-                gl_FragColor = vec4(baseColor * shade, 1.0);
-            }
-        `,
-        side: THREE.DoubleSide
-    });
+    createGardenBtn.addEventListener('click', rebuildGarden);
+    destroyGardenBtn.addEventListener('click', destroyGarden);
 
     // Setup UI Events
     wireframeInput.addEventListener('change', (e) => {
@@ -457,55 +393,50 @@ async function init() {
     setupDraggable(groundWidthInput, (v) => {
         ground.scale.x = v;
         setVal('groundWidth', v);
-        initGrass();
+        if (gardenSystem) gardenSystem.initGrass();
     }, 0.1);
 
     setupDraggable(groundHeightInput, (v) => {
         ground.scale.y = v;
         setVal('groundHeight', v);
-        initGrass();
+        if (gardenSystem) gardenSystem.initGrass();
     }, 0.1);
 
-    setupDraggable(grassDensityInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeMinLengthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeMaxLengthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeMinWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeMaxWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeMinTipWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeMaxTipWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
-    setupDraggable(bladeSegmentsInput, (v) => { updateGrassJSON(); initGrass(); }, 1);
+    setupDraggable(grassDensityInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeMinLengthInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeMaxLengthInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeMinWidthInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeMaxWidthInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeMinTipWidthInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeMaxTipWidthInput, (v) => { updateGrassJSON(); }, 0);
+    setupDraggable(bladeSegmentsInput, (v) => { updateGrassJSON(); }, 1);
     
     setupDraggable(bendIntensityInput, (v) => { 
-        grassMaterial.uniforms.uBendIntensity.value = v; 
+        if (gardenSystem && gardenSystem.grassMaterial) {
+            gardenSystem.grassMaterial.uniforms.uBendIntensity.value = v; 
+        }
         updateGrassJSON();
     });
     setupDraggable(noiseScaleInput, (v) => { 
-        grassMaterial.uniforms.uNoiseScale.value = v; 
         updateGrassJSON();
     });
     setupDraggable(windIntensityInput, (v) => { 
-        grassMaterial.uniforms.uWindIntensity.value = v; 
         updateGrassJSON();
     });
     setupDraggable(windXInput, (v) => { 
-        grassMaterial.uniforms.uWindDirection.value.x = v; 
         updateGrassJSON();
     });
     setupDraggable(windYInput, (v) => { 
-        grassMaterial.uniforms.uWindDirection.value.y = v; 
         updateGrassJSON();
     });
     
     planeColorInput.addEventListener('input', (e) => { 
-        ground.material.color.set(e.target.value); 
         updateGrassJSON();
     });
     grassColor1Input.addEventListener('input', (e) => { 
-        grassMaterial.uniforms.uColor1.value.set(e.target.value); 
         updateGrassJSON();
     });
     grassColor2Input.addEventListener('input', (e) => { 
-        grassMaterial.uniforms.uColor2.value.set(e.target.value); 
         updateGrassJSON();
     });
 
@@ -551,53 +482,6 @@ async function init() {
 
     window.addEventListener('resize', onWindowResize);
 
-    function initGrass() {
-        if (grassMesh) {
-            scene.remove(grassMesh);
-            grassMesh.geometry.dispose();
-        }
-        const count = parseInt(grassDensityInput.value);
-        const minLen = parseFloat(bladeMinLengthInput.value);
-        const maxLen = parseFloat(bladeMaxLengthInput.value);
-        const minWid = parseFloat(bladeMinWidthInput.value);
-        const maxWid = parseFloat(bladeMaxWidthInput.value);
-        const minTipWid = parseFloat(bladeMinTipWidthInput.value);
-        const maxTipWid = parseFloat(bladeMaxTipWidthInput.value);
-        const segments = parseInt(bladeSegmentsInput.value);
-        const gW = ground.scale.x;
-        const gH = ground.scale.y;
-        const baseGeom = new THREE.PlaneGeometry(1, 1, 1, segments);
-        baseGeom.translate(0, 0.5, 0); 
-        const instancedGeom = new THREE.InstancedBufferGeometry();
-        instancedGeom.index = baseGeom.index;
-        instancedGeom.attributes.position = baseGeom.attributes.position;
-        instancedGeom.attributes.uv = baseGeom.attributes.uv;
-        const offsets = new Float32Array(count * 3);
-        const sizes = new Float32Array(count);
-        const widths = new Float32Array(count);
-        const tipWidths = new Float32Array(count);
-        const angles = new Float32Array(count);
-        for (let i = 0; i < count; i++) {
-            offsets[i * 3] = (Math.random() - 0.5) * gW;
-            offsets[i * 3 + 1] = (Math.random() - 0.5) * gH;
-            offsets[i * 3 + 2] = 0.01;
-            sizes[i] = minLen + Math.random() * (maxLen - minLen);
-            widths[i] = minWid + Math.random() * (maxWid - minWid);
-            tipWidths[i] = minTipWid + Math.random() * (maxTipWid - minTipWid);
-            angles[i] = Math.random() * Math.PI * 2;
-        }
-        instancedGeom.setAttribute('aOffset', new THREE.InstancedBufferAttribute(offsets, 3));
-        instancedGeom.setAttribute('aSize', new THREE.InstancedBufferAttribute(sizes, 1));
-        instancedGeom.setAttribute('aWidth', new THREE.InstancedBufferAttribute(widths, 1));
-        instancedGeom.setAttribute('aTipWidth', new THREE.InstancedBufferAttribute(tipWidths, 1));
-        instancedGeom.setAttribute('aAngle', new THREE.InstancedBufferAttribute(angles, 1));
-        grassMesh = new THREE.Mesh(instancedGeom, grassMaterial);
-        grassMesh.frustumCulled = false; 
-        grassMesh.renderOrder = 2;
-        scene.add(grassMesh);
-    }
-
-    initGrass();
     regeneratePrisms();
     animate();
 }
@@ -694,9 +578,6 @@ function setupDraggable(input, onUpdate, minVal = null) {
 function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
-    if (grassMesh && grassMesh.material.uniforms.uTime) {
-        grassMesh.material.uniforms.uTime.value = time;
-    }
     if (gardenSystem) {
         gardenSystem.updateAnimation(time);
     }

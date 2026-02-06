@@ -109,6 +109,14 @@ export class Snail extends THREE.Object3D {
     }
 
     cleanup() {
-        // Any specific cleanup if needed
+        this.snailModel.traverse(node => {
+            if (node.isMesh) {
+                if (node.geometry) node.geometry.dispose();
+                if (node.material) {
+                    if (Array.isArray(node.material)) node.material.forEach(m => m.dispose());
+                    else node.material.dispose();
+                }
+            }
+        });
     }
 }

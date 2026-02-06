@@ -155,7 +155,18 @@ export class GardenScatter extends THREE.Object3D {
     }
 
     cleanup() {
-        this.items.forEach(item => this.remove(item));
+        this.items.forEach(item => {
+            this.remove(item);
+            item.traverse(node => {
+                if (node.isMesh) {
+                    if (node.geometry) node.geometry.dispose();
+                    if (node.material) {
+                        if (Array.isArray(node.material)) node.material.forEach(m => m.dispose());
+                        else node.material.dispose();
+                    }
+                }
+            });
+        });
         this.items = [];
     }
 }
