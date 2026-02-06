@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Monarch Butterfly (Smooth Bezier Flight)</title>
+<style>
+	html, body {
+		margin: 0;
+		height: 100%;
+		background: #0b1020;
+		overflow: hidden;
+	}
+	canvas {
+		display: block;
+		width: 100vw;
+		height: 100vh;
+	}
+	.hint {
+		position: fixed;
+		left: 12px;
+		bottom: 12px;
+		color: rgba(255,255,255,0.75);
+		font: 12px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+		user-select: none;
+	}
+	.kbd {
+		padding: 2px 6px;
+		border: 1px solid rgba(255,255,255,0.25);
+		border-radius: 6px;
+		background: rgba(255,255,255,0.06);
+	}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint">
+	Click to pick a new point • <span class="kbd">Space</span> to randomize • Butterflies hate straight lines 🦋
+</div>
+
+<script>
+(() => {
+	'use strict';
+
+	const canvas = document.getElementById('c');
+	const ctx = canvas.getContext('2d', { alpha: false });
+
+	const TAU = Math.PI * 2;
+
+	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+	const lerp = (a, b, t) => a + (b - a) * t;
+
+	const wrapAngle = (a) => {
+		while (a <= -Math.PI) a += TAU;
+		while (a > Math.PI) a -= TAU;
+		return a;
+	};
+
+	const lerpAngle = (a, b, t) => {
+		let d = wrapAngle(b - a);
+		return a + d * t;
+	};
+
+	const rand = (a, b) => a + Math.random() * (b - a);
+
+	const vec = (x=0, y=0) => ({ x, y });
+	const vAdd = (a, b) => ({ x: a.x + b.x, y: a.y + b.y });
+	const vSub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
+	const vMul = (a, s) => ({ x: a.x * s, y: a.y * s });
+	const vLen = (a) => Math.hypot(a.x, a.y);
+	const vNorm = (a) => {
+		const l = vLen(a) || 1;
+		return { x: a.x / l, y: a.y / l };
+	};
+	const vDot = (a, b) => a.x * b.x + a.y * b.y;
+
+	const resize = () => {
+		const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+		canvas.width = Math.floor(innerWidth * dpr);
+		canvas.height = Math.floor(innerHeight * dpr);
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+	};
+	addEventListener('resize', resize);
+	resize();
+
+	// Cubic Bézier helpers
+	const bezierPoint = (p0, p1, p2, p3, t) => {
+		const u = 1 - t;
+		const tt = t * t;
+		const uu = u * u;
+		const uuu = uu * u;
+		const ttt = tt * t;
+		return {
+			x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
+			y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
+		};
+	};
+
+	const bezierTangent = (p0, p1, p2, p3, t) => {
+		// derivative of cubic bezier
+		const u = 1 - t;
+		const a = vMul(vSub(p1, p0), 3 * u * u);
+		const b = vMul(vSub(p2, p1), 6 * u * t);
+		const c = vMul(vSub(p3, p2), 3 * t * t);
+		return vAdd(vAdd(a, b), c);
+	};
+
+	const buildArcTable = (p0, p1, p2, p3, steps) => {
+		const ts = new Array(steps + 1);
+		const pts = new Array(steps + 1);
+		const lens = new Array(steps + 1);
+
+		let total = 0;
+		ts[0] = 0;
+		pts[0] = { x: p0.x, y: p0.y };
+		lens[0] = 0;
+
+		for (let i = 1; i <= steps; i++) {
+			const t = i / steps;
+			const pt = bezierPoint(p0, p1, p2, p3, t);
+			ts[i] = t;
+			pts[i] = pt;
+			total += vLen(vSub(pt, pts[i - 1]));
+			lens[i] = total;
+		}
+
+		return { ts, pts, lens, total };
+	};
+
+	const arcTAtDistance = (table, dist) => {
+		const d = clamp(dist, 0, table.total);
+		const lens = table.lens;
+		let lo = 0;
+		let hi = lens.length - 1;
+
+		while (hi - lo > 1) {
+			const mid = (lo + hi) >> 1;
+			if (lens[mid] < d) lo = mid;
+			else hi = mid;
+		}
+
+		const d0 = lens[lo];
+		const d1 = lens[hi];
+		const t0 = table.ts[lo];
+		const t1 = table.ts[hi];
+		const span = (d1 - d0) || 1;
+		const f = (d - d0) / span;
+
+		return lerp(t0, t1, f);
+	};
+
+	// Flight state
+	const state = {
+		pos: vec(innerWidth * 0.5, innerHeight * 0.5),
+		angle: rand(-Math.PI, Math.PI),
+		speed: 140,			// px/s (smoothed)
+		target: vec(innerWidth * 0.7, innerHeight * 0.5),
+		curve: null,
+		curveTable: null,
+		curveDist: 0,
+		curveSteps: 240,
+		lastPickAt: 0
+	};
+
+	const pickTarget = (x, y) => {
+		const w = innerWidth;
+		const h = innerHeight;
+
+		state.target = vec(
+			clamp(x ?? rand(40, w - 40), 40, w - 40),
+			clamp(y ?? rand(40, h - 40), 40, h - 40)
+		);
+
+		const p0 = { x: state.pos.x, y: state.pos.y };
+		const heading = { x: Math.cos(state.angle), y: Math.sin(state.angle) };
+
+		const toT = vSub(state.target, state.pos);
+		const dist = vLen(toT);
+
+		// Control lengths scale with distance, but never tiny/huge.
+		const c1Len = clamp(dist * 0.35, 80, 260);
+		const c2Len = clamp(dist * 0.25, 60, 220);
+
+		// p1 starts exactly along current heading => no abrupt turn at curve start.
+		const p1 = vAdd(p0, vMul(heading, c1Len));
+
+		// p2 nudges the approach direction: mostly toward the target, with a bit of "sweep"
+		// to encourage curvy flight and avoid straight segments.
+		const toDir = vNorm(toT);
+		const side = { x: -toDir.y, y: toDir.x };
+
+		const sweepSign = (Math.random() < 0.5) ? -1 : 1;
+		const sweepAmt = clamp(dist * 0.18, 40, 160) * sweepSign;
+
+		// Approach direction: blend between "toward target" and "continue-ish heading"
+		const mix = clamp(0.35 + 0.25 * (1 - Math.abs(vDot(heading, toDir))), 0.25, 0.75);
+		const approach = vNorm(vAdd(vMul(toDir, 1 - mix), vMul(heading, mix)));
+
+		const p3 = { x: state.target.x, y: state.target.y };
+		let p2 = vSub(p3, vMul(approach, c2Len));
+		p2 = vAdd(p2, vMul(side, sweepAmt));
+
+		state.curve = { p0, p1, p2, p3 };
+		state.curveTable = buildArcTable(p0, p1, p2, p3, state.curveSteps);
+		state.curveDist = 0;
+		state.lastPickAt = performance.now();
+	};
+
+	// initial curve
+	pickTarget();
+
+	// Interaction
+	addEventListener('pointerdown', (e) => pickTarget(e.clientX, e.clientY));
+	addEventListener('keydown', (e) => {
+		if (e.code === 'Space') {
+			e.preventDefault();
+			pickTarget();
+		}
+	});
+
+	// Butterfly drawing (local coordinates, facing +X)
+	const drawButterfly = (x, y, angle, t) => {
+		ctx.save();
+		ctx.translate(x, y);
+		ctx.rotate(angle);
+
+		// Subtle bobbing/flitter (doesn't affect physics)
+		const flutter = Math.sin(t * 10.0) * 0.25 + Math.sin(t * 6.2) * 0.12;
+		const wingOpen = 0.70 + 0.25 * Math.sin(t * 9.0 + 0.7);
+
+		ctx.translate(0, Math.sin(t * 5.2) * 1.6);
+		ctx.scale(1, 1);
+
+		// Body
+		ctx.fillStyle = '#1a1a1a';
+		roundOval(0, 0, 38, 10, 0.9);
+		ctx.fill();
+
+		// Thorax highlight
+		ctx.fillStyle = 'rgba(255,255,255,0.10)';
+		roundOval(6, -1, 16, 6, 0.9);
+		ctx.fill();
+
+		// Antennae
+		ctx.strokeStyle = '#111';
+		ctx.lineWidth = 2;
+		ctx.lineCap = 'round';
+		ctx.beginPath();
+		ctx.moveTo(18, -2);
+		ctx.quadraticCurveTo(30, -12, 40, -14);
+		ctx.moveTo(18, 2);
+		ctx.quadraticCurveTo(30, 12, 40, 14);
+		ctx.stroke();
+
+		// Antennae tips
+		ctx.fillStyle = '#111';
+		roundOval(41, -14, 4, 4, 1);
+		ctx.fill();
+		roundOval(41, 14, 4, 4, 1);
+		ctx.fill();
+
+		// Wings (two sides)
+		drawWingSide(wingOpen, flutter, 1);
+		drawWingSide(wingOpen, flutter, -1);
+
+		ctx.restore();
+	};
+
+	const roundOval = (cx, cy, rx, ry, squish) => {
+		ctx.beginPath();
+		ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU);
+	};
+
+	const drawWingSide = (wingOpen, flutter, side) => {
+		ctx.save();
+		ctx.scale(1, side);
+
+		// Wing hinge point slightly behind center
+		ctx.translate(-2, 0);
+
+		// Wing "flap" via rotation and scale
+		const flap = (0.45 + 0.55 * wingOpen) * 0.9;
+		ctx.rotate(0.55 * flap + flutter * 0.15);
+		ctx.scale(1, 0.95 + 0.08 * Math.sin(flutter * 4));
+
+		// Outer wing (orange)
+		ctx.fillStyle = '#f28c1b';
+		ctx.strokeStyle = '#121212';
+		ctx.lineWidth = 3;
+
+		ctx.beginPath();
+		ctx.ellipse(-6, -16, 34, 22, -0.25, 0, TAU);
+		ctx.ellipse(-10, 18, 28, 18, 0.25, 0, TAU);
+		ctx.fill();
+		ctx.stroke();
+
+		// Black border accents (thicker outline)
+		ctx.strokeStyle = '#0f0f0f';
+		ctx.lineWidth = 5;
+		ctx.beginPath();
+		ctx.ellipse(-6, -16, 34, 22, -0.25, 0, TAU);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.ellipse(-10, 18, 28, 18, 0.25, 0, TAU);
+		ctx.stroke();
+
+		// White spots along the edge
+		ctx.fillStyle = '#f3f3f3';
+		for (let i = 0; i < 7; i++) {
+			const a = lerp(-1.05, 0.25, i / 6);
+			const px = -6 + Math.cos(a) * 30;
+			const py = -16 + Math.sin(a) * 18;
+			ctx.beginPath();
+			ctx.ellipse(px, py, 2.2, 1.8, a * 0.2, 0, TAU);
+			ctx.fill();
+		}
+		for (let i = 0; i < 6; i++) {
+			const a = lerp(0.55, 2.35, i / 5);
+			const px = -10 + Math.cos(a) * 24;
+			const py = 18 + Math.sin(a) * 14;
+			ctx.beginPath();
+			ctx.ellipse(px, py, 2.0, 1.6, a * 0.2, 0, TAU);
+			ctx.fill();
+		}
+
+		// Black veins (simple curves)
+		ctx.strokeStyle = 'rgba(10,10,10,0.85)';
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(6, 0);
+		ctx.quadraticCurveTo(-12, -6, -34, -18);
+		ctx.moveTo(6, 0);
+		ctx.quadraticCurveTo(-8, -2, -26, -2);
+		ctx.moveTo(6, 0);
+		ctx.quadraticCurveTo(-10, 8, -30, 20);
+		ctx.stroke();
+
+		ctx.restore();
+	};
+
+	// Background + subtle vignette
+	const drawBackground = () => {
+		const w = innerWidth;
+		const h = innerHeight;
+
+		const g = ctx.createLinearGradient(0, 0, 0, h);
+		g.addColorStop(0, '#0b1020');
+		g.addColorStop(1, '#081328');
+
+		ctx.fillStyle = g;
+		ctx.fillRect(0, 0, w, h);
+
+		// Vignette
+		const rg = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.2, w * 0.5, h * 0.5, Math.max(w, h) * 0.75);
+		rg.addColorStop(0, 'rgba(0,0,0,0)');
+		rg.addColorStop(1, 'rgba(0,0,0,0.55)');
+		ctx.fillStyle = rg;
+		ctx.fillRect(0, 0, w, h);
+	};
+
+	const drawTarget = () => {
+		ctx.save();
+		ctx.translate(state.target.x, state.target.y);
+		ctx.fillStyle = '#33d17a';
+		ctx.beginPath();
+		ctx.arc(0, 0, 5, 0, TAU);
+		ctx.fill();
+
+		ctx.strokeStyle = 'rgba(51,209,122,0.35)';
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(0, 0, 14, 0, TAU);
+		ctx.stroke();
+		ctx.restore();
+	};
+
+	// Main update loop
+	let last = performance.now();
+
+	const step = (now) => {
+		const dt = clamp((now - last) / 1000, 0, 0.033);
+		last = now;
+
+		// Auto-pick: don’t “arrive and stop”, pick a new target before the end sometimes.
+		const sincePick = (now - state.lastPickAt) / 1000;
+		const nearingEnd = state.curveTable ? (state.curveDist / (state.curveTable.total || 1)) > 0.82 : false;
+		if (sincePick > rand(1.4, 2.7) || nearingEnd) {
+			// Bias new target toward where we're headed, so motion stays flowy
+			const forward = { x: Math.cos(state.angle), y: Math.sin(state.angle) };
+			const ahead = vAdd(state.pos, vMul(forward, rand(120, 260)));
+			pickTarget(
+				ahead.x + rand(-220, 220),
+				ahead.y + rand(-180, 180)
+			);
+		}
+
+		// Smooth speed (avoid abrupt changes)
+		const desiredSpeed = 150 + 55 * Math.sin(now * 0.0012) + 20 * Math.sin(now * 0.0029);
+		state.speed = lerp(state.speed, desiredSpeed, 1 - Math.pow(0.001, dt)); // framerate-independent smoothing
+
+		// Advance along curve by arc-length distance
+		if (state.curve && state.curveTable) {
+			state.curveDist += state.speed * dt;
+
+			// If we hit the end (should be rare since we pre-pick), keep flowing:
+			if (state.curveDist >= state.curveTable.total) {
+				state.curveDist = state.curveTable.total;
+			}
+
+			const t = arcTAtDistance(state.curveTable, state.curveDist);
+			const p = bezierPoint(state.curve.p0, state.curve.p1, state.curve.p2, state.curve.p3, t);
+			const tan = bezierTangent(state.curve.p0, state.curve.p1, state.curve.p2, state.curve.p3, t);
+
+			// Position follows curve exactly; heading follows tangent but smoothed
+			state.pos.x = p.x;
+			state.pos.y = p.y;
+
+			const targetAngle = Math.atan2(tan.y, tan.x);
+
+			// Smooth turning: no abrupt rotation
+			const turnSmooth = 1 - Math.pow(0.0005, dt);
+			state.angle = lerpAngle(state.angle, targetAngle, turnSmooth);
+		}
+
+		// Draw
+		drawBackground();
+		drawTarget();
+
+		// (Optional) show the current curve faintly for debugging / vibes
+		drawCurveGhost();
+
+		drawButterfly(state.pos.x, state.pos.y, state.angle, now * 0.001);
+
+		requestAnimationFrame(step);
+	};
+
+	const drawCurveGhost = () => {
+		if (!state.curve) return;
+
+		ctx.save();
+		ctx.globalAlpha = 0.14;
+		ctx.strokeStyle = '#7aa2ff';
+		ctx.lineWidth = 2;
+
+		const { p0, p1, p2, p3 } = state.curve;
+		ctx.beginPath();
+		ctx.moveTo(p0.x, p0.y);
+		ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+		ctx.stroke();
+
+		// Control points
+		ctx.globalAlpha = 0.18;
+		ctx.fillStyle = '#7aa2ff';
+		for (const p of [p0, p1, p2, p3]) {
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, 3, 0, TAU);
+			ctx.fill();
+		}
+
+		ctx.restore();
+	};
+
+	requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>
