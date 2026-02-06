@@ -92,7 +92,6 @@ async function init() {
             const saved = JSON.parse(localStorage.getItem('g_grassSettings'));
             grassSettings = { ...defaultGrassSettings, ...saved };
         } catch (e) {
-            console.warn("Invalid saved grass settings", e);
         }
     }
     grassSettingsInput.value = JSON.stringify(grassSettings, null, 2);
@@ -130,7 +129,9 @@ async function init() {
             windY: parseFloat(windYInput.value) || 0,
             dirtColor: planeColorInput.value,
             grassColor1: grassColor1Input.value,
-            grassColor2: grassColor2Input.value
+            grassColor2: grassColor2Input.value,
+            dirtUVScale: grassSettings.dirtUVScale || 4.0,
+            normalStrength: grassSettings.normalStrength || 1.0
         };
         grassSettingsInput.value = JSON.stringify(settings, null, 2);
         localStorage.setItem('g_grassSettings', grassSettingsInput.value);
@@ -168,7 +169,6 @@ async function init() {
             }
 
         } catch (e) {
-            // Ignore invalid JSON while typing
         }
     });
 
@@ -196,6 +196,14 @@ async function init() {
             xRot: [70, 120],
             yRot: [-45, 45],
             zRot: [0, 360]
+        },
+        butterfly: {
+            scale: 1,
+            speed: 1,
+            animationSpeed: 1,
+            yOffset: 3,
+            baseRotation: [0, 0, 0],
+            showDebugTarget: true
         }
     };
 
@@ -264,7 +272,6 @@ async function init() {
 
     // Ground Plane
     const groundGeometry = new THREE.PlaneGeometry(1, 1);
-    // DEBUG BLUE MATERIAL
     const groundMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x00ABAE, 
         side: THREE.DoubleSide 
@@ -302,25 +309,26 @@ async function init() {
         scene.background = new THREE.CanvasTexture(canvas);
 
         const gltfLoader = new GLTFLoader();
-        const [block, snail, sunflower, leaves] = await Promise.all([
+        const [block, snail, sunflower, leaves, butterfly] = await Promise.all([
             gltfLoader.loadAsync('models/GardenBlock.glb'),
             gltfLoader.loadAsync('models/Snail.glb'),
             gltfLoader.loadAsync('models/Sunflower.glb'),
-            gltfLoader.loadAsync('models/Leaves.glb')
+            gltfLoader.loadAsync('models/Leaves.glb'),
+            gltfLoader.loadAsync('models/Butterfly.glb')
         ]);
 
         loadedModels = {
             block: block.scene,
             snail: snail.scene,
             sunflower: sunflower.scene,
-            leaves: leaves.scene
+            leaves: leaves.scene,
+            butterfly: butterfly
         };
 
         // Initialize GardenSystem
         rebuildGarden();
 
     } catch (e) {
-        console.error("Failed to load assets", e);
     }
 
     function rebuildGarden() {
@@ -338,7 +346,6 @@ async function init() {
             bSettings = JSON.parse(blockSettingsInput.value);
             grSettings = JSON.parse(grassSettingsInput.value);
         } catch(e) {
-            console.warn("Invalid JSON settings", e);
         }
 
         gardenSystem = new GardenSystem(
@@ -348,7 +355,8 @@ async function init() {
             gSettings,
             bSettings,
             grSettings,
-            prngSeedInput.value
+            prngSeedInput.value,
+            camera
         );
         scene.add(gardenSystem);
         scene.updateMatrixWorld(true);
@@ -381,15 +389,10 @@ async function init() {
         setVal('wireframe', wireframeEnabled);
         targetPrisms.forEach(p => {
             p.material.wireframe = wireframeEnabled;
-            // The block is a child of the prism. If we hide the prism, we hide the block.
-            // We should keep the prism visible but transparent/invisible if wireframe is off?
-            // Actually, if wireframe is off, we just want to see the block meshes.
-            // The prism is just a container/reference.
             p.material.transparent = true;
             p.material.opacity = wireframeEnabled ? 0.8 : 0;
-            
             const occluder = p.getObjectByName("occluder");
-            if (occluder) occluder.visible = true; // Always keep occluder active for depth
+            if (occluder) occluder.visible = true;
         });
     });
 
@@ -511,13 +514,13 @@ function regeneratePrisms() {
             color: 0x83da4a, 
             wireframe: wireframeEnabled,
             transparent: true,
-            opacity: 0.8
+            opacity: wireframeEnabled ? 0.8 : 0
         });
         const prism = new THREE.Mesh(boxGeom, mat);
         prism.scale.set(prismWidth, ySize, prismDepth);
         prism.position.set(0, currentY + ySize / 2, prismDepth / 2);
         prism.renderOrder = 1;
-        prism.visible = wireframeEnabled;
+        prism.visible = true;
         scene.add(prism);
         targetPrisms.push(prism);
         const occluderMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
@@ -586,8 +589,9 @@ function setupDraggable(input, onUpdate, minVal = null) {
 function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
+    const dt = clock.getDelta();
     if (gardenSystem) {
-        gardenSystem.updateAnimation(time);
+        gardenSystem.updateAnimation(time, dt);
     }
     controls.update();
     renderer.render(scene, camera);

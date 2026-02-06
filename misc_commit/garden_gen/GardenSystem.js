@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import { GardenBlock } from './GardenBlock.js';
 import { GardenScatter } from './GardenScatter.js';
+import { Butterfly } from './Butterfly.js';
 import PRNG from './utils/PRNG.js';
 
 export class GardenSystem extends THREE.Object3D {
-    constructor(models, bgPlane, prisms, gardenSettings, blockSettings, grassSettings, seed = 'default_seed') {
+    constructor(models, bgPlane, prisms, gardenSettings, blockSettings, grassSettings, seed = 'default_seed', camera) {
         super();
         this.models = models;
         this.bgPlane = bgPlane;
+        this.camera = camera;
         this.gardenSettings = gardenSettings || {};
         this.blockSettings = blockSettings || {};
         this.grassSettings = grassSettings || {};
@@ -17,11 +19,15 @@ export class GardenSystem extends THREE.Object3D {
         this.gardenBlocks = new Map(); // Map prism -> GardenBlock
         this.snailGroup = new THREE.Group();
         this.add(this.snailGroup);
+        this.butterflyGroup = new THREE.Group();
+        this.add(this.butterflyGroup);
         
         this.scatterers = {
             flowers: null,
             leaves: null
         };
+
+        this.butterflies = [];
 
         // Cache original material
         this.originalPlaneMaterial = this.bgPlane.material;
@@ -51,6 +57,27 @@ export class GardenSystem extends THREE.Object3D {
         this.initGrass();
 
         this.update(prisms);
+        this.initButterflies(prisms);
+    }
+
+    initButterflies(prisms) {
+        // Clear existing
+        this.butterflies.forEach(b => {
+            if (b.parent) b.parent.remove(b);
+            b.cleanup();
+        });
+        this.butterflies = [];
+
+        if (this.models.butterfly && this.gardenSettings.butterfly) {
+            const left = new Butterfly(this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'left');
+            const right = new Butterfly(this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'right');
+            
+            // Add to unscaled group to prevent skewing
+            this.butterflyGroup.add(left);
+            this.butterflyGroup.add(right);
+            
+            this.butterflies.push(left, right);
+        }
     }
 
     initGrass() {
@@ -284,15 +311,29 @@ export class GardenSystem extends THREE.Object3D {
         // Snails handled by GardenBlock now
         this.updateScatter('flowers', this.models.sunflower, this.gardenSettings.flowers, prisms, `${this.seed}_flowers`);
         this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms, `${this.seed}_leaves`);
+        
+        // 3. Update Butterflies
+        // (Re-init if prisms changed? or just update their ref?)
+        // Currently initButterflies clears and rebuilds. 
+        // We can just update their prism ref if we want, but rebuilding is safer for lane calc.
+        // But rebuilding resets position.
+        // Let's just update the prisms ref in the butterflies.
+        this.butterflies.forEach(b => b.prisms = prisms);
+        // But if prisms count changed drastically, lanes might change.
+        // initButterflies checks this.models.butterfly.
+        if (this.butterflies.length === 0 && this.models.butterfly) {
+            this.initButterflies(prisms);
+        }
     }
 
-    updateAnimation(time) {
+    updateAnimation(time, dt) {
         if (this.grassMaterial) {
             this.grassMaterial.uniforms.uTime.value = time;
         }
         for (const block of this.gardenBlocks.values()) {
             block.updateAnimation(time);
         }
+        this.butterflies.forEach(b => b.update(time, dt));
     }
 
     updateScatter(key, model, settings, prisms, seed) {
@@ -330,6 +371,12 @@ export class GardenSystem extends THREE.Object3D {
             this.snailGroup.remove(child);
             if (child.cleanup) child.cleanup();
         }
+        
+        while(this.butterflyGroup.children.length > 0){
+            const child = this.butterflyGroup.children[0];
+            this.butterflyGroup.remove(child);
+            if (child.cleanup) child.cleanup();
+        }
 
         Object.keys(this.scatterers).forEach(key => {
             if (this.scatterers[key]) {
@@ -338,6 +385,12 @@ export class GardenSystem extends THREE.Object3D {
                 this.scatterers[key] = null;
             }
         });
+        
+        this.butterflies.forEach(b => {
+            if (b.parent) b.parent.remove(b);
+            b.cleanup();
+        });
+        this.butterflies = [];
 
         if (this.grassMesh) {
             this.remove(this.grassMesh);

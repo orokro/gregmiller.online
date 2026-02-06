@@ -26,7 +26,6 @@ export class GardenBlock extends THREE.Object3D {
         this.snails = [];
         this.snailData = []; // Store local pos and orientation for updating world pos
 
-        console.log(`GardenBlock: Initialized with seed ${this.seed}, has snailModel: ${!!this.snailModel}`);
         this.parseModel(modelScene);
         this.update(true);
     }
@@ -49,8 +48,6 @@ export class GardenBlock extends THREE.Object3D {
 
                 this.pieces[name] = clone;
                 this.add(clone);
-            } else {
-                console.warn(`GardenBlock: Could not find piece named ${name}`);
             }
         });
     }
@@ -219,7 +216,6 @@ export class GardenBlock extends THREE.Object3D {
         this.snailData = [];
 
         if (!this.snailModel) {
-            console.warn("GardenBlock: No snail model provided");
             return;
         }
 
@@ -244,7 +240,6 @@ export class GardenBlock extends THREE.Object3D {
 
         if (this.prng.bool(odds)) {
             const count = Math.floor(this.prng.range(1, maxSnails + 1));
-            console.log(`GardenBlock: Spawning ${count} snails for seed ${this.seed}`);
             
             for (let i = 0; i < count; i++) {
                 const snail = new Snail(this.snailModel, debugSnails);
@@ -300,9 +295,6 @@ export class GardenBlock extends THREE.Object3D {
             const data = this.snailData[i];
             if (data) {
                 snail.position.copy(data.localPos).applyMatrix4(this.prism.matrixWorld);
-                // Orientation might also need updating if prism rotates, 
-                // but for now we assume mostly upright.
-                // If prism rotates, we'd need to combine rotations.
             }
         });
     }

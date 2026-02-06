@@ -46,7 +46,6 @@ export class Snail extends THREE.Object3D {
             if (child.isMesh) {
                 child.renderOrder = 3;
                 if (child.morphTargetDictionary && child.morphTargetInfluences) {
-                    console.log("Snail: Found morph targets on mesh:", child.name, Object.keys(child.morphTargetDictionary));
                     this.meshesWithMorphs.push(child);
                 }
             }
@@ -68,10 +67,10 @@ export class Snail extends THREE.Object3D {
         this.speeds = {
             tail_up: 0.5 + Math.random() * 0.5,
             tail_wag: 0.8 + Math.random() * 0.4,
-            side_up_a: 1.0 + Math.random() * 0.5, // Faster
-            side_up_b: 1.2 + Math.random() * 0.5, // Faster
-            shell_a: 0.8 + Math.random() * 0.4,   // Much faster
-            shell_b: 0.9 + Math.random() * 0.4,   // Much faster
+            side_up_a: 1.0 + Math.random() * 0.5, 
+            side_up_b: 1.2 + Math.random() * 0.5, 
+            shell_a: 0.8 + Math.random() * 0.4,   
+            shell_b: 0.9 + Math.random() * 0.4,   
             head: 0.6 + Math.random() * 0.4,
             antennas_a: 0.4 + Math.random() * 0.3, 
             antennas_b: 0.3 + Math.random() * 0.3, 
@@ -93,12 +92,10 @@ export class Snail extends THREE.Object3D {
             const phase = this.phases[key] || 0;
             let val = (Math.sin(time * speed + phase) + 1) / 2;
             
-            // Add some interference for smoother/varied movement
             if (key === 'antennas_a' || key === 'antennas_b' || key === 'head' || key.includes('side') || key.includes('shell')) {
                 val = (val + (Math.sin(time * speed * 1.7 + phase * 0.8) + 1) / 2) / 2;
             }
 
-            // Apply to all meshes that have this target
             this.meshesWithMorphs.forEach(mesh => {
                 const index = mesh.morphTargetDictionary[key];
                 if (index !== undefined) {
