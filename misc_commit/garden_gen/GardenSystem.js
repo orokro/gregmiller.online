@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GardenBlock } from './GardenBlock.js';
+import { GardenScatter } from './GardenScatter.js';
 
 export class GardenSystem extends THREE.Object3D {
     constructor(models, bgPlane, prisms, gardenSettings, blockSettings) {
@@ -10,45 +11,66 @@ export class GardenSystem extends THREE.Object3D {
         this.blockSettings = blockSettings || {};
         
         this.gardenBlocks = new Map(); // Map prism -> GardenBlock
+        
+        this.scatterers = {
+            snails: null,
+            flowers: null,
+            leaves: null
+        };
 
         this.update(prisms);
     }
 
     update(prisms) {
-        // diff prisms
+        // 1. Update Blocks
         const currentPrisms = new Set(prisms);
 
-        // Remove old
+        // Remove old blocks
         for (const [prism, block] of this.gardenBlocks) {
             if (!currentPrisms.has(prism)) {
                 block.cleanup();
-                this.remove(block);
+                if (block.parent) block.parent.remove(block);
                 this.gardenBlocks.delete(prism);
             }
         }
 
-        // Add new / Update existing
+        // Add or Update blocks
         prisms.forEach(prism => {
             if (!this.gardenBlocks.has(prism)) {
-                // Spawn new
                 const block = new GardenBlock(this.models.block, prism, this.blockSettings);
-                // Parent to the prism so it moves with it? 
-                // "The pieces are placed inside their target prism"
-                // If we parent to the prism, local coords are easy.
-                // BUT the prism might be invisible/wireframe.
-                // The prompt says "spawned for any new prisms".
-                // And "pieces are placed inside their target prism".
-                // If I add 'block' to 'this' (GardenSystem), I need to copy world transforms.
-                // If I add 'block' to 'prism', it inherits transforms.
-                // Let's add to prism for simplicity, as implied by "inside".
                 prism.add(block);
                 this.gardenBlocks.set(prism, block);
             } else {
-                // Update existing
                 const block = this.gardenBlocks.get(prism);
+                block.settings = this.blockSettings; // Pass latest settings
                 block.update();
             }
         });
+
+        // 2. Update Scatterers
+        this.updateScatter('snails', this.models.snail, this.gardenSettings.snails, prisms);
+        this.updateScatter('flowers', this.models.sunflower, this.gardenSettings.flowers, prisms);
+        this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms);
+    }
+
+    updateScatter(key, model, settings, prisms) {
+        if (!settings || !model || settings.density <= 0) {
+            if (this.scatterers[key]) {
+                this.remove(this.scatterers[key]);
+                this.scatterers[key].cleanup();
+                this.scatterers[key] = null;
+            }
+            return;
+        }
+
+        if (!this.scatterers[key]) {
+            this.scatterers[key] = new GardenScatter(model, this.bgPlane, prisms, settings);
+            this.add(this.scatterers[key]);
+        } else {
+            // Check if settings or prisms changed significantly to warrant regen
+            // For now, always update when called (since it's UI driven)
+            this.scatterers[key].update(prisms, settings);
+        }
     }
 
     cleanup() {
@@ -57,5 +79,13 @@ export class GardenSystem extends THREE.Object3D {
             if (block.parent) block.parent.remove(block);
         }
         this.gardenBlocks.clear();
+
+        Object.keys(this.scatterers).forEach(key => {
+            if (this.scatterers[key]) {
+                this.remove(this.scatterers[key]);
+                this.scatterers[key].cleanup();
+                this.scatterers[key] = null;
+            }
+        });
     }
 }

@@ -131,7 +131,32 @@
         <h3>Settings JSON</h3>
         <div class="control-group">
             <label for="gardenSettings">Garden System Settings:</label>
-            <textarea id="gardenSettings">{}</textarea>
+            <textarea id="gardenSettings">{
+  "snails": {
+    "density": 10,
+    "minScale": 0.5,
+    "maxScale": 1.2,
+    "seed": "snail_v1",
+    "yOffset": 0.1,
+    "randomRotation": true
+  },
+  "flowers": {
+    "density": 30,
+    "minScale": 0.8,
+    "maxScale": 1.5,
+    "seed": "flower_v1",
+    "yOffset": 0.0,
+    "randomRotation": true
+  },
+  "leaves": {
+    "density": 50,
+    "minScale": 0.3,
+    "maxScale": 0.8,
+    "seed": "leaf_v1",
+    "yOffset": 0.0,
+    "randomRotation": true
+  }
+}</textarea>
         </div>
         <div class="control-group">
             <label for="blockSettings">Garden Block Settings:</label>
