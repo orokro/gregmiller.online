@@ -81,6 +81,8 @@ async function init() {
         dirtColor: "#3d2b1f",
         grassColor1: "#4da83b",
         grassColor2: "#83da4a",
+        dirtUVScale: 4.0,
+        normalStrength: 1.0
     };
 
     // Load or Init Grass Settings

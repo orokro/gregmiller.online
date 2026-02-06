@@ -26,6 +26,25 @@ export class GardenSystem extends THREE.Object3D {
         // Cache original material
         this.originalPlaneMaterial = this.bgPlane.material;
 
+        // Find Dirt Textures from Block Model
+        this.dirtTextures = { map: null, normalMap: null };
+        if (this.models.block) {
+            this.models.block.traverse((child) => {
+                if (child.isMesh && child.name === 'DirtRefPlane' && child.material) {
+                    if (child.material.map) {
+                        this.dirtTextures.map = child.material.map;
+                        this.dirtTextures.map.wrapS = THREE.RepeatWrapping;
+                        this.dirtTextures.map.wrapT = THREE.RepeatWrapping;
+                    }
+                    if (child.material.normalMap) {
+                        this.dirtTextures.normalMap = child.material.normalMap;
+                        this.dirtTextures.normalMap.wrapS = THREE.RepeatWrapping;
+                        this.dirtTextures.normalMap.wrapT = THREE.RepeatWrapping;
+                    }
+                }
+            });
+        }
+
         // Initialize Grass
         this.grassMaterial = null;
         this.grassMesh = null;
@@ -64,7 +83,7 @@ export class GardenSystem extends THREE.Object3D {
                     uWindDirection: { value: new THREE.Vector2(settings.windX || 1.0, settings.windY || 1.0) },
                     uColor1: { value: new THREE.Color(settings.grassColor1 || "#4da83b") },
                     uColor2: { value: new THREE.Color(settings.grassColor2 || "#83da4a") },
-                    uBendIntensity: { value: 0.5 } // Keep hardcoded or add to settings if needed
+                    uBendIntensity: { value: 0.5 } 
                 },
                 vertexShader: `
                     uniform float uTime;
@@ -157,7 +176,6 @@ export class GardenSystem extends THREE.Object3D {
         const tipWidths = new Float32Array(count);
         const angles = new Float32Array(count);
         
-        // Use a local PRNG for grass to keep it consistent
         const grassPRNG = new PRNG(this.seed + "_grass");
 
         for (let i = 0; i < count; i++) {
@@ -180,11 +198,31 @@ export class GardenSystem extends THREE.Object3D {
         this.grassMesh.renderOrder = 2;
         this.add(this.grassMesh);
 
-        // Update ground color
-        this.bgPlane.material = new THREE.MeshStandardMaterial({ 
+        // Update ground material
+        const uvScale = settings.dirtUVScale || 4.0;
+        const normalScale = settings.normalStrength || 1.0;
+        
+        // Dispose old material if it's not the original (we created it)
+        if (this.bgPlane.material && this.bgPlane.material !== this.originalPlaneMaterial) {
+            this.bgPlane.material.dispose();
+        }
+
+        const groundMat = new THREE.MeshStandardMaterial({ 
             color: settings.dirtColor || "#3d2b1f", 
             side: THREE.DoubleSide 
         });
+
+        if (this.dirtTextures.map) {
+            groundMat.map = this.dirtTextures.map;
+            groundMat.map.repeat.set(uvScale, uvScale);
+        }
+        if (this.dirtTextures.normalMap) {
+            groundMat.normalMap = this.dirtTextures.normalMap;
+            groundMat.normalMap.repeat.set(uvScale, uvScale);
+            groundMat.normalScale.set(normalScale, normalScale);
+        }
+
+        this.bgPlane.material = groundMat;
     }
 
     updateShader(settings) {
@@ -196,13 +234,22 @@ export class GardenSystem extends THREE.Object3D {
             this.grassMaterial.uniforms.uColor1.value.set(settings.grassColor1);
             this.grassMaterial.uniforms.uColor2.value.set(settings.grassColor2);
         }
-        if (this.bgPlane && this.bgPlane.material) {
+        
+        // Update Ground Material Properties
+        if (this.bgPlane && this.bgPlane.material && this.bgPlane.material.isMeshStandardMaterial) {
             this.bgPlane.material.color.set(settings.dirtColor);
+            const uvScale = settings.dirtUVScale || 4.0;
+            const normalScale = settings.normalStrength || 1.0;
+
+            if (this.bgPlane.material.map) {
+                this.bgPlane.material.map.repeat.set(uvScale, uvScale);
+            }
+            if (this.bgPlane.material.normalMap) {
+                this.bgPlane.material.normalMap.repeat.set(uvScale, uvScale);
+                this.bgPlane.material.normalScale.set(normalScale, normalScale);
+            }
         }
 
-        // If density or segments changed, we might need to re-init grass
-        // For simplicity and performance, only re-init if structural params changed
-        // But the prompt says "new source of truth", so let's check if we need to regen
         this.initGrass();
     }
 
