@@ -82,33 +82,40 @@ async function init() {
     prngSeedInput.value = getVal('prngSeed', 'garden_seed_123');
     
     const defaultGardenSettings = {
-        flowers: { density: 30, minScale: 5.8, maxScale: 8.5, yOffset: 2, randomRotation: true, rotationAxis: 'y' },
-        leaves: { 
-            density: 50, 
-            minScale: 35.3, 
-            maxScale: 50.8, 
-            yOffset: 3, 
+        flowers: {
+            density: 10,
+            minScale: 4.8,
+            maxScale: 6.5,
+            yOffset: 2,
             randomRotation: true,
-            xRot: [-30, 30],
-            yRot: [0, 360],
-            zRot: [-30, 30]
+            rotationAxis: "y"
+        },
+        leaves: {
+            density: 50,
+            minScale: 0.3,
+            maxScale: 0.5,
+            yOffset: 4,
+            randomRotation: true,
+            xRot: [70, 120],
+            yRot: [-45, 45],
+            zRot: [0, 360]
         }
     };
 
     const defaultBlockSettings = {
-        blockScaleSize: 1.0,
+        blockScaleSize: 4,
         overScaleDepth: 1.1,
         centerScaler: 1.666666667,
-        uvScale: 1.0,
+        uvScale: 0.2,
         reprojectUVs: true,
         blockHasSnailsOdds: 0.7,
         maxSnails: 2,
-        minSnailScale: 3.0,
-        maxSnailScale: 5.0,
-        snailXOffset: 0.0,
+        minSnailScale: 3,
+        maxSnailScale: 5,
+        snailXOffset: 0,
         snailYOffset: -0.04,
-        snailZOffset: 0.0,
-        debugSnails: true,
+        snailZOffset: -0.1,
+        debugSnails: false,
         snailAnimationSpeed: 1,
         snailRotationMultiplier: [0, 1, 0],
         snailRotationXOffset: 0,
