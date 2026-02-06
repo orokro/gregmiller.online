@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GardenSystem } from './GardenSystem.js';
 
 let scene, camera, renderer, controls;
 let ground, grassMesh;
 let targetPrisms = [];
 let wireframeEnabled = true;
 let clock = new THREE.Clock();
+let gardenSystem;
+let loadedModels = {};
 
 // Persistence helpers
 const getVal = (key, def) => localStorage.getItem('g_' + key) !== null ? localStorage.getItem('g_' + key) : def;
@@ -109,15 +113,53 @@ async function init() {
     dirLight.position.set(20, 20, 40);
     scene.add(dirLight);
 
-    // Load HDR
+    // Load Assets
     try {
         const rgbeLoader = new RGBELoader();
         const texture = await rgbeLoader.loadAsync('env.hdr');
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
-        scene.background = texture;
+        // scene.background = texture; // Use dark gradient instead
+
+        // Dark gradient background
+        const canvas = document.createElement('canvas');
+        canvas.width = 2;
+        canvas.height = 2;
+        const context = canvas.getContext('2d');
+        const gradient = context.createLinearGradient(0, 0, 0, 2);
+        gradient.addColorStop(0, '#1a1a1a');
+        gradient.addColorStop(1, '#000000');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 2, 2);
+        scene.background = new THREE.CanvasTexture(canvas);
+
+        const gltfLoader = new GLTFLoader();
+        const [block, snail, sunflower, leaves] = await Promise.all([
+            gltfLoader.loadAsync('models/GardenBlock.glb'),
+            gltfLoader.loadAsync('models/Snail.glb'),
+            gltfLoader.loadAsync('models/Sunflower.glb'),
+            gltfLoader.loadAsync('models/Leaves.glb')
+        ]);
+
+        loadedModels = {
+            block: block.scene,
+            snail: snail.scene,
+            sunflower: sunflower.scene,
+            leaves: leaves.scene
+        };
+
+        // Initialize GardenSystem
+        gardenSystem = new GardenSystem(
+            loadedModels,
+            ground,
+            targetPrisms,
+            {}, // gardenSettings
+            { blockScaleSize: 1.0 } // blockSettings
+        );
+        scene.add(gardenSystem);
+
     } catch (e) {
-        console.error("Failed to load HDR", e);
+        console.error("Failed to load assets", e);
     }
 
     // Grass Material
@@ -330,6 +372,7 @@ async function init() {
             p.scale.x = v;
         });
         setVal('prismWidth', v);
+        if (gardenSystem) gardenSystem.update(targetPrisms);
     }, 0.1);
 
     setupDraggable(prismDepthInput, (v) => {
@@ -338,11 +381,13 @@ async function init() {
             p.position.z = v / 2;
         });
         setVal('prismDepth', v);
+        if (gardenSystem) gardenSystem.update(targetPrisms);
     }, 0.1);
 
     setupDraggable(prismSpacingInput, (v) => {
         updatePrismPositions();
         setVal('prismSpacing', v);
+        if (gardenSystem) gardenSystem.update(targetPrisms);
     });
 
     prismHeightsInput.addEventListener('input', () => {
@@ -460,6 +505,8 @@ function regeneratePrisms() {
         
         currentY += ySize + prismSpacing;
     });
+
+    if (gardenSystem) gardenSystem.update(targetPrisms);
 }
 
 function updatePrismPositions() {
