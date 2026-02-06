@@ -7,16 +7,14 @@ export class GardenBlock extends THREE.Object3D {
         this.prism = prism;
         this.settings = settings || {};
         this.scaleSize = this.settings.blockScaleSize || 1.0;
+        this.overScaleDepth = this.settings.overScaleDepth || 1.0;
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
         this.pieces = {};
-        this.baseDimensions = {}; // Store unscaled, unrotated dimensions
+        this.baseDimensions = {}; 
         this.lastPrismScale = new THREE.Vector3();
 
-        // Parse and clone the model parts
         this.parseModel(modelScene);
-
-        // Initial layout
         this.update(true);
     }
 
@@ -29,12 +27,13 @@ export class GardenBlock extends THREE.Object3D {
                 const clone = original.clone();
                 clone.geometry = original.geometry.clone();
                 
+                // Measure base dimensions in local space
                 const bbox = new THREE.Box3().setFromBufferAttribute(clone.geometry.attributes.position);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
                 this.baseDimensions[name] = size;
 
-                // Rotate to face +Z
+                // Rotate 90X to face Z+ (World)
                 clone.rotation.x = Math.PI / 2;
 
                 this.pieces[name] = clone;
@@ -48,6 +47,10 @@ export class GardenBlock extends THREE.Object3D {
     update(force = false) {
         if (!this.prism) return;
 
+        this.scaleSize = this.settings.blockScaleSize || 1.0;
+        this.overScaleDepth = this.settings.overScaleDepth || 1.0;
+        this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
+
         const currentScale = this.prism.scale;
         
         if (!force && currentScale.equals(this.lastPrismScale)) {
@@ -59,78 +62,74 @@ export class GardenBlock extends THREE.Object3D {
     }
 
     layout() {
-        // Since we are a child of the scaled prism, our parent's scale is applied to us.
         const pW = this.prism.scale.x;
         const pH = this.prism.scale.y;
         const pD = this.prism.scale.z;
         
         const s = this.scaleSize;
+        const osd = this.overScaleDepth;
 
-        // Base unscaled dimensions of TL
+        // 1. Measure reference margins
+        // With 90X rotation:
+        // Local X -> World X (Width)
+        // Local Y -> World Z (Depth) -> uses GLTF Y
+        // Local Z -> World Y (Height) -> uses GLTF Z
         const dimTL = this.baseDimensions['TL'] || new THREE.Vector3(1, 1, 1);
-        
-        // Desired WORLD sizes for margins (Corners)
         const worldCornerW = dimTL.x * s;
-        const worldCornerH = dimTL.z * s; // Local Z is world Height
+        const worldCornerH = dimTL.z * s; // Use Z for vertical height
         
-        // Inner world dimensions
         const worldInnerW = Math.max(0, pW - (2 * worldCornerW));
         const worldInnerH = Math.max(0, pH - (2 * worldCornerH));
 
-        // LOCAL scales (relative to parent prism's scale)
-        // For depth: Local Y * Parent Z * Base Y = Target Z
-        // We want Target Z = Parent Z (pD)
-        // So Local Y = 1 / Base Y
+        // 2. Scale Helper Functions (Proper Axis Mapping)
+        const getLocalWidthScale = (name, targetWorldW) => {
+            const baseW = this.baseDimensions[name] ? this.baseDimensions[name].x : 1;
+            return baseW > 0.001 ? targetWorldW / (pW * baseW) : s / pW;
+        };
         const getLocalDepthScale = (name) => {
-            const baseDepth = this.baseDimensions[name] ? this.baseDimensions[name].y : 1;
-            return baseDepth > 0 ? (1.0 / baseDepth) : 1;
+            const baseD = this.baseDimensions[name] ? this.baseDimensions[name].y : 1; // GLTF Y is world Depth after 90X
+            return baseD > 0.001 ? (osd / baseD) : osd;
+        };
+        const getLocalHeightScale = (name, targetWorldH) => {
+            const baseH = this.baseDimensions[name] ? this.baseDimensions[name].z : 1; // GLTF Z is world Height after 90X
+            return baseH > 0.001 ? targetWorldH / (pH * baseH) : s / pH;
         };
 
-        // --- CORNERS ---
+        // --- SCALE ---
         ['TL', 'TR', 'BL', 'BR'].forEach(n => {
             const p = this.pieces[n];
             if (p) {
-                // Local X scale = worldCornerW / (pW * baseW) = (baseW * s) / (pW * baseW) = s / pW
                 p.scale.set(s / pW, getLocalDepthScale(n), s / pH);
             }
         });
 
-        // --- EDGES ---
-        if (this.pieces['T'] && this.baseDimensions['T']) {
-            const baseW = this.baseDimensions['T'].x;
-            this.pieces['T'].scale.set(worldInnerW / (pW * baseW), getLocalDepthScale('T'), s / pH);
-        }
-        if (this.pieces['B'] && this.baseDimensions['B']) {
-            const baseW = this.baseDimensions['B'].x;
-            this.pieces['B'].scale.set(worldInnerW / (pW * baseW), getLocalDepthScale('B'), s / pH);
-        }
-        if (this.pieces['L'] && this.baseDimensions['L']) {
-            const baseH = this.baseDimensions['L'].z;
-            this.pieces['L'].scale.set(s / pW, getLocalDepthScale('L'), worldInnerH / (pH * baseH));
-        }
-        if (this.pieces['R'] && this.baseDimensions['R']) {
-            const baseH = this.baseDimensions['R'].z;
-            this.pieces['R'].scale.set(s / pW, getLocalDepthScale('R'), worldInnerH / (pH * baseH));
-        }
-        if (this.pieces['C'] && this.baseDimensions['C']) {
-            const baseW = this.baseDimensions['C'].x;
-            const baseH = this.baseDimensions['C'].z;
-            this.pieces['C'].scale.set(worldInnerW / (pW * baseW), getLocalDepthScale('C'), worldInnerH / (pH * baseH));
+        const sideHeightScale = getLocalHeightScale('L', worldInnerH);
+        const topWidthScale = getLocalWidthScale('T', worldInnerW);
+
+        if (this.pieces['T']) this.pieces['T'].scale.set(topWidthScale, getLocalDepthScale('T'), s / pH);
+        if (this.pieces['B']) this.pieces['B'].scale.set(topWidthScale, getLocalDepthScale('B'), s / pH);
+        if (this.pieces['L']) this.pieces['L'].scale.set(s / pW, getLocalDepthScale('L'), sideHeightScale);
+        if (this.pieces['R']) this.pieces['R'].scale.set(s / pW, getLocalDepthScale('R'), sideHeightScale);
+        
+        if (this.pieces['C']) {
+            this.pieces['C'].scale.set(
+                getLocalWidthScale('C', worldInnerW), 
+                getLocalDepthScale('C'), 
+                getLocalHeightScale('C', worldInnerH)
+            );
         }
 
         // --- PLACEMENT ---
-        // Local coordinates in prism space (-0.5 to 0.5)
         const left = -0.5;
         const right = 0.5;
         const top = 0.5;
         const bottom = -0.5;
-        const back = -0.5; // Back of the prism
+        const back = -0.5; 
 
         this.place('TL', left, top, back);
         this.place('TR', right, top, back);
         this.place('BL', left, bottom, back);
         this.place('BR', right, bottom, back);
-        
         this.place('T', 0, top, back);
         this.place('B', 0, bottom, back);
         this.place('L', left, 0, back);
@@ -138,7 +137,7 @@ export class GardenBlock extends THREE.Object3D {
         this.place('C', 0, 0, back);
 
         if (this.reprojectUVs) {
-            this.reproject();
+            this.reproject(pW, pH);
         }
     }
 
@@ -149,8 +148,45 @@ export class GardenBlock extends THREE.Object3D {
         }
     }
 
-    reproject() {
-        // Placeholder
+    reproject(pW, pH) {
+        Object.keys(this.pieces).forEach(name => {
+            const mesh = this.pieces[name];
+            if (!mesh.geometry || !mesh.geometry.attributes.uv) return;
+
+            const uvAttr = mesh.geometry.attributes.uv;
+            const originalUV = mesh.userData.originalUV || uvAttr.array.slice();
+            if (!mesh.userData.originalUV) mesh.userData.originalUV = originalUV;
+
+            let worldW, worldH;
+            const s = this.scaleSize;
+            const dim = this.baseDimensions[name];
+            const dimTL = this.baseDimensions['TL'];
+            
+            if (['TL', 'TR', 'BL', 'BR'].includes(name)) {
+                worldW = dim.x * s;
+                worldH = dim.z * s;
+            } else if (name === 'T' || name === 'B') {
+                worldW = pW - (2 * dimTL.x * s);
+                worldH = dim.z * s;
+            } else if (name === 'L' || name === 'R') {
+                worldW = dim.x * s;
+                worldH = pH - (2 * dimTL.z * s);
+            } else if (name === 'C') {
+                worldW = pW - (2 * dimTL.x * s);
+                worldH = pH - (2 * dimTL.z * s);
+            }
+
+            const scaleX = worldW / dim.x;
+            const scaleY = worldH / dim.z; // Reproject vertical UV using geometry Z
+
+            for (let i = 0; i < uvAttr.count; i++) {
+                uvAttr.setXY(i, 
+                    originalUV[i * 2] * scaleX, 
+                    originalUV[i * 2 + 1] * scaleY
+                );
+            }
+            uvAttr.needsUpdate = true;
+        });
     }
 
     cleanup() {
