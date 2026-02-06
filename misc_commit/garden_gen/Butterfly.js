@@ -18,16 +18,24 @@ export class Butterfly extends THREE.Object3D {
         
         this.mixer = new THREE.AnimationMixer(this.mesh);
         if (gltf.animations && gltf.animations.length > 0) {
-            const action = this.mixer.clipAction(gltf.animations[0]);
+            const clip = gltf.animations[0];
+            
+            // Remove position tracks to prevent root motion (flying out of box)
+            const tracks = clip.tracks.filter(t => !t.name.includes('.position'));
+            const cleanClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+
+            const action = this.mixer.clipAction(cleanClip);
             action.play();
             action.timeScale = this.settings.animationSpeed || 1;
+            
+            console.log(`Butterfly [${this.side}]: Playing sanitized animation ${clip.name}. Tracks: ${tracks.length}/${clip.tracks.length}`);
         }
 
         // Auto-normalize scale based on VALID MESHES ONLY
+        // We separate "valid for bounds" vs "valid for visibility"
         const box = new THREE.Box3();
         let foundValidMesh = false;
         
-        // Force update of internal matrices before measurement
         this.mesh.updateMatrixWorld(true);
 
         this.mesh.traverse((child) => {
@@ -50,13 +58,20 @@ export class Butterfly extends THREE.Object3D {
                     const distFromOrigin = center.length();
 
                     // Heuristics:
-                    // 1. Not massive (> 500 units)
-                    // 2. Not far from origin (> 500 units) - catches the exploded parts at -1720
-                    if (maxSide < 500 && maxSide > 0.001 && distFromOrigin < 500) {
-                        box.union(geomBox);
-                        foundValidMesh = true;
+                    // 1. Is it a "part" of the butterfly? (Size < 500)
+                    if (maxSide < 500 && maxSide > 0.001) {
                         child.visible = true;
+                        
+                        // 2. Should it drive the bounding box centering/scale?
+                        // Only if it's near the origin (not exploded bind pose)
+                        if (distFromOrigin < 500) {
+                            box.union(geomBox);
+                            foundValidMesh = true;
+                        } else {
+                            console.log(`Butterfly [${this.side}]: Mesh ${child.name} visible but excluded from bounds (Dist: ${distFromOrigin.toFixed(2)})`);
+                        }
                     } else {
+                        // Massive rig parts or helpers
                         child.visible = false;
                     }
                 }
@@ -64,6 +79,8 @@ export class Butterfly extends THREE.Object3D {
                 
                 if (child.material) {
                     child.material.side = THREE.DoubleSide;
+                    // child.material.transparent = false; 
+                    // child.material.opacity = 1.0;
                 }
             }
         });
@@ -74,14 +91,16 @@ export class Butterfly extends THREE.Object3D {
         const center = new THREE.Vector3();
         box.getCenter(center);
         
+        console.log(`Butterfly [${this.side}]: Bounds Center: ${center.toArray()}, MaxDim: ${maxDim}`);
+
         this.meshContainer = new THREE.Group();
         this.add(this.meshContainer);
         this.meshContainer.add(this.mesh);
 
         if (maxDim > 0) {
-            // Scale to be size 1
             const scaleFactor = 1.0 / maxDim;
             this.mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            // Center based on the calculated box of "valid" meshes
             this.mesh.position.sub(center.clone().multiplyScalar(scaleFactor));
         }
 
