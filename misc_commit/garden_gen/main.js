@@ -52,6 +52,7 @@ async function init() {
 
     const gardenSettingsInput = document.getElementById('gardenSettings');
     const blockSettingsInput = document.getElementById('blockSettings');
+    const grassSettingsInput = document.getElementById('grassSettings');
 
     // Load Persistence
     wireframeInput.checked = getVal('wireframe', 'true') === 'true';
@@ -59,22 +60,117 @@ async function init() {
     hdrIntensityInput.value = getVal('hdrIntensity', '1.0');
     groundWidthInput.value = getVal('groundWidth', '18');
     groundHeightInput.value = getVal('groundHeight', '15');
-    grassDensityInput.value = getVal('grassDensity', '50000');
-    bladeMinLengthInput.value = getVal('bladeMinLength', '0.2');
-    bladeMaxLengthInput.value = getVal('bladeMaxLength', '0.5');
-    bladeMinWidthInput.value = getVal('bladeMinWidth', '0.02');
-    bladeMaxWidthInput.value = getVal('bladeMaxWidth', '0.05');
-    bladeMinTipWidthInput.value = getVal('bladeMinTipWidth', '0.0');
-    bladeMaxTipWidthInput.value = getVal('bladeMaxTipWidth', '0.01');
-    bladeSegmentsInput.value = getVal('bladeSegments', '4');
-    bendIntensityInput.value = getVal('bendIntensity', '0.5');
-    noiseScaleInput.value = getVal('noiseScale', '2.0');
-    windIntensityInput.value = getVal('windIntensity', '0.3');
-    windXInput.value = getVal('windX', '1.0');
-    windYInput.value = getVal('windY', '1.0');
-    planeColorInput.value = getVal('planeColor', '#3d2b1f');
-    grassColor1Input.value = getVal('grassColor1', '#4da83b');
-    grassColor2Input.value = getVal('grassColor2', '#83da4a');
+    
+    // Default Grass Settings
+    const defaultGrassSettings = {
+        density: 7000,
+        minLength: 0,
+        maxLength: 4,
+        minWidth: 0.25,
+        maxWidth: 0.68,
+        minTipWidth: 0,
+        maxTipWidth: 0.2,
+        segments: 4,
+        noiseScale: 2,
+        windIntensity: 0.3,
+        windX: 1,
+        windY: 1,
+        dirtColor: "#3d2b1f",
+        grassColor1: "#4da83b",
+        grassColor2: "#83da4a",
+    };
+
+    // Load or Init Grass Settings
+    let grassSettings = { ...defaultGrassSettings };
+    if (localStorage.getItem('g_grassSettings')) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('g_grassSettings'));
+            grassSettings = { ...defaultGrassSettings, ...saved };
+        } catch (e) {
+            console.warn("Invalid saved grass settings", e);
+        }
+    }
+    grassSettingsInput.value = JSON.stringify(grassSettings, null, 2);
+
+    // Sync Inputs to Loaded/Default Settings
+    grassDensityInput.value = grassSettings.density;
+    bladeMinLengthInput.value = grassSettings.minLength;
+    bladeMaxLengthInput.value = grassSettings.maxLength;
+    bladeMinWidthInput.value = grassSettings.minWidth;
+    bladeMaxWidthInput.value = grassSettings.maxWidth;
+    bladeMinTipWidthInput.value = grassSettings.minTipWidth;
+    bladeMaxTipWidthInput.value = grassSettings.maxTipWidth;
+    bladeSegmentsInput.value = grassSettings.segments;
+    noiseScaleInput.value = grassSettings.noiseScale;
+    windIntensityInput.value = grassSettings.windIntensity;
+    windXInput.value = grassSettings.windX;
+    windYInput.value = grassSettings.windY;
+    planeColorInput.value = grassSettings.dirtColor;
+    grassColor1Input.value = grassSettings.grassColor1;
+    grassColor2Input.value = grassSettings.grassColor2;
+
+    function updateGrassJSON() {
+        const settings = {
+            density: parseInt(grassDensityInput.value) || 0,
+            minLength: parseFloat(bladeMinLengthInput.value) || 0,
+            maxLength: parseFloat(bladeMaxLengthInput.value) || 0,
+            minWidth: parseFloat(bladeMinWidthInput.value) || 0,
+            maxWidth: parseFloat(bladeMaxWidthInput.value) || 0,
+            minTipWidth: parseFloat(bladeMinTipWidthInput.value) || 0,
+            maxTipWidth: parseFloat(bladeMaxTipWidthInput.value) || 0,
+            segments: parseInt(bladeSegmentsInput.value) || 1,
+            noiseScale: parseFloat(noiseScaleInput.value) || 0,
+            windIntensity: parseFloat(windIntensityInput.value) || 0,
+            windX: parseFloat(windXInput.value) || 0,
+            windY: parseFloat(windYInput.value) || 0,
+            dirtColor: planeColorInput.value,
+            grassColor1: grassColor1Input.value,
+            grassColor2: grassColor2Input.value
+        };
+        grassSettingsInput.value = JSON.stringify(settings, null, 2);
+        localStorage.setItem('g_grassSettings', grassSettingsInput.value);
+    }
+
+    grassSettingsInput.addEventListener('input', () => {
+        try {
+            const settings = JSON.parse(grassSettingsInput.value);
+            
+            // Validate and Apply
+            if (typeof settings.density === 'number') grassDensityInput.value = settings.density;
+            if (typeof settings.minLength === 'number') bladeMinLengthInput.value = settings.minLength;
+            if (typeof settings.maxLength === 'number') bladeMaxLengthInput.value = settings.maxLength;
+            if (typeof settings.minWidth === 'number') bladeMinWidthInput.value = settings.minWidth;
+            if (typeof settings.maxWidth === 'number') bladeMaxWidthInput.value = settings.maxWidth;
+            if (typeof settings.minTipWidth === 'number') bladeMinTipWidthInput.value = settings.minTipWidth;
+            if (typeof settings.maxTipWidth === 'number') bladeMaxTipWidthInput.value = settings.maxTipWidth;
+            if (typeof settings.segments === 'number') bladeSegmentsInput.value = settings.segments;
+            if (typeof settings.noiseScale === 'number') noiseScaleInput.value = settings.noiseScale;
+            if (typeof settings.windIntensity === 'number') windIntensityInput.value = settings.windIntensity;
+            if (typeof settings.windX === 'number') windXInput.value = settings.windX;
+            if (typeof settings.windY === 'number') windYInput.value = settings.windY;
+            if (settings.dirtColor) planeColorInput.value = settings.dirtColor;
+            if (settings.grassColor1) grassColor1Input.value = settings.grassColor1;
+            if (settings.grassColor2) grassColor2Input.value = settings.grassColor2;
+
+            localStorage.setItem('g_grassSettings', grassSettingsInput.value);
+            
+            // Trigger updates
+            initGrass();
+            // Update uniforms directly for shader props
+            if (grassMesh) {
+                grassMaterial.uniforms.uNoiseScale.value = parseFloat(noiseScaleInput.value);
+                grassMaterial.uniforms.uWindIntensity.value = parseFloat(windIntensityInput.value);
+                grassMaterial.uniforms.uWindDirection.value.set(parseFloat(windXInput.value), parseFloat(windYInput.value));
+                grassMaterial.uniforms.uColor1.value.set(grassColor1Input.value);
+                grassMaterial.uniforms.uColor2.value.set(grassColor2Input.value);
+            }
+            ground.material.color.set(planeColorInput.value);
+
+        } catch (e) {
+            // Ignore invalid JSON while typing
+        }
+    });
+
     prismWidthInput.value = getVal('prismWidth', '10');
     prismDepthInput.value = getVal('prismDepth', '5');
     prismSpacingInput.value = getVal('prismSpacing', '2');
@@ -370,47 +466,47 @@ async function init() {
         initGrass();
     }, 0.1);
 
-    setupDraggable(grassDensityInput, (v) => { setVal('grassDensity', v); initGrass(); }, 0);
-    setupDraggable(bladeMinLengthInput, (v) => { setVal('bladeMinLength', v); initGrass(); }, 0);
-    setupDraggable(bladeMaxLengthInput, (v) => { setVal('bladeMaxLength', v); initGrass(); }, 0);
-    setupDraggable(bladeMinWidthInput, (v) => { setVal('bladeMinWidth', v); initGrass(); }, 0);
-    setupDraggable(bladeMaxWidthInput, (v) => { setVal('bladeMaxWidth', v); initGrass(); }, 0);
-    setupDraggable(bladeMinTipWidthInput, (v) => { setVal('bladeMinTipWidth', v); initGrass(); }, 0);
-    setupDraggable(bladeMaxTipWidthInput, (v) => { setVal('bladeMaxTipWidth', v); initGrass(); }, 0);
-    setupDraggable(bladeSegmentsInput, (v) => { setVal('bladeSegments', v); initGrass(); }, 1);
+    setupDraggable(grassDensityInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeMinLengthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeMaxLengthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeMinWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeMaxWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeMinTipWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeMaxTipWidthInput, (v) => { updateGrassJSON(); initGrass(); }, 0);
+    setupDraggable(bladeSegmentsInput, (v) => { updateGrassJSON(); initGrass(); }, 1);
     
     setupDraggable(bendIntensityInput, (v) => { 
         grassMaterial.uniforms.uBendIntensity.value = v; 
-        setVal('bendIntensity', v);
+        updateGrassJSON();
     });
     setupDraggable(noiseScaleInput, (v) => { 
         grassMaterial.uniforms.uNoiseScale.value = v; 
-        setVal('noiseScale', v);
+        updateGrassJSON();
     });
     setupDraggable(windIntensityInput, (v) => { 
         grassMaterial.uniforms.uWindIntensity.value = v; 
-        setVal('windIntensity', v);
+        updateGrassJSON();
     });
     setupDraggable(windXInput, (v) => { 
         grassMaterial.uniforms.uWindDirection.value.x = v; 
-        setVal('windX', v);
+        updateGrassJSON();
     });
     setupDraggable(windYInput, (v) => { 
         grassMaterial.uniforms.uWindDirection.value.y = v; 
-        setVal('windY', v);
+        updateGrassJSON();
     });
     
     planeColorInput.addEventListener('input', (e) => { 
         ground.material.color.set(e.target.value); 
-        setVal('planeColor', e.target.value);
+        updateGrassJSON();
     });
     grassColor1Input.addEventListener('input', (e) => { 
         grassMaterial.uniforms.uColor1.value.set(e.target.value); 
-        setVal('grassColor1', e.target.value);
+        updateGrassJSON();
     });
     grassColor2Input.addEventListener('input', (e) => { 
         grassMaterial.uniforms.uColor2.value.set(e.target.value); 
-        setVal('grassColor2', e.target.value);
+        updateGrassJSON();
     });
 
     setupDraggable(prismWidthInput, (v) => {
