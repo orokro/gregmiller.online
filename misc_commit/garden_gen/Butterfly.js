@@ -41,7 +41,6 @@ export class Butterfly extends THREE.Object3D {
         this.meshContainer.add(this.mesh);
 
         if (maxDim > 0) {
-            // User requested 5x larger in its bounding box
             const targetSize = 5.0; 
             const scaleFactor = targetSize / maxDim;
             this.mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -67,11 +66,6 @@ export class Butterfly extends THREE.Object3D {
                 new THREE.SphereGeometry(0.5, 8, 8),
                 new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
             );
-            const selfDebug = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 1, 1),
-                new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true })
-            );
-            this.meshContainer.add(selfDebug);
         }
 
         this.state = {
