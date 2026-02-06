@@ -381,9 +381,15 @@ async function init() {
         setVal('wireframe', wireframeEnabled);
         targetPrisms.forEach(p => {
             p.material.wireframe = wireframeEnabled;
-            p.visible = wireframeEnabled;
+            // The block is a child of the prism. If we hide the prism, we hide the block.
+            // We should keep the prism visible but transparent/invisible if wireframe is off?
+            // Actually, if wireframe is off, we just want to see the block meshes.
+            // The prism is just a container/reference.
+            p.material.transparent = true;
+            p.material.opacity = wireframeEnabled ? 0.8 : 0;
+            
             const occluder = p.getObjectByName("occluder");
-            if (occluder) occluder.visible = wireframeEnabled;
+            if (occluder) occluder.visible = true; // Always keep occluder active for depth
         });
     });
 
