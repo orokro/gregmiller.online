@@ -18,7 +18,6 @@ export class GardenSystem extends THREE.Object3D {
         this.add(this.snailGroup);
         
         this.scatterers = {
-            snails: null,
             flowers: null,
             leaves: null
         };
@@ -54,7 +53,7 @@ export class GardenSystem extends THREE.Object3D {
         });
 
         // 2. Update Scatterers
-        this.updateScatter('snails', this.models.snail, this.gardenSettings.snails, prisms);
+        // Snails handled by GardenBlock now
         this.updateScatter('flowers', this.models.sunflower, this.gardenSettings.flowers, prisms);
         this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms);
     }
