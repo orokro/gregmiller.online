@@ -7,26 +7,6 @@ export class Snail extends THREE.Object3D {
         
         // Auto-normalize scale to fit in ~1 unit box (Meshes only)
         const box = new THREE.Box3();
-        let hasMeshes = false;
-        
-        this.snailModel.traverse((child) => {
-            if (child.isMesh) {
-                // Ensure the mesh has geometry to measure
-                if (child.geometry) {
-                    child.geometry.computeBoundingBox();
-                    const childBox = child.geometry.boundingBox.clone();
-                    childBox.applyMatrix4(child.matrixWorld);
-                    box.union(childBox);
-                    hasMeshes = true;
-                }
-            }
-        });
-
-        // Fallback if traverse didn't work (e.g. flat hierarchy or not updated world matrices)
-        // Since the clone is fresh, matrixWorld might be identity.
-        // Let's try setFromObject but filtering? No, setFromObject traverses.
-        // Better approach:
-        box.makeEmpty();
         this.snailModel.traverse((child) => {
             if (child.isMesh) {
                 box.expandByObject(child);
@@ -42,12 +22,6 @@ export class Snail extends THREE.Object3D {
             // Re-center
             const center = new THREE.Vector3();
             box.getCenter(center);
-            
-            // We need to move the model such that the center of the geometry aligns with 0,0,0
-            // AND the bottom aligns with 0.
-            // Current center is 'center'. We want new center to be (0, center.y, 0)?
-            // No, we want the *bottom* to be at 0.
-            // The bottom of the box is center.y - size.y/2.
             
             this.snailModel.position.sub(center.multiplyScalar(scaleFactor));
             this.snailModel.position.y += (size.y * scaleFactor) / 2;
@@ -94,14 +68,14 @@ export class Snail extends THREE.Object3D {
         this.speeds = {
             tail_up: 0.5 + Math.random() * 0.5,
             tail_wag: 0.8 + Math.random() * 0.4,
-            side_up_a: 0.3 + Math.random() * 0.3,
-            side_up_b: 0.4 + Math.random() * 0.3,
-            shell_a: 0.1 + Math.random() * 0.2,
-            shell_b: 0.15 + Math.random() * 0.2,
+            side_up_a: 1.0 + Math.random() * 0.5, // Faster
+            side_up_b: 1.2 + Math.random() * 0.5, // Faster
+            shell_a: 0.8 + Math.random() * 0.4,   // Much faster
+            shell_b: 0.9 + Math.random() * 0.4,   // Much faster
             head: 0.6 + Math.random() * 0.4,
-            antennas_a: 1.2 + Math.random() * 0.8,
-            antennas_b: 1.0 + Math.random() * 0.7,
-            whiskers: 2.0 + Math.random() * 1.0
+            antennas_a: 0.4 + Math.random() * 0.3, 
+            antennas_b: 0.3 + Math.random() * 0.3, 
+            whiskers: 1.5 + Math.random() * 1.0
         };
     }
 
@@ -119,9 +93,9 @@ export class Snail extends THREE.Object3D {
             const phase = this.phases[key] || 0;
             let val = (Math.sin(time * speed + phase) + 1) / 2;
             
-            // Add some interference for some
-            if (key === 'antennas_a' || key === 'antennas_b' || key === 'head') {
-                val = (val + (Math.sin(time * speed * 1.5 + phase * 0.5) + 1) / 2) / 2;
+            // Add some interference for smoother/varied movement
+            if (key === 'antennas_a' || key === 'antennas_b' || key === 'head' || key.includes('side') || key.includes('shell')) {
+                val = (val + (Math.sin(time * speed * 1.7 + phase * 0.8) + 1) / 2) / 2;
             }
 
             // Apply to all meshes that have this target

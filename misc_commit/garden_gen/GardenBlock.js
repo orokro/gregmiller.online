@@ -173,8 +173,12 @@ export class GardenBlock extends THREE.Object3D {
 
         const odds = this.settings.blockHasSnailsOdds !== undefined ? this.settings.blockHasSnailsOdds : 0.7;
         const maxSnails = this.settings.maxSnails !== undefined ? this.settings.maxSnails : 2;
-        const snailScale = this.settings.snailScale !== undefined ? this.settings.snailScale : 1.0;
-        const snailYOffset = this.settings.snailYOffset !== undefined ? this.settings.snailYOffset : 0.0;
+        const rotationMultiplier = this.settings.snailRotationMultiplier || [0, 1, 0];
+        const minSnailScale = this.settings.minSnailScale !== undefined ? this.settings.minSnailScale : 3.0;
+        const maxSnailScale = this.settings.maxSnailScale !== undefined ? this.settings.maxSnailScale : 5.0;
+        const snailXOffset = this.settings.snailXOffset !== undefined ? this.settings.snailXOffset : 0.0;
+        const snailYOffset = this.settings.snailYOffset !== undefined ? this.settings.snailYOffset : -0.04;
+        const snailZOffset = this.settings.snailZOffset !== undefined ? this.settings.snailZOffset : 0.0;
         const debugSnails = this.settings.debugSnails !== undefined ? this.settings.debugSnails : true;
         const rotXOffset = this.settings.snailRotationXOffset !== undefined ? this.settings.snailRotationXOffset : 0;
         const rotYOffset = this.settings.snailRotationYOffset !== undefined ? this.settings.snailRotationYOffset : 0;
@@ -200,13 +204,13 @@ export class GardenBlock extends THREE.Object3D {
 
                 while (!validPlacement && attempts < 10) {
                     const edgeX = this.prng.range(-0.45, 0.45); 
-                    localPos.set(edgeX, 0.5 + snailYOffset, 0.5);
+                    localPos.set(edgeX + snailXOffset, 0.5 + snailYOffset, 0.5 + snailZOffset);
 
                     validPlacement = true;
                     worldPos.copy(localPos).applyMatrix4(this.prism.matrixWorld);
 
                     for (const other of this.snails) {
-                        if (worldPos.distanceTo(other.position) < 0.5) { 
+                        if (worldPos.distanceTo(other.position) < 1.5) { 
                             validPlacement = false;
                             break;
                         }
@@ -218,7 +222,13 @@ export class GardenBlock extends THREE.Object3D {
                     snail.position.copy(worldPos);
                     const baseRot = new THREE.Euler(rotXOffset, rotYOffset, rotZOffset); 
                     snail.quaternion.setFromEuler(baseRot);
-                    snail.scale.set(snailScale, snailScale, snailScale);
+
+                    // Add random rotation on Y axis based on multiplier
+                    const randY = (this.prng.random() * Math.PI * 2) * rotationMultiplier[1];
+                    snail.rotateY(randY);
+
+                    const scale = this.prng.range(minSnailScale, maxSnailScale);
+                    snail.scale.set(scale, scale, scale);
 
                     if (this.snailGroup) {
                         this.snailGroup.add(snail);
