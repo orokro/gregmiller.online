@@ -8,7 +8,8 @@ export class GardenBlock extends THREE.Object3D {
         this.settings = settings || {};
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
-        this.centerScaler = this.settings.centerScaler || 1.0;
+        this.centerScaler = this.settings.centerScaler !== undefined ? this.settings.centerScaler : 1.666666667;
+        this.uvScale = this.settings.uvScale || 1.0;
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
         this.pieces = {};
@@ -28,13 +29,11 @@ export class GardenBlock extends THREE.Object3D {
                 const clone = original.clone();
                 clone.geometry = original.geometry.clone();
                 
-                // Measure base dimensions in local space
                 const bbox = new THREE.Box3().setFromBufferAttribute(clone.geometry.attributes.position);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
                 this.baseDimensions[name] = size;
 
-                // Rotate 90X to face Z+ (World)
                 clone.rotation.x = Math.PI / 2;
 
                 this.pieces[name] = clone;
@@ -50,7 +49,8 @@ export class GardenBlock extends THREE.Object3D {
 
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
-        this.centerScaler = this.settings.centerScaler || 1.0;
+        this.centerScaler = this.settings.centerScaler !== undefined ? this.settings.centerScaler : 1.666666667;
+        this.uvScale = this.settings.uvScale || 1.0;
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
         const currentScale = this.prism.scale;
@@ -72,36 +72,30 @@ export class GardenBlock extends THREE.Object3D {
         const osd = this.overScaleDepth;
         const cs = this.centerScaler;
 
-        // 1. Measure reference margins
         const dimTL = this.baseDimensions['TL'] || new THREE.Vector3(1, 1, 1);
         const worldCornerW = dimTL.x * s;
-        const worldCornerH = dimTL.z * s; // Use Z for vertical height after 90X rotation
+        const worldCornerH = dimTL.z * s; 
         
         const worldInnerW = Math.max(0, pW - (2 * worldCornerW));
         const worldInnerH = Math.max(0, pH - (2 * worldCornerH));
 
-        // 2. Scale Helper Functions
         const getLocalWidthScale = (name, targetWorldW) => {
             const baseW = this.baseDimensions[name] ? this.baseDimensions[name].x : 1;
             return baseW > 0.001 ? targetWorldW / (pW * baseW) : s / pW;
         };
         const getLocalDepthScale = (name) => {
-            const baseD = this.baseDimensions[name] ? this.baseDimensions[name].y : 1; // GLTF Y is world Depth after 90X
+            const baseD = this.baseDimensions[name] ? this.baseDimensions[name].y : 1;
             let scale = baseD > 0.001 ? (osd / baseD) : osd;
-            if (name === 'C') scale *= cs; // Apply center scaler
+            if (name === 'C') scale *= cs;
             return scale;
         };
         const getLocalHeightScale = (name, targetWorldH) => {
-            const baseH = this.baseDimensions[name] ? this.baseDimensions[name].z : 1; // GLTF Z is world Height after 90X
+            const baseH = this.baseDimensions[name] ? this.baseDimensions[name].z : 1;
             return baseH > 0.001 ? targetWorldH / (pH * baseH) : s / pH;
         };
 
-        // --- SCALE ---
         ['TL', 'TR', 'BL', 'BR'].forEach(n => {
-            const p = this.pieces[n];
-            if (p) {
-                p.scale.set(s / pW, getLocalDepthScale(n), s / pH);
-            }
+            if (this.pieces[n]) this.pieces[n].scale.set(s / pW, getLocalDepthScale(n), s / pH);
         });
 
         const sideHeightScale = getLocalHeightScale('L', worldInnerH);
@@ -120,7 +114,6 @@ export class GardenBlock extends THREE.Object3D {
             );
         }
 
-        // --- PLACEMENT ---
         const left = -0.5;
         const right = 0.5;
         const top = 0.5;
@@ -150,6 +143,7 @@ export class GardenBlock extends THREE.Object3D {
     }
 
     reproject(pW, pH) {
+        const uvScale = this.uvScale;
         Object.keys(this.pieces).forEach(name => {
             const mesh = this.pieces[name];
             if (!mesh.geometry || !mesh.geometry.attributes.uv) return;
@@ -177,8 +171,8 @@ export class GardenBlock extends THREE.Object3D {
                 worldH = pH - (2 * dimTL.z * s);
             }
 
-            const scaleX = worldW / dim.x;
-            const scaleY = worldH / dim.z; 
+            const scaleX = (worldW / dim.x) * uvScale;
+            const scaleY = (worldH / dim.z) * uvScale; 
 
             for (let i = 0; i < uvAttr.count; i++) {
                 uvAttr.setXY(i, 
