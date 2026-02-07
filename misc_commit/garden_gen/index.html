@@ -21,6 +21,11 @@
             <button id="createGarden" style="flex: 1; padding: 10px; cursor: pointer; background: #4da83b; color: white; border: none; border-radius: 4px; font-weight: bold;">Create Garden</button>
             <button id="destroyGarden" style="flex: 1; padding: 10px; cursor: pointer; background: #d9534f; color: white; border: none; border-radius: 4px; font-weight: bold;">Destroy Garden</button>
         </div>
+        <div style="margin-bottom: 15px;">
+             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="toggleShadows" checked> Enable Shadows
+            </label>
+        </div>
 
         <h2>Garden Settings</h2>
         
@@ -214,6 +219,11 @@
   "snailRotationYOffset": 0,
   "snailRotationZOffset": 0
 }</textarea>
+        </div>
+
+        <div class="control-group">
+            <label for="shadowSettings">Shadow Settings:</label>
+            <textarea id="shadowSettings"></textarea>
         </div>
 
     </div>

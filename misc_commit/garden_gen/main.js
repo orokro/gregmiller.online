@@ -4,7 +4,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GardenSystem } from './GardenSystem.js';
 
-let scene, camera, renderer, controls;
+let scene, camera, renderer, controls, dirLight;
 let ground;
 let targetPrisms = [];
 let wireframeEnabled = true;
@@ -22,6 +22,7 @@ async function init() {
     // UI Elements
     const createGardenBtn = document.getElementById('createGarden');
     const destroyGardenBtn = document.getElementById('destroyGarden');
+    const toggleShadowsInput = document.getElementById('toggleShadows');
 
     const wireframeInput = document.getElementById('wireframe');
     const hdrIntensityInput = document.getElementById('hdrIntensity');
@@ -56,6 +57,7 @@ async function init() {
     const gardenSettingsInput = document.getElementById('gardenSettings');
     const blockSettingsInput = document.getElementById('blockSettings');
     const grassSettingsInput = document.getElementById('grassSettings');
+    const shadowSettingsInput = document.getElementById('shadowSettings');
 
     // Load Persistence
     wireframeInput.checked = getVal('wireframe', 'true') === 'true';
@@ -144,7 +146,6 @@ async function init() {
     grassSettingsInput.addEventListener('input', () => {
         try {
             const settings = JSON.parse(grassSettingsInput.value);
-            
             // Validate and Apply
             if (typeof settings.density === 'number') grassDensityInput.value = settings.density;
             if (typeof settings.minLength === 'number') bladeMinLengthInput.value = settings.minLength;
@@ -161,54 +162,83 @@ async function init() {
             if (settings.dirtColor) planeColorInput.value = settings.dirtColor;
             if (settings.grassColor1) grassColor1Input.value = settings.grassColor1;
             if (settings.grassColor2) grassColor2Input.value = settings.grassColor2;
-
             localStorage.setItem('g_grassSettings', grassSettingsInput.value);
-            
-            if (gardenSystem) {
-                gardenSystem.updateShader(settings);
-            }
-
-        } catch (e) {
-        }
+            if (gardenSystem) gardenSystem.updateShader(settings);
+        } catch (e) {}
     });
 
+    // Shadow Settings Logic
+    const defaultShadowSettings = {
+        enabled: true,
+        lightIntensity: 1.0,
+        lightX: 20,
+        lightY: 20,
+        lightZ: 40,
+        shadowBias: -0.0001,
+        shadowMapSize: 2048,
+        shadowCamSize: 50
+    };
+
+    let shadowSettings = { ...defaultShadowSettings };
+    if (localStorage.getItem('g_shadowSettings')) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('g_shadowSettings'));
+            shadowSettings = { ...defaultShadowSettings, ...saved };
+        } catch (e) {}
+    }
+    shadowSettingsInput.value = JSON.stringify(shadowSettings, null, 2);
+    toggleShadowsInput.checked = shadowSettings.enabled;
+
+    function applyShadowSettings() {
+        if (!renderer || !dirLight) return;
+        renderer.shadowMap.enabled = shadowSettings.enabled;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        dirLight.position.set(shadowSettings.lightX, shadowSettings.lightY, shadowSettings.lightZ);
+        dirLight.intensity = shadowSettings.lightIntensity;
+        dirLight.castShadow = shadowSettings.enabled;
+        dirLight.shadow.bias = shadowSettings.shadowBias;
+        dirLight.shadow.mapSize.width = shadowSettings.shadowMapSize;
+        dirLight.shadow.mapSize.height = shadowSettings.shadowMapSize;
+        const size = shadowSettings.shadowCamSize;
+        dirLight.shadow.camera.left = -size;
+        dirLight.shadow.camera.right = size;
+        dirLight.shadow.camera.top = size;
+        dirLight.shadow.camera.bottom = -size;
+        dirLight.shadow.camera.updateProjectionMatrix();
+        if (gardenSystem) gardenSystem.enableShadows(shadowSettings.enabled, shadowSettings);
+    }
+
+    function updateShadowsFromJSON() {
+        try {
+            const settings = JSON.parse(shadowSettingsInput.value);
+            shadowSettings = settings;
+            toggleShadowsInput.checked = shadowSettings.enabled;
+            localStorage.setItem('g_shadowSettings', shadowSettingsInput.value);
+            applyShadowSettings();
+        } catch (e) {}
+    }
+    
+    toggleShadowsInput.addEventListener('change', () => {
+        shadowSettings.enabled = toggleShadowsInput.checked;
+        shadowSettingsInput.value = JSON.stringify(shadowSettings, null, 2);
+        localStorage.setItem('g_shadowSettings', shadowSettingsInput.value);
+        applyShadowSettings();
+    });
+
+    shadowSettingsInput.addEventListener('input', updateShadowsFromJSON);
+
+    // Initial Defaults
     prismWidthInput.value = getVal('prismWidth', '10');
     prismDepthInput.value = getVal('prismDepth', '5');
     prismSpacingInput.value = getVal('prismSpacing', '2');
     prismHeightsInput.value = getVal('prismHeights', '10, 6, 7');
     prngSeedInput.value = getVal('prngSeed', 'garden_seed_123');
     
+    // UI Settings Objects
     const defaultGardenSettings = {
-        flowers: {
-            density: 10,
-            minScale: 4.8,
-            maxScale: 6.5,
-            yOffset: 2,
-            randomRotation: true,
-            rotationAxis: "y"
-        },
-        leaves: {
-            density: 50,
-            minScale: 0.3,
-            maxScale: 0.5,
-            yOffset: 4,
-            randomRotation: true,
-            xRot: [70, 120],
-            yRot: [-45, 45],
-            zRot: [0, 360]
-        },
-        butterfly: {
-            scale: 1,
-            speed: 1,
-            animationSpeed: 1,
-            yOffset: 3,
-            butterflyXOffset: 0,
-            butterflyYOffset: 0,
-            butterflyZOffset: 0,
-            butterflyBodyScale: 1,
-            baseRotation: [0, 0, 0],
-            showDebugTarget: true
-        }
+        flowers: { density: 10, minScale: 4.8, maxScale: 6.5, yOffset: 2, randomRotation: true, rotationAxis: "y" },
+        leaves: { density: 50, minScale: 0.3, maxScale: 0.5, yOffset: 4, randomRotation: true, xRot: [70, 120], yRot: [-45, 45], zRot: [0, 360] },
+        butterfly: { scale: 1, speed: 1, animationSpeed: 1, yOffset: 3, butterflyXOffset: 0, butterflyYOffset: 0, butterflyZOffset: 0, butterflyBodyScale: 1, baseRotation: [0, 0, 0], showDebugTarget: true }
     };
 
     const defaultBlockSettings = {
@@ -232,13 +262,11 @@ async function init() {
         snailRotationZOffset: 0
     };
 
+    // Load Settings
     if (localStorage.getItem('g_gardenSettings')) {
         try {
             const saved = JSON.parse(localStorage.getItem('g_gardenSettings'));
-            // Deep merge for butterfly settings
-            const merged = { 
-                ...defaultGardenSettings, 
-                ...saved,
+            const merged = { ...defaultGardenSettings, ...saved,
                 flowers: { ...defaultGardenSettings.flowers, ...(saved.flowers || {}) },
                 leaves: { ...defaultGardenSettings.leaves, ...(saved.leaves || {}) },
                 butterfly: { ...defaultGardenSettings.butterfly, ...(saved.butterfly || {}) }
@@ -281,24 +309,96 @@ async function init() {
     controls.enableDamping = true;
     controls.target.set(0, 0, 0);
 
-    // Ground Plane
     const groundGeometry = new THREE.PlaneGeometry(1, 1);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x00ABAE, 
-        side: THREE.DoubleSide 
-    });
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x00ABAE, side: THREE.DoubleSide });
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.name = 'ground';
     scene.add(ground);
-
-    // Initial Scales for Ground
     ground.scale.set(parseFloat(groundWidthInput.value), parseFloat(groundHeightInput.value), 1);
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(20, 20, 40);
     scene.add(dirLight);
+
+    // Helper functions
+    function regeneratePrisms() {
+        targetPrisms.forEach(p => scene.remove(p));
+        targetPrisms = [];
+        const prismWidth = parseFloat(document.getElementById('prismWidth').value) || 10;
+        const prismDepth = parseFloat(document.getElementById('prismDepth').value) || 5;
+        const prismSpacing = parseFloat(document.getElementById('prismSpacing').value) || 2;
+        const heightsCSV = document.getElementById('prismHeights').value;
+        const ySizes = heightsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        if (ySizes.length === 0) return;
+        const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * prismSpacing;
+        let currentY = -totalYLength / 2;
+        const boxGeom = new THREE.BoxGeometry(1, 1, 1);
+        ySizes.forEach((ySize) => {
+            const mat = new THREE.MeshStandardMaterial({ color: 0x83da4a, wireframe: wireframeEnabled, transparent: true, opacity: wireframeEnabled ? 0.8 : 0 });
+            const prism = new THREE.Mesh(boxGeom, mat);
+            prism.scale.set(prismWidth, ySize, prismDepth);
+            prism.position.set(0, currentY + ySize / 2, prismDepth / 2);
+            prism.renderOrder = 1; prism.visible = true;
+            scene.add(prism); targetPrisms.push(prism);
+            const occluderMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
+            const occluder = new THREE.Mesh(boxGeom, occluderMat);
+            occluder.renderOrder = 0; occluder.name = "occluder";
+            prism.add(occluder);
+            currentY += ySize + prismSpacing;
+        });
+        if (gardenSystem) gardenSystem.update(targetPrisms);
+        applyShadowSettings();
+    }
+
+    function updatePrismPositions() {
+        const prismSpacing = parseFloat(document.getElementById('prismSpacing').value) || 2;
+        const ySizes = targetPrisms.map(p => p.scale.y);
+        const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * prismSpacing;
+        let currentY = -totalYLength / 2;
+        targetPrisms.forEach((prism, i) => {
+            const ySize = ySizes[i];
+            prism.position.y = currentY + ySize / 2;
+            currentY += ySize + prismSpacing;
+        });
+        if (gardenSystem) gardenSystem.update(targetPrisms);
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function setupDraggable(input, onUpdate, minVal = null) {
+        if (!input) return;
+        let isDragging = false, startX = 0, startVal = 0;
+        input.addEventListener('mousedown', (e) => {
+            isDragging = true; startX = e.clientX; startVal = parseFloat(input.value) || 0;
+            input.classList.add('dragging'); document.body.style.cursor = 'ew-resize';
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const delta = e.clientX - startX;
+            const speed = e.shiftKey ? 0.01 : 0.1;
+            let newVal = Math.round((startVal + delta * speed) * 100) / 100;
+            if (minVal !== null) newVal = Math.max(minVal, newVal);
+            input.value = newVal; onUpdate(newVal);
+        });
+        window.addEventListener('mouseup', () => {
+            if (isDragging) { isDragging = false; input.classList.remove('dragging'); document.body.style.cursor = 'default'; }
+        });
+        input.addEventListener('input', () => { const val = parseFloat(input.value); if (!isNaN(val)) onUpdate(val); });
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const time = clock.getElapsedTime();
+        const dt = clock.getDelta();
+        if (gardenSystem) { gardenSystem.updateAnimation(time, dt); }
+        controls.update();
+        renderer.render(scene, camera);
+    }
 
     // Load Assets
     try {
@@ -306,40 +406,24 @@ async function init() {
         const texture = await rgbeLoader.loadAsync('env.hdr');
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
-
-        // Dark gradient background
         const canvas = document.createElement('canvas');
-        canvas.width = 2;
-        canvas.height = 2;
+        canvas.width = 2; canvas.height = 2;
         const context = canvas.getContext('2d');
         const gradient = context.createLinearGradient(0, 0, 0, 2);
-        gradient.addColorStop(0, '#1a1a1a');
-        gradient.addColorStop(1, '#000000');
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, 2, 2);
+        gradient.addColorStop(0, '#1a1a1a'); gradient.addColorStop(1, '#000000');
+        context.fillStyle = gradient; context.fillRect(0, 0, 2, 2);
         scene.background = new THREE.CanvasTexture(canvas);
 
         const gltfLoader = new GLTFLoader();
         const [block, snail, sunflower, leaves, butterfly] = await Promise.all([
-            gltfLoader.loadAsync('models/GardenBlock.glb'),
-            gltfLoader.loadAsync('models/Snail.glb'),
-            gltfLoader.loadAsync('models/Sunflower.glb'),
-            gltfLoader.loadAsync('models/Leaves.glb'),
+            gltfLoader.loadAsync('models/GardenBlock.glb'), gltfLoader.loadAsync('models/Snail.glb'),
+            gltfLoader.loadAsync('models/Sunflower.glb'), gltfLoader.loadAsync('models/Leaves.glb'),
             gltfLoader.loadAsync('models/Butterfly.glb')
         ]);
-
-        loadedModels = {
-            block: block.scene,
-            snail: snail.scene,
-            sunflower: sunflower.scene,
-            leaves: leaves.scene,
-            butterfly: butterfly
-        };
-
-        // Initialize GardenSystem
+        loadedModels = { block: block.scene, snail: snail.scene, sunflower: sunflower.scene, leaves: leaves.scene, butterfly: butterfly };
         rebuildGarden();
-
     } catch (e) {
+        console.error("Init Error:", e);
     }
 
     function rebuildGarden() {
@@ -348,29 +432,16 @@ async function init() {
             scene.remove(gardenSystem);
             gardenSystem = null;
         }
-
-        let gSettings = {};
-        let bSettings = {};
-        let grSettings = {};
+        let gSettings = {}, bSettings = {}, grSettings = {};
         try {
             gSettings = JSON.parse(gardenSettingsInput.value);
             bSettings = JSON.parse(blockSettingsInput.value);
             grSettings = JSON.parse(grassSettingsInput.value);
-        } catch(e) {
-        }
-
-        gardenSystem = new GardenSystem(
-            loadedModels,
-            ground,
-            targetPrisms,
-            gSettings,
-            bSettings,
-            grSettings,
-            prngSeedInput.value,
-            camera
-        );
+        } catch(e) {}
+        gardenSystem = new GardenSystem(loadedModels, ground, targetPrisms, gSettings, bSettings, grSettings, prngSeedInput.value, camera);
         scene.add(gardenSystem);
         scene.updateMatrixWorld(true);
+        applyShadowSettings();
         updateButtonStates();
     }
 
@@ -386,7 +457,6 @@ async function init() {
     function updateButtonStates() {
         createGardenBtn.disabled = !!gardenSystem;
         destroyGardenBtn.disabled = !gardenSystem;
-        
         createGardenBtn.style.opacity = createGardenBtn.disabled ? "0.5" : "1";
         destroyGardenBtn.style.opacity = destroyGardenBtn.disabled ? "0.5" : "1";
     }
@@ -394,7 +464,6 @@ async function init() {
     createGardenBtn.addEventListener('click', rebuildGarden);
     destroyGardenBtn.addEventListener('click', destroyGarden);
 
-    // Setup UI Events
     wireframeInput.addEventListener('change', (e) => {
         wireframeEnabled = e.target.checked;
         setVal('wireframe', wireframeEnabled);
@@ -407,23 +476,9 @@ async function init() {
         });
     });
 
-    setupDraggable(hdrIntensityInput, (v) => {
-        renderer.toneMappingExposure = v;
-        setVal('hdrIntensity', v);
-    });
-
-    setupDraggable(groundWidthInput, (v) => {
-        ground.scale.x = v;
-        setVal('groundWidth', v);
-        if (gardenSystem) gardenSystem.initGrass();
-    }, 0.1);
-
-    setupDraggable(groundHeightInput, (v) => {
-        ground.scale.y = v;
-        setVal('groundHeight', v);
-        if (gardenSystem) gardenSystem.initGrass();
-    }, 0.1);
-
+    setupDraggable(hdrIntensityInput, (v) => { renderer.toneMappingExposure = v; setVal('hdrIntensity', v); });
+    setupDraggable(groundWidthInput, (v) => { ground.scale.x = v; setVal('groundWidth', v); if (gardenSystem) gardenSystem.initGrass(); }, 0.1);
+    setupDraggable(groundHeightInput, (v) => { ground.scale.y = v; setVal('groundHeight', v); if (gardenSystem) gardenSystem.initGrass(); }, 0.1);
     setupDraggable(grassDensityInput, (v) => { updateGrassJSON(); }, 0);
     setupDraggable(bladeMinLengthInput, (v) => { updateGrassJSON(); }, 0);
     setupDraggable(bladeMaxLengthInput, (v) => { updateGrassJSON(); }, 0);
@@ -432,180 +487,24 @@ async function init() {
     setupDraggable(bladeMinTipWidthInput, (v) => { updateGrassJSON(); }, 0);
     setupDraggable(bladeMaxTipWidthInput, (v) => { updateGrassJSON(); }, 0);
     setupDraggable(bladeSegmentsInput, (v) => { updateGrassJSON(); }, 1);
-    
-    setupDraggable(bendIntensityInput, (v) => { 
-        if (gardenSystem && gardenSystem.grassMaterial) {
-            gardenSystem.grassMaterial.uniforms.uBendIntensity.value = v; 
-        }
-        updateGrassJSON();
-    });
-    setupDraggable(noiseScaleInput, (v) => { 
-        updateGrassJSON();
-    });
-    setupDraggable(windIntensityInput, (v) => { 
-        updateGrassJSON();
-    });
-    setupDraggable(windXInput, (v) => { 
-        updateGrassJSON();
-    });
-    setupDraggable(windYInput, (v) => { 
-        updateGrassJSON();
-    });
-    
-    planeColorInput.addEventListener('input', (e) => { 
-        updateGrassJSON();
-    });
-    grassColor1Input.addEventListener('input', (e) => { 
-        updateGrassJSON();
-    });
-    grassColor2Input.addEventListener('input', (e) => { 
-        updateGrassJSON();
-    });
-
-    setupDraggable(prismWidthInput, (v) => {
-        targetPrisms.forEach(p => p.scale.x = v);
-        setVal('prismWidth', v);
-        if (gardenSystem) gardenSystem.update(targetPrisms);
-    }, 0.1);
-
-    setupDraggable(prismDepthInput, (v) => {
-        targetPrisms.forEach(p => {
-            p.scale.z = v;
-            p.position.z = v / 2;
-        });
-        setVal('prismDepth', v);
-        if (gardenSystem) gardenSystem.update(targetPrisms);
-    }, 0.1);
-
-    setupDraggable(prismSpacingInput, (v) => {
-        updatePrismPositions();
-        setVal('prismSpacing', v);
-        if (gardenSystem) gardenSystem.update(targetPrisms);
-    });
-
-    prismHeightsInput.addEventListener('input', () => {
-        regeneratePrisms();
-        setVal('prismHeights', prismHeightsInput.value);
-    });
-
-    prngSeedInput.addEventListener('input', () => {
-        setVal('prngSeed', prngSeedInput.value);
-        rebuildGarden();
-    });
-
-    gardenSettingsInput.addEventListener('input', () => {
-        setVal('gardenSettings', gardenSettingsInput.value);
-        rebuildGarden();
-    });
-    blockSettingsInput.addEventListener('input', () => {
-        setVal('blockSettings', blockSettingsInput.value);
-        rebuildGarden();
-    });
-
+    setupDraggable(bendIntensityInput, (v) => { if (gardenSystem && gardenSystem.grassMaterial) gardenSystem.grassMaterial.uniforms.uBendIntensity.value = v; updateGrassJSON(); });
+    setupDraggable(noiseScaleInput, (v) => { updateGrassJSON(); });
+    setupDraggable(windIntensityInput, (v) => { updateGrassJSON(); });
+    setupDraggable(windXInput, (v) => { updateGrassJSON(); });
+    setupDraggable(windYInput, (v) => { updateGrassJSON(); });
+    planeColorInput.addEventListener('input', (e) => { updateGrassJSON(); });
+    grassColor1Input.addEventListener('input', (e) => { updateGrassJSON(); });
+    grassColor2Input.addEventListener('input', (e) => { updateGrassJSON(); });
+    setupDraggable(prismWidthInput, (v) => { targetPrisms.forEach(p => p.scale.x = v); setVal('prismWidth', v); if (gardenSystem) gardenSystem.update(targetPrisms); }, 0.1);
+    setupDraggable(prismDepthInput, (v) => { targetPrisms.forEach(p => { p.scale.z = v; p.position.z = v / 2; }); setVal('prismDepth', v); if (gardenSystem) gardenSystem.update(targetPrisms); }, 0.1);
+    setupDraggable(prismSpacingInput, (v) => { updatePrismPositions(); setVal('prismSpacing', v); if (gardenSystem) gardenSystem.update(targetPrisms); });
+    prismHeightsInput.addEventListener('input', () => { regeneratePrisms(); setVal('prismHeights', prismHeightsInput.value); });
+    prngSeedInput.addEventListener('input', () => { setVal('prngSeed', prngSeedInput.value); rebuildGarden(); });
+    gardenSettingsInput.addEventListener('input', () => { setVal('gardenSettings', gardenSettingsInput.value); rebuildGarden(); });
+    blockSettingsInput.addEventListener('input', () => { setVal('blockSettings', blockSettingsInput.value); rebuildGarden(); });
     window.addEventListener('resize', onWindowResize);
-
     regeneratePrisms();
     animate();
-}
-
-function regeneratePrisms() {
-    targetPrisms.forEach(p => scene.remove(p));
-    targetPrisms = [];
-    const prismWidth = parseFloat(document.getElementById('prismWidth').value) || 10;
-    const prismDepth = parseFloat(document.getElementById('prismDepth').value) || 5;
-    const prismSpacing = parseFloat(document.getElementById('prismSpacing').value) || 2;
-    const heightsCSV = document.getElementById('prismHeights').value;
-    const ySizes = heightsCSV.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-    if (ySizes.length === 0) return;
-    const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * prismSpacing;
-    let currentY = -totalYLength / 2;
-    const boxGeom = new THREE.BoxGeometry(1, 1, 1);
-    ySizes.forEach((ySize) => {
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: 0x83da4a, 
-            wireframe: wireframeEnabled,
-            transparent: true,
-            opacity: wireframeEnabled ? 0.8 : 0
-        });
-        const prism = new THREE.Mesh(boxGeom, mat);
-        prism.scale.set(prismWidth, ySize, prismDepth);
-        prism.position.set(0, currentY + ySize / 2, prismDepth / 2);
-        prism.renderOrder = 1;
-        prism.visible = true;
-        scene.add(prism);
-        targetPrisms.push(prism);
-        const occluderMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
-        const occluder = new THREE.Mesh(boxGeom, occluderMat);
-        occluder.renderOrder = 0;
-        occluder.name = "occluder";
-        prism.add(occluder);
-        currentY += ySize + prismSpacing;
-    });
-    if (gardenSystem) gardenSystem.update(targetPrisms);
-}
-
-function updatePrismPositions() {
-    const prismSpacing = parseFloat(document.getElementById('prismSpacing').value) || 2;
-    const ySizes = targetPrisms.map(p => p.scale.y);
-    const totalYLength = ySizes.reduce((a, b) => a + b, 0) + (ySizes.length - 1) * prismSpacing;
-    let currentY = -totalYLength / 2;
-    targetPrisms.forEach((prism, i) => {
-        const ySize = ySizes[i];
-        prism.position.y = currentY + ySize / 2;
-        currentY += ySize + prismSpacing;
-    });
-    if (gardenSystem) gardenSystem.update(targetPrisms);
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function setupDraggable(input, onUpdate, minVal = null) {
-    if (!input) return;
-    let isDragging = false;
-    let startX = 0;
-    let startVal = 0;
-    input.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX;
-        startVal = parseFloat(input.value) || 0;
-        input.classList.add('dragging');
-        document.body.style.cursor = 'ew-resize';
-    });
-    window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const delta = e.clientX - startX;
-        const speed = e.shiftKey ? 0.01 : 0.1;
-        let newVal = Math.round((startVal + delta * speed) * 100) / 100;
-        if (minVal !== null) newVal = Math.max(minVal, newVal);
-        input.value = newVal;
-        onUpdate(newVal);
-    });
-    window.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
-            input.classList.remove('dragging');
-            document.body.style.cursor = 'default';
-        }
-    });
-    input.addEventListener('input', () => {
-        const val = parseFloat(input.value);
-        if (!isNaN(val)) onUpdate(val);
-    });
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    const time = clock.getElapsedTime();
-    const dt = clock.getDelta();
-    if (gardenSystem) {
-        gardenSystem.updateAnimation(time, dt);
-    }
-    controls.update();
-    renderer.render(scene, camera);
 }
 
 init();
