@@ -88,18 +88,17 @@ export class GardenSystem extends THREE.Object3D {
 
         const settings = this.grassSettings;
         const count = settings.density || 7000;
-        const minLen = settings.minLength || 0;
-        const maxLen = settings.maxLength || 4;
-        const minWid = settings.minWidth || 0.25;
-        const maxWid = settings.maxWidth || 0.68;
-        const minTipWid = settings.minTipWidth || 0;
-        const maxTipWid = settings.maxTipWidth || 0.2;
         const segments = settings.segments || 4;
-        
         const gW = this.bgPlane.scale.x;
         const gH = this.bgPlane.scale.y;
 
         if (this.grassMaterial) this.grassMaterial.dispose();
+
+        // Use MeshStandardMaterial with onBeforeCompile for custom logic + shadows
+        this.grassMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(settings.grassColor1 || "#4da83b"),
+            side: THREE.DoubleSide
+        });
 
         const uniforms = {
             uTime: { value: 0 },
@@ -111,41 +110,59 @@ export class GardenSystem extends THREE.Object3D {
             uBendIntensity: { value: 0.5 }
         };
 
-        const vertexShader = `
-            uniform float uTime;
-            uniform float uNoiseScale;
-            uniform float uWindIntensity;
-            uniform vec2 uWindDirection;
-            uniform float uBendIntensity;
+        this.grassMaterial.onBeforeCompile = (shader) => {
+            shader.uniforms.uTime = uniforms.uTime;
+            shader.uniforms.uNoiseScale = uniforms.uNoiseScale;
+            shader.uniforms.uWindIntensity = uniforms.uWindIntensity;
+            shader.uniforms.uWindDirection = uniforms.uWindDirection;
+            shader.uniforms.uColor1 = uniforms.uColor1;
+            shader.uniforms.uColor2 = uniforms.uColor2;
+            shader.uniforms.uBendIntensity = uniforms.uBendIntensity;
 
-            attribute float aSize;
-            attribute float aWidth;
-            attribute float aTipWidth;
-            attribute vec3 aOffset;
-            attribute float aAngle;
+            // Store for updateAnimation
+            this.grassMaterial.userData.shader = shader;
 
-            varying float vHeightPercent;
-            varying float vRandom;
+            shader.vertexShader = `
+                uniform float uTime;
+                uniform float uNoiseScale;
+                uniform float uWindIntensity;
+                uniform vec2 uWindDirection;
+                uniform float uBendIntensity;
 
-            float hash(float n) { return fract(sin(n) * 43758.5453123); }
-            float noise(vec3 x) {
-                vec3 p = floor(x);
-                vec3 f = fract(x);
-                f = f*f*(3.0-2.0*f);
-                float n = p.x + p.y*57.0 + 113.0*p.z;
-                return mix(mix(mix( hash(n+  0.0), hash(n+  1.0),f.x),
-                               mix( hash(n+ 57.0), hash(n+ 58.0),f.x),f.y),
-                           mix(mix( hash(n+113.0), hash(n+114.0),f.x),
-                               mix( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
-            }
+                attribute float aSize;
+                attribute float aWidth;
+                attribute float aTipWidth;
+                attribute vec3 aOffset;
+                attribute float aAngle;
 
-            void main() {
+                varying float vHeightPercent;
+                varying float vRandom;
+
+                float hash(float n) { return fract(sin(n) * 43758.5453123); }
+                float noise(vec3 x) {
+                    vec3 p = floor(x);
+                    vec3 f = fract(x);
+                    f = f*f*(3.0-2.0*f);
+                    float n = p.x + p.y*57.0 + 113.0*p.z;
+                    return mix(mix(mix( hash(n+  0.0), hash(n+  1.0),f.x),
+                                   mix( hash(n+ 57.0), hash(n+ 58.0),f.x),f.y),
+                               mix(mix( hash(n+113.0), hash(n+114.0),f.x),
+                                   mix( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
+                }
+                ${shader.vertexShader}
+            `;
+
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `
                 vHeightPercent = uv.y;
                 vRandom = aAngle;
+                
                 vec3 pos = position;
                 float currentWidth = mix(aWidth, aTipWidth, uv.y);
                 pos.x *= currentWidth;
                 pos.y *= aSize;
+                
                 float angle = aAngle;
                 float s = sin(angle);
                 float c = cos(angle);
@@ -153,48 +170,46 @@ export class GardenSystem extends THREE.Object3D {
                 float rz = pos.x * s + pos.z * c;
                 pos.x = rx;
                 pos.z = rz;
+
                 float windFactor = uv.y * uv.y;
                 float noiseVal = noise(vec3(aOffset.xy * uNoiseScale, uTime * 0.5));
                 vec2 windMove = uWindDirection * uWindIntensity * (noiseVal + 0.5);
                 pos.x += windMove.x * windFactor;
                 pos.y += windMove.y * windFactor;
+                
                 float bendX = sin(aAngle * 1.5) * uBendIntensity;
                 float bendY = cos(aAngle * 1.5) * uBendIntensity;
                 pos.x += bendX * windFactor;
                 pos.y += bendY * windFactor;
                 pos.z += windFactor * uBendIntensity * 0.5;
+
                 vec3 finalLocal;
                 finalLocal.x = pos.x;
-                finalLocal.y = pos.y;
-                finalLocal.z = pos.z;
-                vec3 normalOriented;
-                normalOriented.x = finalLocal.x;
-                normalOriented.y = -finalLocal.z;
-                normalOriented.z = finalLocal.y;
-                vec3 worldPos = aOffset + normalOriented;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
-            }
-        `;
+                finalLocal.y = -pos.z; 
+                finalLocal.z = pos.y;
+                
+                vec3 transformed = finalLocal + aOffset;
+                `
+            );
 
-        const fragmentShader = `
-            uniform vec3 uColor1;
-            uniform vec3 uColor2;
-            varying float vHeightPercent;
-            varying float vRandom;
-            void main() {
+            shader.fragmentShader = `
+                uniform vec3 uColor1;
+                uniform vec3 uColor2;
+                varying float vHeightPercent;
+                varying float vRandom;
+                ${shader.fragmentShader}
+            `;
+
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <color_fragment>',
+                `
+                #include <color_fragment>
                 float shade = mix(0.2, 1.0, vHeightPercent);
-                vec3 baseColor = mix(uColor1, uColor2, fract(vRandom * 7.0));
-                gl_FragColor = vec4(baseColor * shade, 1.0);
-            }
-        `;
-
-        this.grassMaterial = new THREE.ShaderMaterial({
-            uniforms: uniforms,
-            vertexShader: vertexShader,
-            fragmentShader: fragmentShader,
-            side: THREE.DoubleSide,
-            lights: false
-        });
+                vec3 baseGrassColor = mix(uColor1, uColor2, fract(vRandom * 7.0));
+                diffuseColor.rgb = baseGrassColor * shade;
+                `
+            );
+        };
 
         const baseGeom = new THREE.PlaneGeometry(1, 1, 1, segments);
         baseGeom.translate(0, 0.5, 0); 
@@ -214,9 +229,9 @@ export class GardenSystem extends THREE.Object3D {
             offsets[i * 3] = (grassPRNG.random() - 0.5) * gW;
             offsets[i * 3 + 1] = (grassPRNG.random() - 0.5) * gH;
             offsets[i * 3 + 2] = 0.01;
-            sizes[i] = minLen + grassPRNG.random() * (maxLen - minLen);
-            widths[i] = minWid + grassPRNG.random() * (maxWid - minWid);
-            tipWidths[i] = minTipWid + grassPRNG.random() * (maxTipWid - minTipWid);
+            sizes[i] = settings.minLength + grassPRNG.random() * (settings.maxLength - settings.minLength);
+            widths[i] = settings.minWidth + grassPRNG.random() * (settings.maxWidth - settings.minWidth);
+            tipWidths[i] = settings.minTipWidth + grassPRNG.random() * (settings.maxTipWidth - settings.minTipWidth);
             angles[i] = grassPRNG.random() * Math.PI * 2;
         }
         instancedGeom.setAttribute('aOffset', new THREE.InstancedBufferAttribute(offsets, 3));
@@ -228,14 +243,17 @@ export class GardenSystem extends THREE.Object3D {
         this.grassMesh = new THREE.Mesh(instancedGeom, this.grassMaterial);
         this.grassMesh.frustumCulled = false; 
         this.grassMesh.renderOrder = 2;
-        this.add(this.grassMesh);
-
-        if (this.bgPlane.material && this.bgPlane.material !== this.originalPlaneMaterial) {
-            this.bgPlane.material.dispose();
+        if (this.shadowEnabled) {
+            this.grassMesh.receiveShadow = true;
         }
+        this.add(this.grassMesh);
 
         const uvScale = settings.dirtUVScale || 4.0;
         const normalScale = settings.normalStrength || 1.0;
+        
+        if (this.bgPlane.material && this.bgPlane.material !== this.originalPlaneMaterial) {
+            this.bgPlane.material.dispose();
+        }
 
         const groundMat = new THREE.MeshStandardMaterial({ 
             color: settings.dirtColor || "#3d2b1f", 
@@ -255,7 +273,6 @@ export class GardenSystem extends THREE.Object3D {
         this.bgPlane.material = groundMat;
         if (this.shadowEnabled) {
             this.bgPlane.receiveShadow = true;
-            this.grassMesh.receiveShadow = true;
         }
         
         baseGeom.dispose();
@@ -340,8 +357,8 @@ export class GardenSystem extends THREE.Object3D {
     }
 
     updateAnimation(time, dt) {
-        if (this.grassMaterial && this.grassMaterial.type === 'ShaderMaterial') {
-            this.grassMaterial.uniforms.uTime.value = time;
+        if (this.grassMaterial && this.grassMaterial.userData.shader) {
+            this.grassMaterial.userData.shader.uniforms.uTime.value = time;
         }
         for (const block of this.gardenBlocks.values()) {
             block.updateAnimation(time);
