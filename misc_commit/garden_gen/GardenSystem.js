@@ -310,14 +310,7 @@ export class GardenSystem extends THREE.Object3D {
 
         Object.values(this.scatterers).forEach(scatter => {
             if (scatter) {
-                scatter.items.forEach(item => {
-                    item.traverse(child => {
-                        if (child.isMesh) {
-                            child.receiveShadow = enabled;
-                            child.castShadow = enabled;
-                        }
-                    });
-                });
+                scatter.setShadows(enabled);
             }
         });
 
@@ -383,14 +376,7 @@ export class GardenSystem extends THREE.Object3D {
             this.scatterers[key].update(prisms, mergedSettings);
         }
         if (this.shadowEnabled && this.scatterers[key]) {
-             this.scatterers[key].items.forEach(item => {
-                item.traverse(child => {
-                    if (child.isMesh) {
-                        child.receiveShadow = true;
-                        child.castShadow = true;
-                    }
-                });
-            });
+             this.scatterers[key].setShadows(true);
         }
     }
 

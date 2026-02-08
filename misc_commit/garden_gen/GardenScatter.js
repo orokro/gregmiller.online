@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import PRNG from './utils/PRNG.js';
 
 export class GardenScatter extends THREE.Object3D {
     constructor(model, bgPlane, prisms, settings) {
@@ -8,165 +9,257 @@ export class GardenScatter extends THREE.Object3D {
         this.prisms = prisms;
         this.settings = settings || {};
         
-        this.items = [];
+        this.cells = new Map(); // key -> { items: [] }
+        this.cellSize = 10;
+        this.shadowEnabled = false;
         
-        // Analyze library if needed
         this.library = [];
-        this.model.traverse((child) => {
-            if (child.isMesh && child.name.includes('leaf')) {
-                this.library.push(child);
-            }
-        });
+        if (this.model) {
+            this.model.traverse((child) => {
+                if (child.isMesh && child.name.toLowerCase().includes('leaf')) {
+                    this.library.push(child);
+                }
+            });
+        }
 
-        this.generate();
+        this.update(prisms, this.settings);
     }
 
-    generate() {
-        // Clear existing items
-        this.items.forEach(item => this.remove(item));
-        this.items = [];
+    update(prisms, settings) {
+        const oldSettings = this.settings;
+        this.prisms = prisms;
+        this.settings = settings;
 
+        // Check if we need to completely regenerate cell contents
+        const needsRegen = !oldSettings || 
+            settings.seed !== oldSettings.seed || 
+            settings.density !== oldSettings.density ||
+            settings.rotationAxis !== oldSettings.rotationAxis ||
+            JSON.stringify(settings.xRot) !== JSON.stringify(oldSettings.xRot) ||
+            JSON.stringify(settings.yRot) !== JSON.stringify(oldSettings.yRot) ||
+            JSON.stringify(settings.zRot) !== JSON.stringify(oldSettings.zRot) ||
+            settings.randomRotation !== oldSettings.randomRotation;
+
+        if (needsRegen) {
+            this.clearAll();
+        }
+
+        this.refresh();
+    }
+
+    refresh() {
+        const gW = this.bgPlane.scale.x;
+        const gH = this.bgPlane.scale.y;
+
+        const { density = 0 } = this.settings;
+        const refArea = 270; // Reference area for density
+        const densityPerUnit = density / refArea;
+
+        // We want stability relative to the top-left corner.
+        // In world space, the plane is centered at (0,0).
+        // Top-left is (-gW/2, gH/2).
+        // Let's define a grid origin that is "stable" relative to top-left.
+        // However, if we want items to stay at (localX, localY) from top-left,
+        // we can just use a local grid [0, gW] x [0, gH].
+        
+        const colEnd = Math.ceil(gW / this.cellSize);
+        const rowEnd = Math.ceil(gH / this.cellSize);
+
+        const activeKeys = new Set();
+        for (let i = 0; i <= colEnd; i++) {
+            for (let j = 0; j <= rowEnd; j++) {
+                const key = `${i}_${j}`;
+                activeKeys.add(key);
+                if (!this.cells.has(key)) {
+                    this.generateCell(i, j, densityPerUnit);
+                }
+            }
+        }
+
+        // Apply positions and culling
+        this.updateItems(gW, gH);
+
+        // Remove cells that are way out of bounds
+        // (We keep a small buffer or just remove those not in activeKeys)
+        for (const key of this.cells.keys()) {
+            if (!activeKeys.has(key)) {
+                const cell = this.cells.get(key);
+                cell.items.forEach(item => {
+                    if (item.parent) this.remove(item);
+                });
+                this.cells.delete(key);
+            }
+        }
+    }
+
+    generateCell(col, row, densityPerUnit) {
+        const cellX = col * this.cellSize;
+        const cellY = row * this.cellSize;
+        const cellSeed = `${this.settings.seed}_${col}_${row}`;
+        const prng = new PRNG(cellSeed);
+
+        const expectedCount = densityPerUnit * this.cellSize * this.cellSize;
+        let count = Math.floor(expectedCount);
+        if (prng.random() < (expectedCount % 1)) count++;
+
+        const items = [];
+        for (let n = 0; n < count; n++) {
+            const localX = prng.random() * this.cellSize;
+            const localY = prng.random() * this.cellSize;
+            
+            const item = this.createItem(prng);
+            // Store coordinates relative to the TOP-LEFT of the plane
+            item.userData.planeLocalPos = { x: cellX + localX, y: cellY + localY };
+            items.push(item);
+        }
+        this.cells.set(`${col}_${row}`, { items });
+    }
+
+    createItem(prng) {
         const { 
-            density = 0, 
             minScale = 1, 
             maxScale = 1, 
-            seed = 'default', 
-            yOffset = 0, 
             randomRotation = true,
             rotationAxis = 'z',
             xRot = null,
             yRot = null,
             zRot = null
         } = this.settings;
-        
-        // Simple deterministic PRNG
-        let seedNum = this.hashString(seed);
-        const random = () => {
-            seedNum = (seedNum * 16807) % 2147483647;
-            return (seedNum - 1) / 2147483646;
-        };
 
-        const degToRad = THREE.MathUtils.degToRad;
-
-        const gW = this.bgPlane.scale.x;
-        const gH = this.bgPlane.scale.y;
-
-        // Calculate Block Column Bounds
-        let minBX = Infinity, maxBX = -Infinity;
-        let minBY = Infinity, maxBY = -Infinity;
-        
-        if (this.prisms.length > 0) {
-            this.prisms.forEach(p => {
-                const w = p.scale.x;
-                const h = p.scale.y;
-                minBX = Math.min(minBX, p.position.x - w/2);
-                maxBX = Math.max(maxBX, p.position.x + w/2);
-                minBY = Math.min(minBY, p.position.y - h/2);
-                maxBY = Math.max(maxBY, p.position.y + h/2);
-            });
+        let item;
+        if (this.library.length > 0) {
+            const template = prng.pick(this.library);
+            item = template.clone();
         } else {
-            minBX = maxBX = 0;
-            minBY = maxBY = 0;
+            item = this.model.clone();
         }
 
-        const margin = 0.5;
-        minBX -= margin;
-        maxBX += margin;
+        const degToRad = THREE.MathUtils.degToRad;
+        item.rotation.x = Math.PI / 2; 
 
-        let spawned = 0;
-        let attempts = 0;
-        const maxAttempts = density * 20;
-
-        while (spawned < density && attempts < maxAttempts) {
-            attempts++;
-            
-            const x = (random() - 0.5) * gW;
-            const y = (random() - 0.5) * gH;
-
-            // Collision check: Avoid the block column
-            let inside = false;
-            if (this.prisms.length > 0) {
-                if (x >= minBX && x <= maxBX && y >= minBY && y <= maxBY) {
-                    inside = true;
-                }
+        if (randomRotation) {
+            if (xRot || yRot || zRot) {
+                const rx = xRot ? degToRad(prng.range(xRot[0], xRot[1])) : 0;
+                const ry = yRot ? degToRad(prng.range(yRot[0], yRot[1])) : 0;
+                const rz = zRot ? degToRad(prng.range(zRot[0], zRot[1])) : 0;
+                item.rotateX(rx);
+                item.rotateY(ry);
+                item.rotateZ(rz);
+            } else {
+                const angle = prng.random() * Math.PI * 2;
+                if (rotationAxis === 'y') item.rotation.y = angle;
+                else item.rotation.z = angle;
             }
+        }
 
-            if (!inside) {
-                let item;
-                if (this.library.length > 0) {
-                    const template = this.library[Math.floor(random() * this.library.length)];
-                    item = template.clone();
-                } else {
-                    item = this.model.clone();
+        const s = prng.range(minScale, maxScale);
+        item.scale.set(s, s, s);
+        
+        return item;
+    }
+
+    setShadows(enabled) {
+        this.shadowEnabled = enabled;
+        for (const cell of this.cells.values()) {
+            cell.items.forEach(item => {
+                if (item.parent) {
+                    item.traverse(child => {
+                        if (child.isMesh) {
+                            child.receiveShadow = enabled;
+                            child.castShadow = enabled;
+                        }
+                    });
                 }
+            });
+        }
+    }
 
-                item.position.set(x, y, yOffset);
+    updateItems(gW, gH) {
+        const { yOffset = 0 } = this.settings;
+
+        // Calculate Prism Bounds in World Space
+        const prismBounds = this.prisms.map(p => {
+            const w = p.scale.x;
+            const h = p.scale.y;
+            const margin = 0.5;
+            return {
+                xMin: p.position.x - w/2 - margin,
+                xMax: p.position.x + w/2 + margin,
+                yMin: p.position.y - h/2 - margin,
+                yMax: p.position.y + h/2 + margin
+            };
+        });
+
+        const worldLeft = -gW / 2;
+        const worldTop = gH / 2;
+
+        for (const cell of this.cells.values()) {
+            cell.items.forEach(item => {
+                const lPos = item.userData.planeLocalPos;
                 
-                // Base Orientation (Pointing Up/Out)
-                item.rotation.x = Math.PI / 2; 
+                // Convert local (top-left) to world
+                const wx = worldLeft + lPos.x;
+                const wy = worldTop - lPos.y;
+
+                // Plane bounds check
+                let visible = lPos.x >= 0 && lPos.x <= gW && lPos.y >= 0 && lPos.y <= gH;
                 
-                if (randomRotation) {
-                    // Check if we have specific range settings (Leaves)
-                    if (xRot || yRot || zRot) {
-                        const rx = xRot ? degToRad(xRot[0] + random() * (xRot[1] - xRot[0])) : 0;
-                        const ry = yRot ? degToRad(yRot[0] + random() * (yRot[1] - yRot[0])) : 0;
-                        const rz = zRot ? degToRad(zRot[0] + random() * (zRot[1] - zRot[0])) : 0;
-                        
-                        // Apply as local additions or absolute if base is zero?
-                        // If base is PI/2 X, we should probably use a dummy or rotate in order
-                        item.rotateX(rx);
-                        item.rotateY(ry);
-                        item.rotateZ(rz);
-                    } else {
-                        // Simple axis logic (Flowers)
-                        const angle = random() * Math.PI * 2;
-                        if (rotationAxis === 'y') {
-                            item.rotation.y = angle;
-                        } else {
-                            item.rotation.z = angle;
+                // Prism culling check
+                if (visible) {
+                    for (const b of prismBounds) {
+                        if (wx >= b.xMin && wx <= b.xMax && wy >= b.yMin && wy <= b.yMax) {
+                            visible = false;
+                            break;
                         }
                     }
                 }
 
-                // Random Scale
-                const s = minScale + random() * (maxScale - minScale);
-                item.scale.set(s, s, s);
-
-                this.add(item);
-                this.items.push(item);
-                spawned++;
-            }
+                if (visible) {
+                    if (!item.parent) {
+                        this.add(item);
+                        // Apply shadows if enabled
+                        item.traverse(child => {
+                            if (child.isMesh) {
+                                child.receiveShadow = this.shadowEnabled;
+                                child.castShadow = this.shadowEnabled;
+                            }
+                        });
+                    }
+                    item.position.set(wx, wy, yOffset);
+                } else {
+                    if (item.parent) this.remove(item);
+                }
+            });
         }
     }
 
-    hashString(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
+    clearAll() {
+        for (const cell of this.cells.values()) {
+            cell.items.forEach(item => {
+                if (item.parent) this.remove(item);
+            });
         }
-        return Math.abs(hash);
-    }
-
-    update(prisms, settings) {
-        this.prisms = prisms;
-        this.settings = settings;
-        this.generate();
+        this.cells.clear();
     }
 
     cleanup() {
-        this.items.forEach(item => {
-            this.remove(item);
-            item.traverse(node => {
-                if (node.isMesh) {
-                    if (node.geometry) node.geometry.dispose();
-                    if (node.material) {
-                        if (Array.isArray(node.material)) node.material.forEach(m => m.dispose());
-                        else node.material.dispose();
+        this.clearAll();
+        // Traverse and dispose geometries/materials if they are unique
+        // Since we are cloning, we might be sharing some.
+        // But GardenSystem.cleanup calls this, so it's good to be thorough.
+        this.cells.forEach(cell => {
+            cell.items.forEach(item => {
+                item.traverse(node => {
+                    if (node.isMesh) {
+                        if (node.geometry) node.geometry.dispose();
+                        if (node.material) {
+                            if (Array.isArray(node.material)) node.material.forEach(m => m.dispose());
+                            else node.material.dispose();
+                        }
                     }
-                }
+                });
             });
         });
-        this.items = [];
+        this.cells.clear();
     }
 }

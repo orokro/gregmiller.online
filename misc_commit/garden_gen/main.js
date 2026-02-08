@@ -477,8 +477,8 @@ async function init() {
     });
 
     setupDraggable(hdrIntensityInput, (v) => { renderer.toneMappingExposure = v; setVal('hdrIntensity', v); });
-    setupDraggable(groundWidthInput, (v) => { ground.scale.x = v; setVal('groundWidth', v); if (gardenSystem) gardenSystem.initGrass(); }, 0.1);
-    setupDraggable(groundHeightInput, (v) => { ground.scale.y = v; setVal('groundHeight', v); if (gardenSystem) gardenSystem.initGrass(); }, 0.1);
+    setupDraggable(groundWidthInput, (v) => { ground.scale.x = v; setVal('groundWidth', v); if (gardenSystem) { gardenSystem.initGrass(); gardenSystem.update(targetPrisms); } }, 0.1);
+    setupDraggable(groundHeightInput, (v) => { ground.scale.y = v; setVal('groundHeight', v); if (gardenSystem) { gardenSystem.initGrass(); gardenSystem.update(targetPrisms); } }, 0.1);
     setupDraggable(grassDensityInput, (v) => { updateGrassJSON(); }, 0);
     setupDraggable(bladeMinLengthInput, (v) => { updateGrassJSON(); }, 0);
     setupDraggable(bladeMaxLengthInput, (v) => { updateGrassJSON(); }, 0);

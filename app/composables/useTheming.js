@@ -16,6 +16,7 @@ import { DebugTheme } from '../themes/DebugTheme';
 import { GlassThemeOld } from '../themes/GlassThemeOld';
 import { GlassTheme } from '../themes/GlassTheme';
 import { KoiPondTheme } from '../themes/KoiPondTheme';
+import { GardenTheme } from '../themes/GardenTheme';
 
 // our current theme
 const currentTheme = shallowRef(null);
@@ -163,11 +164,12 @@ const setThemeStyles = (newStyles) => {
 addTheme('Debug Theme', DebugTheme);
 addTheme('Glass Theme', GlassTheme);
 addTheme('Koi Pond Theme', KoiPondTheme);
+addTheme('Garden Theme', GardenTheme);
 addTheme('Glass Theme Old', GlassThemeOld);
 
 
 // save our initial theme
-const defaultTheme = themes.value.find(t => t.name === 'Glass Theme') || themes.value[1];
+const defaultTheme = themes.value.find(t => t.name === 'Garden Theme') || themes.value[1];
 if (defaultTheme) {
 	setTheme(defaultTheme.name);
 }
