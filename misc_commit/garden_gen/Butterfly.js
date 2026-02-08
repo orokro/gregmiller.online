@@ -18,13 +18,26 @@ export class Butterfly extends THREE.Object3D {
         
         // Setup Animation
         this.mixer = new THREE.AnimationMixer(this.mesh);
-        if (gltf.animations && gltf.animations.length > 0) {
-            gltf.animations.forEach(clip => {
-                const action = this.mixer.clipAction(clip);
-                action.play();
-                action.timeScale = this.settings.animationSpeed || 1;
-            });
-        }
+        
+        // Find the wing meshes and their morph target indices
+        this.wingMeshes = [];
+        this.mesh.traverse(child => {
+            if (child.isMesh && child.morphTargetDictionary) {
+                const dict = child.morphTargetDictionary;
+                const meshInfo = { mesh: child, targets: [] };
+                
+                // We want to drive the flapping targets
+                // Based on inspection: Wings1_Bot/Top and Wings2_Bot
+                if (dict['Wings1_Bot'] !== undefined) meshInfo.targets.push({ index: dict['Wings1_Bot'], type: 'bot' });
+                if (dict['Wings1_Top'] !== undefined) meshInfo.targets.push({ index: dict['Wings1_Top'], type: 'top' });
+                if (dict['Wings2_Bot'] !== undefined) meshInfo.targets.push({ index: dict['Wings2_Bot'], type: 'bot' });
+                if (dict['Wings2_Bot_copy1'] !== undefined) meshInfo.targets.push({ index: dict['Wings2_Bot_copy1'], type: 'bot' });
+                
+                if (meshInfo.targets.length > 0) {
+                    this.wingMeshes.push(meshInfo);
+                }
+            }
+        });
 
         // Clean Auto-normalization for the new model
         this.mesh.updateMatrixWorld(true);
@@ -195,6 +208,18 @@ export class Butterfly extends THREE.Object3D {
         safeDt = Math.min(safeDt, 0.1);
 
         if (this.mixer) this.mixer.update(safeDt);
+
+        // Manually drive synced wing flapping
+        const flapSpeed = (this.settings.animationSpeed || 1) * 15;
+        const flapIntensity = (Math.sin(time * flapSpeed) + 1) / 2; // 0 to 1
+
+        this.wingMeshes.forEach(info => {
+            info.targets.forEach(t => {
+                // If it's a 'top' target, maybe it's inverse or shifted? 
+                // Usually for these models, driving them together works best.
+                info.mesh.morphTargetInfluences[t.index] = flapIntensity;
+            });
+        });
 
         const sincePick = (now - this.state.lastPickAt) / 1000;
         const nearingEnd = this.state.curve ? this.state.curveT > 0.86 : false;
