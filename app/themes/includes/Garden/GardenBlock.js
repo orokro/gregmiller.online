@@ -1,11 +1,35 @@
-import * as THREE from 'three';
-import PRNG from './utils/PRNG.js';
-import { Snail } from './Snail.js';
+/*
+	GardenBlock.js
+	--------------
 
+	This fills out the post prisms with a generated garden path like block.
+*/
+
+// imports
+import * as THREE from 'three';
+import PRNG from '../../../utils/PRNG.js';
+import { Snail } from './Snail.js';
+import { Scene } from 'three';
+
+// main export
 export class GardenBlock extends THREE.Object3D {
+
+	/**
+	 * Constructs a new GardenBlock instance.
+	 *
+	 * @param {THREE.Scene} modelScene - The 3D scene containing the block model.
+	 * @param {THREE.Object3D} prism - The prism to fill with the block.
+	 * @param {Object} settings - The settings for the block.
+	 * @param {string} seed - The seed for randomization.
+	 * @param {THREE.Object3D} snailModel - The model for the snails.
+	 * @param {THREE.Group} snailGroup - The group to contain the snails.
+	 */
     constructor(modelScene, prism, settings, seed = 'default_block_seed', snailModel = null, snailGroup = null) {
+
+		// call parent constructor
         super();
 
+		// save our references & settings
         this.prism = prism;
         this.settings = settings || {};
         this.seed = seed;
@@ -13,48 +37,82 @@ export class GardenBlock extends THREE.Object3D {
         this.snailModel = snailModel;
         this.snailGroup = snailGroup;
 
+		// prepare block parameters
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
         this.centerScaler = this.settings.centerScaler !== undefined ? this.settings.centerScaler : 1.666666667;
         this.uvScale = this.settings.uvScale || 1.0;
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
+		// track pieces and dimensions
         this.pieces = {};
-        this.baseDimensions = {}; 
+        this.baseDimensions = {};
         this.lastPrismScale = new THREE.Vector3();
 
+		// track generated snails
         this.snails = [];
         this.snailData = []; // Store local pos and orientation for updating world pos
 
+		// parse the model and initialize pieces
         this.parseModel(modelScene);
+
+		// perform initial update
         this.update(true);
     }
 
+
+	/**
+	 * Parses the model scene and initializes the block pieces.
+	 *
+	 * @param {Scene} modelScene - The scene from the GLB loaded
+	 */
     parseModel(modelScene) {
+
+		// names for each corner, side, and center slice
         const names = ['TL', 'TR', 'BL', 'BR', 'T', 'B', 'L', 'R', 'C'];
-        
+
+		// find the corresponding object in the model scene
         names.forEach(name => {
+
+			// find the mesh that matches the name
             const original = modelScene.getObjectByName(name);
             if (original) {
+
+				// clone the original mesh
                 const clone = original.clone();
                 clone.geometry = original.geometry.clone();
-                
+
+				// measure the bounding box of the clone
                 const bbox = new THREE.Box3().setFromBufferAttribute(clone.geometry.attributes.position);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
+
+				// save the base dimensions
                 this.baseDimensions[name] = size;
 
+				// do initial rotation
                 clone.rotation.x = Math.PI / 2;
 
+				// save the piece
                 this.pieces[name] = clone;
                 this.add(clone);
             }
         });
     }
 
-    update(force = false) {
-        if (!this.prism) return;
 
+	/**
+	 * Updates the block layout and snails based on the current prism scale.
+	 *
+	 * @param {Boolean} force - Whether to force an update regardless of scale changes.
+	 * @returns
+	 */
+    update(force = false) {
+
+        if (!this.prism)
+			return;
+
+		// Update settings from the current block settings
         this.scaleSize = this.settings.blockScaleSize || 1.0;
         this.overScaleDepth = this.settings.overScaleDepth || 1.0;
         this.centerScaler = this.settings.centerScaler !== undefined ? this.settings.centerScaler : 1.666666667;
@@ -62,24 +120,32 @@ export class GardenBlock extends THREE.Object3D {
         this.reprojectUVs = this.settings.reprojectUVs !== undefined ? this.settings.reprojectUVs : true;
 
         const currentScale = this.prism.scale;
-        
+
         if (!force && currentScale.equals(this.lastPrismScale)) {
             // Even if scale hasn't changed, position might have
             this.updateSnails();
             return;
         }
 
+		// re-layout the block
         this.layout();
+
+		// Update the last known prism scale
         this.lastPrismScale.copy(currentScale);
 
         this.spawnSnails();
     }
 
+
+	/**
+	 * Lays out the block pieces based on the current prism scale.
+	 */
     layout() {
+
         const pW = this.prism.scale.x;
         const pH = this.prism.scale.y;
         const pD = this.prism.scale.z;
-        
+
         const s = this.scaleSize;
         const osd = this.overScaleDepth;
         const cs = this.centerScaler;
@@ -87,9 +153,9 @@ export class GardenBlock extends THREE.Object3D {
         const dimTL = this.baseDimensions['TL'] || new THREE.Vector3(1, 1, 1);
         const worldCornerW = dimTL.x * s;
         const worldCornerH = dimTL.z * s; // Z is height due to rotation
-        
+
         const isShort = pH < (2 * worldCornerH);
-        
+
         const worldInnerW = Math.max(0, pW - (2 * worldCornerW));
         const worldInnerH = Math.max(0, pH - (2 * worldCornerH));
 
@@ -168,11 +234,11 @@ export class GardenBlock extends THREE.Object3D {
             if (this.pieces['B']) this.pieces['B'].scale.set(topWidthScale, getLocalDepthScale('B'), s / pH);
             if (this.pieces['L']) this.pieces['L'].scale.set(s / pW, getLocalDepthScale('L'), sideHeightScale);
             if (this.pieces['R']) this.pieces['R'].scale.set(s / pW, getLocalDepthScale('R'), sideHeightScale);
-            
+
             if (this.pieces['C']) {
                 this.pieces['C'].scale.set(
-                    getLocalWidthScale('C', worldInnerW), 
-                    getLocalDepthScale('C'), 
+                    getLocalWidthScale('C', worldInnerW),
+                    getLocalDepthScale('C'),
                     getLocalHeightScale('C', worldInnerH)
                 );
             }
@@ -181,7 +247,7 @@ export class GardenBlock extends THREE.Object3D {
             const right = 0.5;
             const top = 0.5;
             const bottom = -0.5;
-            const back = -0.5; 
+            const back = -0.5;
 
             this.place('TL', left, top, back);
             this.place('TR', right, top, back);
@@ -199,6 +265,15 @@ export class GardenBlock extends THREE.Object3D {
         }
     }
 
+
+    /**
+     * Places a block piece at the specified local coordinates.
+	 *
+     * @param {string} name - The name of the piece to place.
+     * @param {number} x - The local x-coordinate.
+     * @param {number} y - The local y-coordinate.
+     * @param {number} z - The local z-coordinate.
+     */
     place(name, x, y, z) {
         const p = this.pieces[name];
         if (p) {
@@ -206,7 +281,12 @@ export class GardenBlock extends THREE.Object3D {
         }
     }
 
+
+	/**
+     * Spawns snails on the block based on the current settings.
+     */
     spawnSnails() {
+
         // Clear existing snails
         this.snails.forEach(s => {
             if (s.parent) s.parent.remove(s);
@@ -240,24 +320,24 @@ export class GardenBlock extends THREE.Object3D {
 
         if (this.prng.bool(odds)) {
             const count = Math.floor(this.prng.range(1, maxSnails + 1));
-            
+
             for (let i = 0; i < count; i++) {
                 const snail = new Snail(this.snailModel, debugSnails);
-                
+
                 let attempts = 0;
                 let validPlacement = false;
                 let localPos = new THREE.Vector3();
                 let worldPos = new THREE.Vector3();
 
                 while (!validPlacement && attempts < 10) {
-                    const edgeX = this.prng.range(-0.45, 0.45); 
+                    const edgeX = this.prng.range(-0.45, 0.45);
                     localPos.set(edgeX + snailXOffset, 0.5 + snailYOffset, 0.5 + snailZOffset);
 
                     validPlacement = true;
                     worldPos.copy(localPos).applyMatrix4(this.prism.matrixWorld);
 
                     for (const other of this.snails) {
-                        if (worldPos.distanceTo(other.position) < 1.5) { 
+                        if (worldPos.distanceTo(other.position) < 1.5) {
                             validPlacement = false;
                             break;
                         }
@@ -267,7 +347,7 @@ export class GardenBlock extends THREE.Object3D {
 
                 if (validPlacement) {
                     snail.position.copy(worldPos);
-                    const baseRot = new THREE.Euler(rotXOffset, rotYOffset, rotZOffset); 
+                    const baseRot = new THREE.Euler(rotXOffset, rotYOffset, rotZOffset);
                     snail.quaternion.setFromEuler(baseRot);
 
                     // Add random rotation on Y axis based on multiplier
@@ -280,7 +360,7 @@ export class GardenBlock extends THREE.Object3D {
                     if (this.snailGroup) {
                         this.snailGroup.add(snail);
                     } else {
-                        this.add(snail); 
+                        this.add(snail);
                     }
                     this.snails.push(snail);
                     this.snailData.push({ localPos: localPos.clone(), baseRot: baseRot.clone() });
@@ -289,6 +369,10 @@ export class GardenBlock extends THREE.Object3D {
         }
     }
 
+
+    /**
+     * Updates the positions of all snails based on the current prism matrix.
+     */
     updateSnails() {
         this.prism.updateMatrixWorld(true);
         this.snails.forEach((snail, i) => {
@@ -299,13 +383,29 @@ export class GardenBlock extends THREE.Object3D {
         });
     }
 
+
+    /**
+     * Updates the animation of all snails based on the given time.
+	 *
+     * @param {number} time - The current time.
+     */
     updateAnimation(time) {
         const speed = this.settings.snailAnimationSpeed !== undefined ? this.settings.snailAnimationSpeed : 1.0;
         this.snails.forEach(s => s.update(time, speed));
     }
 
+
+	/**
+     * Reprojects the UVs of the block pieces based on the given dimensions.
+	 *
+     * @param {number} pW - The width of the prism.
+     * @param {number} pH - The height of the prism.
+     * @param {boolean} isShort - Whether the prism is in the short configuration.
+     */
     reproject(pW, pH, isShort) {
+
         const uvScale = this.uvScale;
+
         Object.keys(this.pieces).forEach(name => {
             const mesh = this.pieces[name];
             if (!mesh.visible || !mesh.geometry || !mesh.geometry.attributes.uv) return;
@@ -318,7 +418,7 @@ export class GardenBlock extends THREE.Object3D {
             const s = this.scaleSize;
             const dim = this.baseDimensions[name];
             const dimTL = this.baseDimensions['TL'];
-            
+
             if (isShort) {
                 // Short case UVs
                 if (['TL', 'TR', 'BL', 'BR'].includes(name)) {
@@ -348,11 +448,11 @@ export class GardenBlock extends THREE.Object3D {
             }
 
             const scaleX = (worldW / dim.x) * uvScale;
-            const scaleY = (worldH / dim.z) * uvScale; 
+            const scaleY = (worldH / dim.z) * uvScale;
 
             for (let i = 0; i < uvAttr.count; i++) {
-                uvAttr.setXY(i, 
-                    originalUV[i * 2] * scaleX, 
+                uvAttr.setXY(i,
+                    originalUV[i * 2] * scaleX,
                     originalUV[i * 2 + 1] * scaleY
                 );
             }
@@ -360,7 +460,12 @@ export class GardenBlock extends THREE.Object3D {
         });
     }
 
+
+	/**
+     * Cleans up all resources used by the block.
+     */
     cleanup() {
+
         Object.values(this.pieces).forEach(p => {
             if (p.geometry) p.geometry.dispose();
             if (p.material) {

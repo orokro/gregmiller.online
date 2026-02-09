@@ -1,59 +1,101 @@
+/*
+	Butterfly.js
+	------------
+
+	Handles the logic for one of the butterflies in the garden.
+*/
+
+// imports
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
+// main export
 export class Butterfly extends THREE.Object3D {
+
+	/**
+	 * Constructs a new Butterfly instance.
+	 *
+	 * @param {Object} model - The GLTF model of the butterfly.
+	 * @param {THREE.Plane} groundPlane - The ground plane for positioning.
+	 * @param {THREE.Camera} camera - The camera for view calculations.
+	 * @param {Array} prisms - The prisms in the scene.
+	 * @param {Object} settings - The settings for the butterfly.
+	 * @param {string} side - The side of the garden the butterfly is on.
+	 */
     constructor(model, groundPlane, camera, prisms, settings, side) {
+
+		// call parent constructor
         super();
+
+		// save references & settings
         this.camera = camera;
         this.prisms = prisms;
         this.settings = settings || {};
-        this.side = side; 
+        this.side = side;
 
+		// get the GLTF scene
         const gltf = model;
         try {
-            this.mesh = SkeletonUtils.clone(gltf.scene); 
+            this.mesh = SkeletonUtils.clone(gltf.scene);
         } catch (e) {
             this.mesh = gltf.scene.clone();
         }
-        
+
         // Setup Animation
         this.mixer = new THREE.AnimationMixer(this.mesh);
-        if (gltf.animations && gltf.animations.length > 0) {
-            gltf.animations.forEach(clip => {
-                const action = this.mixer.clipAction(clip);
-                action.play();
-                action.timeScale = this.settings.animationSpeed || 1;
-            });
-        }
+
+        // Find the wing meshes and their morph target indices
+        this.wingMeshes = [];
+        this.mesh.traverse(child => {
+            if (child.isMesh && child.morphTargetDictionary) {
+                const dict = child.morphTargetDictionary;
+                const meshInfo = { mesh: child, targets: [] };
+
+                // We want to drive the flapping targets
+                // Based on inspection: Wings1_Bot/Top and Wings2_Bot
+                if (dict['Wings1_Bot'] !== undefined) meshInfo.targets.push({ index: dict['Wings1_Bot'], type: 'bot' });
+                if (dict['Wings1_Top'] !== undefined) meshInfo.targets.push({ index: dict['Wings1_Top'], type: 'top' });
+                if (dict['Wings2_Bot'] !== undefined) meshInfo.targets.push({ index: dict['Wings2_Bot'], type: 'bot' });
+                if (dict['Wings2_Bot_copy1'] !== undefined) meshInfo.targets.push({ index: dict['Wings2_Bot_copy1'], type: 'bot' });
+
+                if (meshInfo.targets.length > 0) {
+                    this.wingMeshes.push(meshInfo);
+                }
+            }
+        });
 
         // Clean Auto-normalization for the new model
         this.mesh.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(this.mesh);
-        
+
+		// measure the bounding box
         const size = new THREE.Vector3();
         box.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
         const center = new THREE.Vector3();
         box.getCenter(center);
-        
+
+		// Create a container for the mesh
         this.meshContainer = new THREE.Group();
         this.add(this.meshContainer);
         this.meshContainer.add(this.mesh);
 
+		// scale, and position the mesh
         if (maxDim > 0) {
-            const targetSize = 5.0; 
+            const targetSize = 5.0;
             const scaleFactor = targetSize / maxDim;
             this.mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-            
+
             // Re-center visually
             this.mesh.position.sub(center.clone().multiplyScalar(scaleFactor));
-            
+
             // Apply user offsets
             this.mesh.position.x += (this.settings.butterflyXOffset || 0);
             this.mesh.position.y += (this.settings.butterflyYOffset || 0);
             this.mesh.position.z += (this.settings.butterflyZOffset || 0);
         }
 
+		// apply a base rotation
         const baseRot = this.settings.baseRotation || [0, 0, 0];
         this.meshContainer.rotation.set(
             THREE.MathUtils.degToRad(baseRot[0]),
@@ -61,6 +103,7 @@ export class Butterfly extends THREE.Object3D {
             THREE.MathUtils.degToRad(baseRot[2])
         );
 
+		// show debug target for debugging the movement
         if (this.settings.showDebugTarget) {
             this.debugSphere = new THREE.Mesh(
                 new THREE.SphereGeometry(0.5, 8, 8),
@@ -68,11 +111,12 @@ export class Butterfly extends THREE.Object3D {
             );
         }
 
+		// save butter fly state
         this.state = {
             pos: new THREE.Vector3(),
             worldPos: new THREE.Vector3(),
             angle: Math.random() * Math.PI * 2,
-            speed: (this.settings.speed || 1) * 5, 
+            speed: (this.settings.speed || 1) * 5,
             targetSpeed: (this.settings.speed || 1) * 5,
             target: new THREE.Vector3(),
             curve: null,
@@ -81,13 +125,19 @@ export class Butterfly extends THREE.Object3D {
             lastUpdate: performance.now()
         };
 
+		// apply user scale
         const userScale = this.settings.scale || 1;
         this.scale.set(userScale, userScale, userScale);
 
         this.initPosition();
     }
 
+
+	/**
+    * Initializes the butterfly's position.
+    */
     initPosition() {
+
         const bounds = this.getLaneBoundsWorld();
         const x = (bounds.minX + bounds.maxX) / 2;
         const y = (bounds.minY + bounds.maxY) / 2;
@@ -97,16 +147,34 @@ export class Butterfly extends THREE.Object3D {
         this.pickTarget();
     }
 
+
+	/**
+    * Returns the screen bounds in world coordinates.
+    */
     getScreenBoundsWorld() {
-        if (!this.camera) return { w: 40, h: 30 };
-        const dist = Math.abs(this.camera.position.z); 
+
+        if (!this.camera)
+			return { w: 40, h: 30 };
+
+        const dist = Math.abs(this.camera.position.z);
         const vFOV = THREE.MathUtils.degToRad(this.camera.fov);
         const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
         const visibleWidth = visibleHeight * this.camera.aspect;
-        return { w: visibleWidth, h: visibleHeight };
+
+        return {
+			w: visibleWidth,
+			h: visibleHeight
+		};
     }
 
+
+	/**
+     * Returns the lane bounds in world coordinates.
+	 *
+	 * Lands are to the left or right of the prisms.
+    */
     getLaneBoundsWorld() {
+
         const bounds = this.getScreenBoundsWorld();
         const halfW = bounds.w / 2;
         const halfH = bounds.h / 2;
@@ -119,11 +187,11 @@ export class Butterfly extends THREE.Object3D {
                 maxPX = Math.max(maxPX, p.position.x + w/2);
             });
         } else {
-            minPX = -2; maxPX = 2; 
+            minPX = -2; maxPX = 2;
         }
 
-        const margin = 2.5; 
-        const screenMargin = 3.0; 
+        const margin = 2.5;
+        const screenMargin = 3.0;
 
         if (this.side === 'left') {
             return {
@@ -142,18 +210,23 @@ export class Butterfly extends THREE.Object3D {
         }
     }
 
+
+	/**
+     * Picks a new target for the butterfly to move towards.
+     */
     pickTarget() {
+
         const bounds = this.getLaneBoundsWorld();
         const x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
         const y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
-        const z = this.settings.yOffset || 3; 
+        const z = this.settings.yOffset || 3;
 
         this.state.target.set(x, y, z);
 
         if (this.debugSphere) {
             this.debugSphere.position.copy(this.state.target);
             if (!this.debugSphere.parent && this.parent && this.parent.parent) {
-                this.parent.parent.add(this.debugSphere); 
+                this.parent.parent.add(this.debugSphere);
             }
         }
 
@@ -184,6 +257,13 @@ export class Butterfly extends THREE.Object3D {
         this.state.lastPickAt = performance.now();
     }
 
+
+	/**
+     * Updates the butterfly's position and animation.
+	 *
+	 * @param {number} time - The current time in seconds.
+	 * @param {number} dt - The delta time since the last update in seconds.
+     */
     update(time, dt) {
         const now = performance.now();
         let safeDt = dt;
@@ -195,6 +275,18 @@ export class Butterfly extends THREE.Object3D {
         safeDt = Math.min(safeDt, 0.1);
 
         if (this.mixer) this.mixer.update(safeDt);
+
+        // Manually drive synced wing flapping
+        const flapSpeed = (this.settings.animationSpeed || 1) * 15;
+        const flapIntensity = (Math.sin(time * flapSpeed) + 1) / 2; // 0 to 1
+
+        this.wingMeshes.forEach(info => {
+            info.targets.forEach(t => {
+                // If it's a 'top' target, maybe it's inverse or shifted?
+                // Usually for these models, driving them together works best.
+                info.mesh.morphTargetInfluences[t.index] = flapIntensity;
+            });
+        });
 
         const sincePick = (now - this.state.lastPickAt) / 1000;
         const nearingEnd = this.state.curve ? this.state.curveT > 0.86 : false;
@@ -220,21 +312,29 @@ export class Butterfly extends THREE.Object3D {
 
                 const newTan = this.state.curve.getTangent(this.state.curveT);
                 const targetAngle = Math.atan2(newTan.y, newTan.x);
-                
+
                 let angleDiff = targetAngle - this.state.angle;
                 while (angleDiff <= -Math.PI) angleDiff += Math.PI * 2;
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-                
+
                 const turnSmooth = 1 - Math.pow(0.001, safeDt);
                 this.state.angle += angleDiff * turnSmooth;
             }
         }
 
         this.position.copy(this.state.worldPos);
-        this.rotation.z = this.state.angle - Math.PI / 2; 
+        this.rotation.z = this.state.angle - Math.PI / 2;
     }
 
+	/**
+     * Returns the derivative of a cubic Bezier curve at a given parameter t.
+	 *
+     * @param {THREE.CubicBezierCurve3} curve - The cubic Bezier curve.
+     * @param {number} t - The parameter along the curve (0 to 1).
+     * @returns {THREE.Vector3} The derivative vector at the given parameter.
+     */
     getBezierDerivative(curve, t) {
+
         const u = 1 - t;
         const p0 = curve.v0, p1 = curve.v1, p2 = curve.v2, p3 = curve.v3;
         const a = p1.clone().sub(p0).multiplyScalar(3 * u * u);
@@ -243,11 +343,17 @@ export class Butterfly extends THREE.Object3D {
         return a.add(b).add(c);
     }
 
+
+	/**
+     * Cleans up resources used by the butterfly.
+     */
     cleanup() {
+
         if (this.debugSphere && this.debugSphere.parent) {
             this.debugSphere.parent.remove(this.debugSphere);
             this.debugSphere.geometry.dispose();
             this.debugSphere.material.dispose();
         }
     }
+
 }
