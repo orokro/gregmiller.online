@@ -45,17 +45,17 @@ export class GardenTheme {
 		};
 
 		this.blockSettings = {
-			blockScaleSize: 4,
+			blockScaleSize: 200,
 			overScaleDepth: 1.1,
 			centerScaler: 1.666666667,
-			uvScale: 0.2,
+			uvScale: 0.003,
 			reprojectUVs: true,
 			blockHasSnailsOdds: 0.7,
 			maxSnails: 2,
-			minSnailScale: 3,
-			maxSnailScale: 5,
+			minSnailScale: 70,
+			maxSnailScale: 100,
 			snailXOffset: 0,
-			snailYOffset: -0.04,
+			snailYOffset: -0.004,
 			snailZOffset: -0.1,
 			debugSnails: false,
 			snailAnimationSpeed: 1,
@@ -205,9 +205,13 @@ export class GardenTheme {
 	}
 
 	buildBox(manager, data) {
-		const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
+		// Use an invisible material so the box doesn't render, but set visible=true so children DO render
+		const cube = new THREE.Mesh(
+			new THREE.BoxGeometry(1, 1, 1),
+			new THREE.MeshBasicMaterial({ visible: false })
+		);
 		cube.name = "garden_prism";
-		cube.visible = false; // It's just a culling volume
+		// cube.visible = true; // Default is true
 		data.empties.center.add(cube);
 	}
 
