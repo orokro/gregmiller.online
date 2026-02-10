@@ -521,7 +521,16 @@ export class GardenSystem extends THREE.Object3D {
         this.updateScatter('leaves', this.models.leaves, this.gardenSettings.leaves, prisms, `${this.seed}_leaves`);
 
 		// make sure our butterflies are updated
-        this.butterflies.forEach(b => b.prisms = prisms);
+        const hadNoPrisms = (!this.butterflies[0] || !this.butterflies[0].prisms || this.butterflies[0].prisms.length === 0);
+        
+        this.butterflies.forEach(b => {
+            b.prisms = prisms;
+            // If we just got prisms for the first time, force a re-init of position
+            if (hadNoPrisms && prisms.length > 0) {
+                b.initPosition();
+            }
+        });
+
         if (this.butterflies.length === 0 && this.models.butterfly) {
             this.initButterflies(prisms);
         }
