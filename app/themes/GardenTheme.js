@@ -94,7 +94,7 @@ export class GardenTheme {
 		this.grassSettings = {
 			density: 50000,
 			minLength: 0,
-			maxLength: 80,
+			maxLength: 40,
 			minWidth: 15,
 			maxWidth: 38,
 			minTipWidth: 0,
@@ -208,6 +208,7 @@ export class GardenTheme {
 		// Initialize GardenSystem
 		// Note: we'll update prisms in the first tick
 		this.gardenSystem = new GardenSystem(
+			manager, // Pass manager
 			this.models,
 			bgData, // Pass bgData instead of just the mesh
 			[],

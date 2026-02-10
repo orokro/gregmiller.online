@@ -22,6 +22,7 @@ export class GardenSystem extends THREE.Object3D {
 	 *
 	 * @class
 	 * @extends THREE.Object3D
+     * @param {Object} manager - The ThreeManager instance.
 	 * @param {Object<string, THREE.Object3D>} models - Loaded model assets (e.g., block model containing DirtRefPlane).
 	 * @param {Object} bgData - The background element data containing group and empties.
 	 * @param {Array<THREE.Object3D>} prisms - Prism objects used to seed/update garden state.
@@ -31,12 +32,13 @@ export class GardenSystem extends THREE.Object3D {
 	 * @param {string} [seed='default_seed'] - Seed for deterministic PRNG.
 	 * @param {THREE.Camera} camera - Scene camera used for view-dependent effects.
 	 */
-    constructor(models, bgData, prisms, gardenSettings, blockSettings, grassSettings, seed = 'default_seed', camera) {
+    constructor(manager, models, bgData, prisms, gardenSettings, blockSettings, grassSettings, seed = 'default_seed', camera) {
 
 		// call parent constructor
         super();
 
 		// save our refs
+        this.manager = manager;
         this.models = models;
         this.bgData = bgData;
         this.camera = camera;
@@ -68,6 +70,7 @@ export class GardenSystem extends THREE.Object3D {
 
         // Cache for change detection
         this.lastPrismState = '';
+        this.lastBgState = '';
 
 		// we'll store scatterer instances for flowers and leaves
         this.scatterers = {
@@ -160,7 +163,7 @@ export class GardenSystem extends THREE.Object3D {
 
 		// Remove existing grass mesh if any
         if (this.grassMesh) {
-            this.remove(this.grassMesh);
+            if (this.grassMesh.parent) this.grassMesh.parent.remove(this.grassMesh);
             if (this.grassMesh.geometry) this.grassMesh.geometry.dispose();
             this.grassMesh = null;
         }
@@ -347,10 +350,6 @@ export class GardenSystem extends THREE.Object3D {
         const uvScale = settings.dirtUVScale || 4.0;
         const normalScale = settings.normalStrength || 1.0;
 
-        if (this.bgPlane.material && this.bgPlane.material !== this.originalPlaneMaterial) {
-            this.bgPlane.material.dispose();
-        }
-
 		// prepare the ground material
         const groundMat = new THREE.MeshStandardMaterial({
             color: settings.dirtColor || "#ffffffff",
@@ -358,20 +357,16 @@ export class GardenSystem extends THREE.Object3D {
         });
         if (this.dirtTextures.map) {
             groundMat.map = this.dirtTextures.map;
-            groundMat.map.repeat.set(uvScale, uvScale);
         }
         if (this.dirtTextures.normalMap) {
             groundMat.normalMap = this.dirtTextures.normalMap;
-            groundMat.normalMap.repeat.set(uvScale, uvScale);
             groundMat.normalScale.set(normalScale, normalScale);
         }
 
-		// apply the ground material to the background plane
-        this.bgPlane.material = groundMat;
-
-		// enable shadows for the background plane
-        if (this.shadowEnabled) {
-            this.bgPlane.receiveShadow = true;
+        // Apply background using manager to ensure it sticks
+        if (this.manager) {
+            // Note: uvScale is handled by setBackground
+            this.manager.setBackground(groundMat, 100, uvScale, this.shadowEnabled);
         }
 
         baseGeom.dispose();
@@ -436,6 +431,16 @@ export class GardenSystem extends THREE.Object3D {
 	 */
     update(prisms) {
 
+        // Check if bg state changed (resize)
+        let bgState = "";
+        if (this.bgPlane) {
+            bgState = `${this.bgPlane.scale.x.toFixed(0)}_${this.bgPlane.scale.y.toFixed(0)}`;
+        }
+        if (bgState !== "" && bgState !== this.lastBgState) {
+            this.lastBgState = bgState;
+            this.initGrass();
+        }
+
         // Check if state changed
         let sig = "";
         for (let i = 0; i < prisms.length; i++) {
@@ -494,18 +499,33 @@ export class GardenSystem extends THREE.Object3D {
 	 * @param {number} time - The current time in seconds
 	 * @param {number} dt - The delta time since the last update
 	 */
-    	updateAnimation(time, dt) {
-    
-            // Sync positions with bgPlane for parallax
-            if (this.bgPlane) {
-                if (this.grassMesh) this.grassMesh.position.copy(this.bgPlane.position);
-                Object.values(this.scatterers).forEach(s => {
-                    if (s) s.position.copy(this.bgPlane.position);
-                });
-            }
-    
-    		// wave grass blades
-    
+    		updateAnimation(time, dt) {
+    	
+    	        // Re-acquire bgPlane if lost (e.g. CoverBG rebuilt it)
+    	        if (!this.bgPlane || !this.bgPlane.parent) {
+    	             if (this.bgData && this.bgData.group) {
+    	                this.bgData.group.traverse(child => {
+    	                    if (child.isMesh && child.name.includes('plane')) {
+    	                        this.bgPlane = child;
+    	                    }
+    	                });
+    	                if (!this.bgPlane) { // Fallback
+    	                    this.bgData.group.traverse(child => {
+    	                        if (child.isMesh) this.bgPlane = child;
+    	                    });
+    	                }
+    	             }
+    	        }
+    	    
+    	        // Sync positions with bgPlane for parallax
+    	        if (this.bgPlane) {
+    	            if (this.grassMesh) this.grassMesh.position.copy(this.bgPlane.position);
+    	            Object.values(this.scatterers).forEach(s => {
+    	                if (s) s.position.copy(this.bgPlane.position);
+    	            });
+    	        }
+    	    		// wave grass blades
+
         if (this.grassMaterial && this.grassMaterial.userData.shader)
             this.grassMaterial.userData.shader.uniforms.uTime.value = time;
 
@@ -607,14 +627,6 @@ export class GardenSystem extends THREE.Object3D {
 
 		// clean up all resources
         this.cleanup();
-
-		// restore the original background plane material
-        if (this.bgPlane) {
-            if (this.bgPlane.material && this.bgPlane.material !== this.originalPlaneMaterial) {
-                this.bgPlane.material.dispose();
-            }
-            this.bgPlane.material = this.originalPlaneMaterial;
-        }
     }
 
 }
