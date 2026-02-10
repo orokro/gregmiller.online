@@ -23,7 +23,7 @@ export class GardenTheme {
 	static themeStyles = {
 		contentFrameShadow: 'inset 0px 0px 20px 5px rgba(0, 0, 0, 0.3)',
 		contentHeaderBGColor: 'rgba(255, 255, 255, 0.8)',
-		contentBoxBGColor: 'rgba(255, 255, 255, 0.8)',
+		contentBoxBGColor: 'rgba(150, 150, 150, 0.5)',
 		contentHeaderTextColor: '#FFFFFF',
 		contentBoxBGBlur: '5px',
 		tagBoxColor: '#83da4aff',
@@ -39,9 +39,35 @@ export class GardenTheme {
 
 		// Default Settings from our demo
 		this.gardenSettings = {
-			flowers: { density: 0.001, minScale: 100.8, maxScale: 160.5, yOffset: 2, randomRotation: true, rotationAxis: "y" },
-			leaves: { density: 0.01, minScale: 5, maxScale: 10, yOffset: 4, randomRotation: true, xRot: [70, 120], yRot: [-45, 45], zRot: [0, 360] },
-			butterfly: { scale: 100, speed: 1, animationSpeed: 1, yOffset: 3, butterflyXOffset: 0, butterflyYOffset: 0, butterflyZOffset: 0, butterflyBodyScale: 1, baseRotation: [0, 0, 0], showDebugTarget: false }
+			flowers: {
+				density: 0.0005,
+				minScale: 200.8,
+				maxScale: 250.5,
+				yOffset: 60,
+				randomRotation: true,
+				rotationAxis: "y"
+			},
+			leaves: { density: 0.005,
+				minScale: 7,
+				maxScale: 12,
+				yOffset: 110,
+				randomRotation: true,
+				xRot: [70, 120],
+				yRot: [-45, 45],
+				zRot: [0, 360]
+			},
+			butterfly: {
+				scale: 100,
+				speed: 1,
+				animationSpeed: 1,
+				yOffset: 3,
+				butterflyXOffset: 0,
+				butterflyYOffset: 0,
+				butterflyZOffset: 0,
+				butterflyBodyScale: 1,
+				baseRotation: [0, 0, 0],
+				showDebugTarget: false
+			}
 		};
 
 		this.blockSettings = {
@@ -66,21 +92,21 @@ export class GardenTheme {
 		};
 
 		this.grassSettings = {
-			density: 7000,
+			density: 50000,
 			minLength: 0,
-			maxLength: 4,
-			minWidth: 0.25,
-			maxWidth: 0.68,
+			maxLength: 80,
+			minWidth: 15,
+			maxWidth: 38,
 			minTipWidth: 0,
-			maxTipWidth: 0.2,
+			maxTipWidth: 10,
 			segments: 4,
-			noiseScale: 2,
-			windIntensity: 0.3,
+			noiseScale: 20,
+			windIntensity: 30,
 			windX: 1,
 			windY: 1,
-			dirtColor: "#3d2b1f",
+			dirtColor: "#ffffff",
 			grassColor1: "#4da83b",
-			grassColor2: "#83da4a",
+			grassColor2: "#9fc785",
 			dirtUVScale: 4.0,
 			normalStrength: 1.0
 		};
