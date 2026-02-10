@@ -58,7 +58,7 @@ export class GardenTheme {
 			},
 			butterfly: {
 				scale: 100,
-				speed: 1,
+				speed: 10,
 				animationSpeed: 1,
 				yOffset: 3,
 				butterflyXOffset: 0,

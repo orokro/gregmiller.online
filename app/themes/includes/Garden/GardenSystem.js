@@ -140,8 +140,15 @@ export class GardenSystem extends THREE.Object3D {
 
             const left = new Butterfly(this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'left');
             const right = new Butterfly(this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'right');
-            this.add(left);
-            this.add(right);
+            
+            if (this.bgData && this.bgData.empties && this.bgData.empties.center) {
+                this.bgData.empties.center.add(left);
+                this.bgData.empties.center.add(right);
+            } else {
+                this.add(left);
+                this.add(right);
+            }
+
             this.butterflies.push(left, right);
         }
 

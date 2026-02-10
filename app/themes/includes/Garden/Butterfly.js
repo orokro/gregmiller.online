@@ -80,6 +80,9 @@ export class Butterfly extends THREE.Object3D {
         this.add(this.meshContainer);
         this.meshContainer.add(this.mesh);
 
+        // FIX: Rotate mesh to face camera (parallel to XY plane)
+        this.mesh.rotation.x = Math.PI / 2;
+
 		// scale, and position the mesh
         if (maxDim > 0) {
             const targetSize = 5.0;
@@ -136,62 +139,60 @@ export class Butterfly extends THREE.Object3D {
 	/**
     * Initializes the butterfly's position.
     */
+	/**
+    * Initializes the butterfly's position.
+    */
     initPosition() {
 
-        const bounds = this.getLaneBoundsWorld();
+        const bounds = this.getLaneBounds();
         const x = (bounds.minX + bounds.maxX) / 2;
         const y = (bounds.minY + bounds.maxY) / 2;
         const z = this.settings.yOffset || 3;
+        
         this.state.worldPos.set(x, y, z);
-        this.position.copy(this.state.worldPos);
+        this.position.set(x, y, z);
         this.pickTarget();
     }
 
 
 	/**
-    * Returns the screen bounds in world coordinates.
-    */
-    getScreenBoundsWorld() {
-
-        if (!this.camera)
-			return { w: 40, h: 30 };
-
-        const dist = Math.abs(this.camera.position.z);
-        const vFOV = THREE.MathUtils.degToRad(this.camera.fov);
-        const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
-        const visibleWidth = visibleHeight * this.camera.aspect;
-
-        return {
-			w: visibleWidth,
-			h: visibleHeight
-		};
-    }
-
-
-	/**
-     * Returns the lane bounds in world coordinates.
+     * Returns the lane bounds in local coordinates (relative to plane center).
 	 *
-	 * Lands are to the left or right of the prisms.
+	 * Lanes are to the left or right of the prisms.
     */
-    getLaneBoundsWorld() {
+    getLaneBounds() {
 
-        const bounds = this.getScreenBoundsWorld();
-        const halfW = bounds.w / 2;
-        const halfH = bounds.h / 2;
+        if (!this.groundPlane) return { minX: -10, maxX: 10, minY: -10, maxY: 10 };
+
+        const halfW = this.groundPlane.scale.x / 2;
+        const halfH = this.groundPlane.scale.y / 2;
 
         let minPX = 0, maxPX = 0;
         if (this.prisms && this.prisms.length > 0) {
             this.prisms.forEach(p => {
                 const w = p.scale.x;
-                minPX = Math.min(minPX, p.position.x - w/2);
-                maxPX = Math.max(maxPX, p.position.x + w/2);
+                // We need the prism position relative to the background plane center
+                // Since prisms and bgData.empties.center share a common world root
+                // we can approximate this by comparing their world positions
+                // or just using the prism's local position if it's already in the same space.
+                // For now, let's assume world position comparison for safety.
+                const pWorld = new THREE.Vector3();
+                p.getWorldPosition(pWorld);
+                
+                const planeWorld = new THREE.Vector3();
+                this.groundPlane.getWorldPosition(planeWorld);
+                
+                const localX = pWorld.x - planeWorld.x;
+
+                minPX = Math.min(minPX, localX - w/2);
+                maxPX = Math.max(maxPX, localX + w/2);
             });
         } else {
             minPX = -2; maxPX = 2;
         }
 
-        const margin = 2.5;
-        const screenMargin = 3.0;
+        const margin = 100; // Increased for pixel-scale units
+        const screenMargin = 200;
 
         if (this.side === 'left') {
             return {
@@ -216,7 +217,7 @@ export class Butterfly extends THREE.Object3D {
      */
     pickTarget() {
 
-        const bounds = this.getLaneBoundsWorld();
+        const bounds = this.getLaneBounds();
         const x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
         const y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
         const z = this.settings.yOffset || 3;
@@ -230,13 +231,13 @@ export class Butterfly extends THREE.Object3D {
             }
         }
 
-        const p0 = this.state.worldPos.clone();
+        const p0 = this.position.clone();
         const heading = new THREE.Vector3(Math.cos(this.state.angle), Math.sin(this.state.angle), 0);
         const toT = new THREE.Vector3().subVectors(this.state.target, p0);
         const dist = toT.length();
 
-        const c1Len = THREE.MathUtils.clamp(dist * 0.35, 2, 10);
-        const c2Len = THREE.MathUtils.clamp(dist * 0.25, 1, 8);
+        const c1Len = THREE.MathUtils.clamp(dist * 0.35, 100, 500);
+        const c2Len = THREE.MathUtils.clamp(dist * 0.25, 50, 400);
 
         const p1 = p0.clone().add(heading.multiplyScalar(c1Len));
         const p3 = this.state.target.clone();
@@ -244,7 +245,7 @@ export class Butterfly extends THREE.Object3D {
         const toDir = toT.clone().normalize();
         const sideVec = new THREE.Vector3(-toDir.y, toDir.x, 0);
         const sweepSign = (Math.random() < 0.5) ? -1 : 1;
-        const sweepAmt = THREE.MathUtils.clamp(dist * 0.16, 1, 5) * sweepSign;
+        const sweepAmt = THREE.MathUtils.clamp(dist * 0.16, 50, 250) * sweepSign;
         const mix = THREE.MathUtils.clamp(0.35 + 0.25 * (1 - Math.abs(heading.dot(toDir))), 0.25, 0.75);
         const approach = new THREE.Vector3()
             .addVectors(toDir.clone().multiplyScalar(1 - mix), heading.clone().multiplyScalar(mix))
@@ -308,7 +309,7 @@ export class Butterfly extends THREE.Object3D {
                 this.state.curveT = Math.min(1, this.state.curveT + dtParam);
 
                 const p = this.state.curve.getPoint(this.state.curveT);
-                this.state.worldPos.copy(p);
+                this.position.copy(p);
 
                 const newTan = this.state.curve.getTangent(this.state.curveT);
                 const targetAngle = Math.atan2(newTan.y, newTan.x);
@@ -322,7 +323,6 @@ export class Butterfly extends THREE.Object3D {
             }
         }
 
-        this.position.copy(this.state.worldPos);
         this.rotation.z = this.state.angle - Math.PI / 2;
     }
 
