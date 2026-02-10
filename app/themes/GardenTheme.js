@@ -45,7 +45,8 @@ export class GardenTheme {
 				maxScale: 250.5,
 				yOffset: 60,
 				randomRotation: true,
-				rotationAxis: "y"
+				rotationAxis: "y",
+				allowCenterColumnSpawning: false
 			},
 			leaves: { density: 0.005,
 				minScale: 7,
@@ -54,7 +55,8 @@ export class GardenTheme {
 				randomRotation: true,
 				xRot: [70, 120],
 				yRot: [-45, 45],
-				zRot: [0, 360]
+				zRot: [0, 360],
+				allowCenterColumnSpawning: true
 			},
 			butterfly: {
 				scale: 50,

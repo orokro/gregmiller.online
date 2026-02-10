@@ -205,10 +205,14 @@ export class GardenScatter extends THREE.Object3D {
     }
 
     updateItems(gW, gH) {
-        const { yOffset = 0 } = this.settings;
+        const { yOffset = 0, allowCenterColumnSpawning = true } = this.settings;
 
         // Calculate Prism Bounds in World Space
         const worldPos = new THREE.Vector3();
+        let prismMinX = Infinity;
+        let prismMaxX = -Infinity;
+        let hasPrisms = this.prisms.length > 0;
+
         const prismBounds = this.prisms.map(p => {
             const w = p.scale.x;
             const h = p.scale.y;
@@ -217,9 +221,15 @@ export class GardenScatter extends THREE.Object3D {
             // FIX: Get actual world position, as 'p' is usually inside a centered group
             worldPos.setFromMatrixPosition(p.matrixWorld);
 
+            const xMin = worldPos.x - w/2 - margin;
+            const xMax = worldPos.x + w/2 + margin;
+
+            prismMinX = Math.min(prismMinX, xMin);
+            prismMaxX = Math.max(prismMaxX, xMax);
+
             return {
-                xMin: worldPos.x - w/2 - margin,
-                xMax: worldPos.x + w/2 + margin,
+                xMin,
+                xMax,
                 yMin: worldPos.y - h/2 - margin,
                 yMax: worldPos.y + h/2 + margin
             };
@@ -252,10 +262,20 @@ export class GardenScatter extends THREE.Object3D {
                     item.position.set(lx, ly, yOffset);
                     item.getWorldPosition(itemWorldPos);
 
-                    for (const b of prismBounds) {
-                        if (itemWorldPos.x >= b.xMin && itemWorldPos.x <= b.xMax && itemWorldPos.y >= b.yMin && itemWorldPos.y <= b.yMax) {
+                    // 1. Center Column Check
+                    if (!allowCenterColumnSpawning && hasPrisms) {
+                        if (itemWorldPos.x >= prismMinX && itemWorldPos.x <= prismMaxX) {
                             visible = false;
-                            break;
+                        }
+                    }
+
+                    // 2. Individual Prism Culling
+                    if (visible) {
+                        for (const b of prismBounds) {
+                            if (itemWorldPos.x >= b.xMin && itemWorldPos.x <= b.xMax && itemWorldPos.y >= b.yMin && itemWorldPos.y <= b.yMax) {
+                                visible = false;
+                                break;
+                            }
                         }
                     }
                 }
