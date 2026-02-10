@@ -15,6 +15,7 @@ export class Butterfly extends THREE.Object3D {
 	/**
 	 * Constructs a new Butterfly instance.
 	 *
+	 * @param {Object} manager - The ThreeManager instance.
 	 * @param {Object} model - The GLTF model of the butterfly.
 	 * @param {THREE.Plane} groundPlane - The ground plane for positioning.
 	 * @param {THREE.Camera} camera - The camera for view calculations.
@@ -22,16 +23,18 @@ export class Butterfly extends THREE.Object3D {
 	 * @param {Object} settings - The settings for the butterfly.
 	 * @param {string} side - The side of the garden the butterfly is on.
 	 */
-    constructor(model, groundPlane, camera, prisms, settings, side) {
+    constructor(manager, model, groundPlane, camera, prisms, settings, side) {
 
 		// call parent constructor
         super();
 
 		// save references & settings
+        this.manager = manager;
         this.camera = camera;
         this.prisms = prisms;
         this.settings = settings || {};
         this.side = side;
+        this.groundPlane = groundPlane;
 
 		// get the GLTF scene
         const gltf = model;

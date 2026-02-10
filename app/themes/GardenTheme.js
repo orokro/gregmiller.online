@@ -57,16 +57,16 @@ export class GardenTheme {
 				zRot: [0, 360]
 			},
 			butterfly: {
-				scale: 100,
+				scale: 50,
 				speed: 10,
 				animationSpeed: 1,
-				yOffset: 3,
+				yOffset: 30,
 				butterflyXOffset: 0,
 				butterflyYOffset: 0,
 				butterflyZOffset: 0,
 				butterflyBodyScale: 1,
 				baseRotation: [0, 0, 0],
-				showDebugTarget: false
+				showDebugTarget: true
 			}
 		};
 

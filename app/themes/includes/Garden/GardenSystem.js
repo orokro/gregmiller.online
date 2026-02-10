@@ -138,8 +138,8 @@ export class GardenSystem extends THREE.Object3D {
 		// spawn one butterfly on each side of the garden
         if (this.models.butterfly && this.gardenSettings.butterfly) {
 
-            const left = new Butterfly(this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'left');
-            const right = new Butterfly(this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'right');
+            const left = new Butterfly(this.manager, this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'left');
+            const right = new Butterfly(this.manager, this.models.butterfly, this.bgPlane, this.camera, prisms, this.gardenSettings.butterfly, 'right');
             
             if (this.bgData && this.bgData.empties && this.bgData.empties.center) {
                 this.bgData.empties.center.add(left);
