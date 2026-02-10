@@ -10,8 +10,12 @@ export class GardenScatter extends THREE.Object3D {
         this.settings = settings || {};
 
         this.cells = new Map(); // key -> { items: [] }
-        this.cellSize = 10;
+        this.cellSize = 300; // Adjusted for pixel-scale units (was 10)
         this.shadowEnabled = false;
+
+        // Cache for change detection
+        this.lastPrismState = '';
+        this.lastBgState = '';
 
         this.library = [];
         if (this.model) {
@@ -23,6 +27,22 @@ export class GardenScatter extends THREE.Object3D {
         }
 
         this.update(prisms, this.settings);
+    }
+
+    /**
+     * Generates a signature string for the current prism state.
+     * Used to detect if prisms have moved or resized.
+     */
+    getPrismState(prisms) {
+        let sig = "";
+        const v = new THREE.Vector3();
+        for (let i = 0; i < prisms.length; i++) {
+            const p = prisms[i];
+            // We need world position for the signature since that's what we cull against
+            v.setFromMatrixPosition(p.matrixWorld);
+            sig += `${p.id}:${v.x.toFixed(0)},${v.y.toFixed(0)},${p.scale.x.toFixed(0)},${p.scale.y.toFixed(0)}|`;
+        }
+        return sig;
     }
 
     update(prisms, settings) {
@@ -40,27 +60,35 @@ export class GardenScatter extends THREE.Object3D {
             JSON.stringify(settings.zRot) !== JSON.stringify(oldSettings.zRot) ||
             settings.randomRotation !== oldSettings.randomRotation;
 
-        if (needsRegen) {
-            this.clearAll();
-        }
-
-        this.refresh();
-    }
-
-    refresh() {
+        // Check geometry changes (bg plane size)
         const gW = this.bgPlane.scale.x;
         const gH = this.bgPlane.scale.y;
+        const bgState = `${gW.toFixed(0)}_${gH.toFixed(0)}`;
 
+        // Check prism changes
+        const prismState = this.getPrismState(prisms);
+
+        const layoutChanged = bgState !== this.lastBgState;
+        const prismsChanged = prismState !== this.lastPrismState;
+
+        this.lastBgState = bgState;
+        this.lastPrismState = prismState;
+
+        if (needsRegen) {
+            this.clearAll();
+            this.refresh(gW, gH, true);
+        } else if (layoutChanged) {
+            this.refresh(gW, gH, true);
+        } else if (prismsChanged) {
+            // If only prisms moved, just re-cull, don't regen grid
+            this.updateItems(gW, gH);
+        }
+    }
+
+    refresh(gW, gH, fullUpdate = false) {
         const { density = 0 } = this.settings;
         const refArea = 270; // Reference area for density
         const densityPerUnit = density / refArea;
-
-        // We want stability relative to the top-left corner.
-        // In world space, the plane is centered at (0,0).
-        // Top-left is (-gW/2, gH/2).
-        // Let's define a grid origin that is "stable" relative to top-left.
-        // However, if we want items to stay at (localX, localY) from top-left,
-        // we can just use a local grid [0, gW] x [0, gH].
 
         const colEnd = Math.ceil(gW / this.cellSize);
         const rowEnd = Math.ceil(gH / this.cellSize);
@@ -77,15 +105,17 @@ export class GardenScatter extends THREE.Object3D {
         }
 
         // Apply positions and culling
-        this.updateItems(gW, gH);
+        if (fullUpdate) {
+            this.updateItems(gW, gH);
+        }
 
-        // Remove cells that are way out of bounds
-        // (We keep a small buffer or just remove those not in activeKeys)
+        // Cleanup out-of-bounds cells
         for (const key of this.cells.keys()) {
             if (!activeKeys.has(key)) {
                 const cell = this.cells.get(key);
                 cell.items.forEach(item => {
                     if (item.parent) this.remove(item);
+                    // Optional: Dispose if we want to be aggressive with memory
                 });
                 this.cells.delete(key);
             }
@@ -178,15 +208,20 @@ export class GardenScatter extends THREE.Object3D {
         const { yOffset = 0 } = this.settings;
 
         // Calculate Prism Bounds in World Space
+        const worldPos = new THREE.Vector3();
         const prismBounds = this.prisms.map(p => {
             const w = p.scale.x;
             const h = p.scale.y;
             const margin = 0.5;
+
+            // FIX: Get actual world position, as 'p' is usually inside a centered group
+            worldPos.setFromMatrixPosition(p.matrixWorld);
+
             return {
-                xMin: p.position.x - w/2 - margin,
-                xMax: p.position.x + w/2 + margin,
-                yMin: p.position.y - h/2 - margin,
-                yMax: p.position.y + h/2 + margin
+                xMin: worldPos.x - w/2 - margin,
+                xMax: worldPos.x + w/2 + margin,
+                yMin: worldPos.y - h/2 - margin,
+                yMax: worldPos.y + h/2 + margin
             };
         });
 
@@ -218,12 +253,14 @@ export class GardenScatter extends THREE.Object3D {
                     if (!item.parent) {
                         this.add(item);
                         // Apply shadows if enabled
-                        item.traverse(child => {
-                            if (child.isMesh) {
-                                child.receiveShadow = this.shadowEnabled;
-                                child.castShadow = this.shadowEnabled;
-                            }
-                        });
+                        if (this.shadowEnabled) {
+                             item.traverse(child => {
+                                if (child.isMesh) {
+                                    child.receiveShadow = true;
+                                    child.castShadow = true;
+                                }
+                            });
+                        }
                     }
                     item.position.set(wx, wy, yOffset);
                 } else {
@@ -240,6 +277,8 @@ export class GardenScatter extends THREE.Object3D {
             });
         }
         this.cells.clear();
+        this.lastPrismState = '';
+        this.lastBgState = '';
     }
 
     cleanup() {
