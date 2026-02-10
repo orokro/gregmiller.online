@@ -92,7 +92,7 @@ export class GardenTheme {
 		};
 
 		this.grassSettings = {
-			density: 50000,
+			density: 70000,
 			minLength: 0,
 			maxLength: 40,
 			minWidth: 15,
@@ -108,7 +108,9 @@ export class GardenTheme {
 			grassColor1: "#4da83b",
 			grassColor2: "#9fc785",
 			dirtUVScale: 4.0,
-			normalStrength: 1.0
+			normalStrength: 100.0,
+            grassRotation: [-30, 0, 0], // x, y, z in degrees
+            grassOffset: [0, 0, 0]    // x, y, z
 		};
 
 		this.buildMaterials();
@@ -124,7 +126,7 @@ export class GardenTheme {
 	}
 
 	buildThemeLighting(manager) {
-		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 0.65);
+		manager.setEnvironmentTexture('/env/brown_photostudio_02_2k.hdr', 1.2);
 		manager.enableMouseLight(false);
 		manager.renderer.physicallyCorrectLights = true;
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
