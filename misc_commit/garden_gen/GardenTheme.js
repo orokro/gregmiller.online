@@ -36,12 +36,12 @@ export class GardenTheme {
 		this.isReady = false;
 		this.gardenSystem = null;
 		this.models = {};
-
+		
 		// Default Settings from our demo
 		this.gardenSettings = {
-			flowers: { density: 0.001, minScale: 100.8, maxScale: 160.5, yOffset: 2, randomRotation: true, rotationAxis: "y" },
-			leaves: { density: 0.01, minScale: 5, maxScale: 10, yOffset: 4, randomRotation: true, xRot: [70, 120], yRot: [-45, 45], zRot: [0, 360] },
-			butterfly: { scale: 100, speed: 1, animationSpeed: 1, yOffset: 3, butterflyXOffset: 0, butterflyYOffset: 0, butterflyZOffset: 0, butterflyBodyScale: 1, baseRotation: [0, 0, 0], showDebugTarget: false }
+			flowers: { density: 10, minScale: 4.8, maxScale: 6.5, yOffset: 2, randomRotation: true, rotationAxis: "y" },
+			leaves: { density: 50, minScale: 0.3, maxScale: 0.5, yOffset: 4, randomRotation: true, xRot: [70, 120], yRot: [-45, 45], zRot: [0, 360] },
+			butterfly: { scale: 1, speed: 1, animationSpeed: 1, yOffset: 3, butterflyXOffset: 0, butterflyYOffset: 0, butterflyZOffset: 0, butterflyBodyScale: 1, baseRotation: [0, 0, 0], showDebugTarget: false }
 		};
 
 		this.blockSettings = {
@@ -108,7 +108,7 @@ export class GardenTheme {
 		this.camLight.position.set(-300, 500, 500);
 		this.camLight.castShadow = true;
 		manager.scene.add(this.camLight);
-
+		
 		// Shadow config matching KoiPond's large scale
 		const d = 2500;
 		this.camLight.shadow.camera.left = -d;
@@ -182,16 +182,16 @@ export class GardenTheme {
 		// Initialize GardenSystem
 		// Note: we'll update prisms in the first tick
 		this.gardenSystem = new GardenSystem(
-			this.models,
-			bgPlaneMesh,
-			[],
-			this.gardenSettings,
-			this.blockSettings,
-			this.grassSettings,
-			"garden_theme_seed",
+			this.models, 
+			bgPlaneMesh, 
+			[], 
+			this.gardenSettings, 
+			this.blockSettings, 
+			this.grassSettings, 
+			"garden_theme_seed", 
 			manager.camera
 		);
-
+		
 		manager.scene.add(this.gardenSystem);
 		this.isReady = true;
 
@@ -234,13 +234,13 @@ export class GardenTheme {
 
 		// 2. Update System
 		this.gardenSystem.update(prisms);
-
+		
 		// 3. Animation
 		// Need dt for butterflies
 		const now = performance.now();
 		const dt = this._lastTime ? (now - this._lastTime) / 1000 : 0.016;
 		this._lastTime = now;
-
+		
 		this.gardenSystem.updateAnimation(time / 1000, dt);
 	}
 

@@ -1,43 +1,18 @@
-/*
-	GardenScatter.js
-	----------------
-
-	Handles the logic for scattering garden elements on a plane.
-*/
-
-// imports
 import * as THREE from 'three';
 import PRNG from '../../../utils/PRNG.js';
-import { Object3D } from 'three';
 
-// main export
 export class GardenScatter extends THREE.Object3D {
-
-	/**
-	 * Constructs a new GardenScatter instance.
-	 *
-	 * @param {Object3D} model - The 3D model to scatter.
-	 * @param {Object3D} bgPlane - The background plane on which to scatter elements.
-	 * @param {Object3D[]} prisms - The prisms to use for scattering.
-	 * @param {Object} settings - The settings for scattering.
-	 */
     constructor(model, bgPlane, prisms, settings) {
-
-		// call parent constructor
         super();
-
-		// save references & settings
         this.model = model;
         this.bgPlane = bgPlane;
         this.prisms = prisms;
         this.settings = settings || {};
 
-		// initialize cells that will hold scattered items
         this.cells = new Map(); // key -> { items: [] }
         this.cellSize = 10;
         this.shadowEnabled = false;
 
-		// initialize library of scatterable items
         this.library = [];
         if (this.model) {
             this.model.traverse((child) => {
@@ -50,16 +25,7 @@ export class GardenScatter extends THREE.Object3D {
         this.update(prisms, this.settings);
     }
 
-
-	/**
-	 * Updates settings for the scatter and regenerates cells if necessary.
-	 *
-	 * @param {Object3D[]} prisms - The prisms to use for scattering.
-	 * @param {Object} settings - The settings for scattering.
-	 */
     update(prisms, settings) {
-
-		// Save the old settings for comparison
         const oldSettings = this.settings;
         this.prisms = prisms;
         this.settings = settings;
@@ -81,19 +47,10 @@ export class GardenScatter extends THREE.Object3D {
         this.refresh();
     }
 
-
-	/**
-	 * Refreshes the scattered items on the background plane.
-	 *
-	 * I.e. it recalculates positions and removes out-of-bounds items.
-	 */
     refresh() {
-
-		// get width and height of the background plane
         const gW = this.bgPlane.scale.x;
         const gH = this.bgPlane.scale.y;
 
-		// pull & compute our density setting
         const { density = 0 } = this.settings;
         const refArea = 270; // Reference area for density
         const densityPerUnit = density / refArea;
@@ -135,16 +92,7 @@ export class GardenScatter extends THREE.Object3D {
         }
     }
 
-
-	/**
-	 * Generates a cell of scattered items.
-	 *
-	 * @param {number} col - The column index of the cell.
-	 * @param {number} row - The row index of the cell.
-	 * @param {number} densityPerUnit - The density of items per unit area.
-	 */
     generateCell(col, row, densityPerUnit) {
-
         const cellX = col * this.cellSize;
         const cellY = row * this.cellSize;
         const cellSeed = `${this.settings.seed}_${col}_${row}`;
@@ -167,15 +115,7 @@ export class GardenScatter extends THREE.Object3D {
         this.cells.set(`${col}_${row}`, { items });
     }
 
-
-	/**
-	 * Spawns a new item.
-	 *
-	 * @param {PRNG} prng - A pseudo-random number generator instance.
-	 * @returns {THREE.Object3D} - The created item.
-	 */
     createItem(prng) {
-
         const {
             minScale = 1,
             maxScale = 1,
@@ -218,14 +158,7 @@ export class GardenScatter extends THREE.Object3D {
         return item;
     }
 
-
-	/**
-	 * Sets whether shadows should be enabled or disabled for all items.
-	 *
-	 * @param {Boolean} enabled - Whether shadows should be enabled or disabled.
-	 */
     setShadows(enabled) {
-
         this.shadowEnabled = enabled;
         for (const cell of this.cells.values()) {
             cell.items.forEach(item => {
@@ -241,15 +174,7 @@ export class GardenScatter extends THREE.Object3D {
         }
     }
 
-
-	/**
-	 * Updates the positions and visibility of all items based on the garden dimensions.
-	 *
-	 * @param {number} gW - The width of the garden.
-	 * @param {number} gH - The height of the garden.
-	 */
     updateItems(gW, gH) {
-
         const { yOffset = 0 } = this.settings;
 
         // Calculate Prism Bounds in World Space
@@ -308,12 +233,7 @@ export class GardenScatter extends THREE.Object3D {
         }
     }
 
-
-	/**
-	 * Clears all items from all cells.
-	 */
     clearAll() {
-
         for (const cell of this.cells.values()) {
             cell.items.forEach(item => {
                 if (item.parent) this.remove(item);
@@ -322,14 +242,8 @@ export class GardenScatter extends THREE.Object3D {
         this.cells.clear();
     }
 
-
-	/**
-	 * Cleans up all resources used by the scatter, including geometries and materials.
-	 */
     cleanup() {
-
         this.clearAll();
-
         // Traverse and dispose geometries/materials if they are unique
         // Since we are cloning, we might be sharing some.
         // But GardenSystem.cleanup calls this, so it's good to be thorough.

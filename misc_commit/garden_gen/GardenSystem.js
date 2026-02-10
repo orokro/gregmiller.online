@@ -29,7 +29,7 @@ export class GardenSystem extends THREE.Object3D {
         this.shadowEnabled = false;
         this.shadowSettings = {};
 
-        this.originalPlaneMaterial = this.bgPlane.material;
+        this.originalPlaneMaterial = this.bgPlane ? this.bgPlane.material : null;
 
         this.dirtTextures = { map: null, normalMap: null };
         if (this.models.block) {
@@ -80,6 +80,8 @@ export class GardenSystem extends THREE.Object3D {
     }
 
     initGrass() {
+        if (!this.bgPlane) return;
+
         if (this.grassMesh) {
             this.remove(this.grassMesh);
             if (this.grassMesh.geometry) this.grassMesh.geometry.dispose();
@@ -360,7 +362,7 @@ export class GardenSystem extends THREE.Object3D {
     }
 
     updateScatter(key, model, settings, prisms, seed) {
-        if (!settings || !model || settings.density <= 0) {
+        if (!this.bgPlane || !settings || !model || settings.density <= 0) {
             if (this.scatterers[key]) {
                 this.remove(this.scatterers[key]);
                 this.scatterers[key].cleanup();
