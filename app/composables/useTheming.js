@@ -169,7 +169,7 @@ addTheme('Glass Theme Old', GlassThemeOld);
 
 
 // save our initial theme
-const defaultTheme = themes.value.find(t => t.name === 'Garden Theme') || themes.value[1];
+const defaultTheme = themes.value.find(t => t.name === 'Glass Theme') || themes.value[1];
 if (defaultTheme) {
 	setTheme(defaultTheme.name);
 }
