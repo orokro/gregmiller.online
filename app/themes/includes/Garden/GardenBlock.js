@@ -24,7 +24,7 @@ export class GardenBlock extends THREE.Object3D {
 	 * @param {THREE.Object3D} snailModel - The model for the snails.
 	 * @param {THREE.Group} snailGroup - The group to contain the snails.
 	 */
-    constructor(modelScene, prism, settings, seed = 'default_block_seed', snailModel = null, snailGroup = null) {
+    constructor(modelScene, prism, settings, seed = 'default_block_seed', snailModel = null) {
 
 		// call parent constructor
         super();
@@ -35,7 +35,6 @@ export class GardenBlock extends THREE.Object3D {
         this.seed = seed;
         this.prng = new PRNG(this.seed);
         this.snailModel = snailModel;
-        this.snailGroup = snailGroup;
 
 		// prepare block parameters
         this.scaleSize = this.settings.blockScaleSize || 1.0;
@@ -51,7 +50,6 @@ export class GardenBlock extends THREE.Object3D {
 
 		// track generated snails
         this.snails = [];
-        this.snailData = []; // Store local pos and orientation for updating world pos
 
 		// parse the model and initialize pieces
         this.parseModel(modelScene);
@@ -80,7 +78,26 @@ export class GardenBlock extends THREE.Object3D {
 
 				// clone the original mesh
                 const clone = original.clone();
-                clone.geometry = original.geometry.clone();
+                
+                // RAM OPTIMIZATION:
+                // Instead of full geometry clone, share heavy buffers (Position, Normal, Index)
+                // Only clone UVs because we manipulate them per-instance.
+                const origGeom = original.geometry;
+                const newGeom = new THREE.BufferGeometry();
+                
+                if (origGeom.index) newGeom.setIndex(origGeom.index);
+                
+                // Share attributes
+                for (const key in origGeom.attributes) {
+                    const attr = origGeom.attributes[key];
+                    if (key === 'uv') {
+                        newGeom.setAttribute(key, attr.clone()); // Unique UVs
+                    } else {
+                        newGeom.setAttribute(key, attr); // Shared Position/Normal
+                    }
+                }
+                
+                clone.geometry = newGeom;
 
 				// measure the bounding box of the clone
                 const bbox = new THREE.Box3().setFromBufferAttribute(clone.geometry.attributes.position);
@@ -122,8 +139,6 @@ export class GardenBlock extends THREE.Object3D {
         const currentScale = this.prism.scale;
 
         if (!force && currentScale.equals(this.lastPrismScale)) {
-            // Even if scale hasn't changed, position might have
-            this.updateSnails();
             return;
         }
 
@@ -293,7 +308,6 @@ export class GardenBlock extends THREE.Object3D {
             s.cleanup();
         });
         this.snails = [];
-        this.snailData = [];
 
         if (!this.snailModel) {
             return;
@@ -312,14 +326,19 @@ export class GardenBlock extends THREE.Object3D {
         const rotYOffset = this.settings.snailRotationYOffset !== undefined ? this.settings.snailRotationYOffset : 0;
         const rotZOffset = this.settings.snailRotationZOffset !== undefined ? this.settings.snailRotationZOffset : 0;
 
-        // Force matrix update to ensure worldPos is correct
-        this.prism.updateMatrixWorld(true);
-
         // Reset PRNG to ensure deterministic placement based on seed
         this.prng = new PRNG(this.seed);
 
         if (this.prng.bool(odds)) {
             const count = Math.floor(this.prng.range(1, maxSnails + 1));
+
+            // Calculate Inverse Scale to counteract prism stretching
+            // Prism scale is (W, H, D). Snail should look (1, 1, 1).
+            // Parent applies (W, H, D). Child needs (1/W, 1/H, 1/D).
+            const pScale = this.prism.scale;
+            const invX = pScale.x > 0.001 ? 1 / pScale.x : 1;
+            const invY = pScale.y > 0.001 ? 1 / pScale.y : 1;
+            const invZ = pScale.z > 0.001 ? 1 / pScale.z : 1;
 
             for (let i = 0; i < count; i++) {
                 const snail = new Snail(this.snailModel, debugSnails);
@@ -327,17 +346,20 @@ export class GardenBlock extends THREE.Object3D {
                 let attempts = 0;
                 let validPlacement = false;
                 let localPos = new THREE.Vector3();
-                let worldPos = new THREE.Vector3();
+                // We check distance in local space roughly or world space if needed.
+                // For simplicity, local space check is usually fine if blocks are similar size,
+                // but since they vary wildly, let's just do a simple check.
 
                 while (!validPlacement && attempts < 10) {
                     const edgeX = this.prng.range(-0.45, 0.45);
                     localPos.set(edgeX + snailXOffset, 0.5 + snailYOffset, 0.5 + snailZOffset);
 
                     validPlacement = true;
-                    worldPos.copy(localPos).applyMatrix4(this.prism.matrixWorld);
-
+                    
+                    // Simple distance check against other snails in local space
+                    // (Assuming x-axis is the main constraint)
                     for (const other of this.snails) {
-                        if (worldPos.distanceTo(other.position) < 1.5) {
+                        if (localPos.distanceTo(other.position) < 0.2) { // 0.2 local units is huge if stretched
                             validPlacement = false;
                             break;
                         }
@@ -346,7 +368,7 @@ export class GardenBlock extends THREE.Object3D {
                 }
 
                 if (validPlacement) {
-                    snail.position.copy(worldPos);
+                    snail.position.copy(localPos);
                     const baseRot = new THREE.Euler(rotXOffset, rotYOffset, rotZOffset);
                     snail.quaternion.setFromEuler(baseRot);
 
@@ -354,33 +376,15 @@ export class GardenBlock extends THREE.Object3D {
                     const randY = (this.prng.random() * Math.PI * 2) * rotationMultiplier[1];
                     snail.rotateY(randY);
 
+                    // Apply Inverse Scale + Random Scale
                     const scale = this.prng.range(minSnailScale, maxSnailScale);
-                    snail.scale.set(scale, scale, scale);
+                    snail.scale.set(scale * invX, scale * invY, scale * invZ);
 
-                    if (this.snailGroup) {
-                        this.snailGroup.add(snail);
-                    } else {
-                        this.add(snail);
-                    }
+                    this.add(snail);
                     this.snails.push(snail);
-                    this.snailData.push({ localPos: localPos.clone(), baseRot: baseRot.clone() });
                 }
             }
         }
-    }
-
-
-    /**
-     * Updates the positions of all snails based on the current prism matrix.
-     */
-    updateSnails() {
-        this.prism.updateMatrixWorld(true);
-        this.snails.forEach((snail, i) => {
-            const data = this.snailData[i];
-            if (data) {
-                snail.position.copy(data.localPos).applyMatrix4(this.prism.matrixWorld);
-            }
-        });
     }
 
 
@@ -478,6 +482,5 @@ export class GardenBlock extends THREE.Object3D {
             s.cleanup();
         });
         this.snails = [];
-        this.snailData = [];
     }
 }

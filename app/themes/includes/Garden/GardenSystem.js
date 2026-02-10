@@ -66,9 +66,8 @@ export class GardenSystem extends THREE.Object3D {
 		// store references to the blocks we generate based on the prisms from the theme
         this.gardenBlocks = new Map();
 
-		// build a new group to stick our spawned snails in
-        this.snailGroup = new THREE.Group();
-        this.add(this.snailGroup);
+        // Cache for change detection
+        this.lastPrismState = '';
 
 		// we'll store scatterer instances for flowers and leaves
         this.scatterers = {
@@ -412,13 +411,6 @@ export class GardenSystem extends THREE.Object3D {
             });
         }
 
-		// update shadows for the snail group
-        this.snailGroup.traverse(child => {
-            if (child.isMesh) {
-                child.castShadow = enabled;
-            }
-        });
-
 		// update shadows for the butterflies
         this.butterflies.forEach(b => {
             b.traverse(child => {
@@ -444,6 +436,18 @@ export class GardenSystem extends THREE.Object3D {
 	 */
     update(prisms) {
 
+        // Check if state changed
+        let sig = "";
+        for (let i = 0; i < prisms.length; i++) {
+            const p = prisms[i];
+            sig += `${p.id}:${p.scale.x.toFixed(2)},${p.scale.y.toFixed(2)}|`;
+        }
+
+        if (sig === this.lastPrismState) {
+            return;
+        }
+        this.lastPrismState = sig;
+
 		// remove any garden blocks that are no longer in the prisms array
         const currentPrisms = new Set(prisms);
         for (const [prism, block] of this.gardenBlocks) {
@@ -458,7 +462,8 @@ export class GardenSystem extends THREE.Object3D {
         prisms.forEach((prism, index) => {
             if (!this.gardenBlocks.has(prism)) {
                 const blockSeed = `${this.seed}_${index}`;
-                const block = new GardenBlock(this.models.block, prism, this.blockSettings, blockSeed, this.models.snail, this.snailGroup);
+                // Remove snailGroup argument
+                const block = new GardenBlock(this.models.block, prism, this.blockSettings, blockSeed, this.models.snail);
                 prism.add(block);
                 this.gardenBlocks.set(prism, block);
                 if (this.shadowEnabled) {
@@ -565,13 +570,6 @@ export class GardenSystem extends THREE.Object3D {
             if (block.parent) block.parent.remove(block);
         }
         this.gardenBlocks.clear();
-
-		// clean up all snails
-        while(this.snailGroup.children.length > 0){
-            const child = this.snailGroup.children[0];
-            this.snailGroup.remove(child);
-            if (child.cleanup) child.cleanup();
-        }
 
 		// clean up all scatterers
         Object.keys(this.scatterers).forEach(key => {
