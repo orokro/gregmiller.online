@@ -183,7 +183,7 @@ export class GardenTheme {
 		// Note: we'll update prisms in the first tick
 		this.gardenSystem = new GardenSystem(
 			this.models,
-			bgPlaneMesh,
+			bgData, // Pass bgData instead of just the mesh
 			[],
 			this.gardenSettings,
 			this.blockSettings,

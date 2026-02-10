@@ -225,24 +225,35 @@ export class GardenScatter extends THREE.Object3D {
             };
         });
 
-        const worldLeft = -gW / 2;
-        const worldTop = gH / 2;
+        // We are now positioned relative to the center of the plane
+        // Local center is (0,0). Top-left is (-gW/2, gH/2).
+        const localLeft = -gW / 2;
+        const localTop = gH / 2;
+
+        const itemWorldPos = new THREE.Vector3();
 
         for (const cell of this.cells.values()) {
             cell.items.forEach(item => {
                 const lPos = item.userData.planeLocalPos;
 
-                // Convert local (top-left) to world
-                const wx = worldLeft + lPos.x;
-                const wy = worldTop - lPos.y;
+                // Position relative to plane center
+                const lx = localLeft + lPos.x;
+                const ly = localTop - lPos.y;
 
                 // Plane bounds check
                 let visible = lPos.x >= 0 && lPos.x <= gW && lPos.y >= 0 && lPos.y <= gH;
 
-                // Prism culling check
+                // Prism culling check (needs world space)
                 if (visible) {
+                    // Update matrix world if parent moved so we get correct world position for culling
+                    if (this.parent) this.parent.updateMatrixWorld();
+                    
+                    // Temp set position to calculate world pos for culling
+                    item.position.set(lx, ly, yOffset);
+                    item.getWorldPosition(itemWorldPos);
+
                     for (const b of prismBounds) {
-                        if (wx >= b.xMin && wx <= b.xMax && wy >= b.yMin && wy <= b.yMax) {
+                        if (itemWorldPos.x >= b.xMin && itemWorldPos.x <= b.xMax && itemWorldPos.y >= b.yMin && itemWorldPos.y <= b.yMax) {
                             visible = false;
                             break;
                         }
@@ -262,7 +273,7 @@ export class GardenScatter extends THREE.Object3D {
                             });
                         }
                     }
-                    item.position.set(wx, wy, yOffset);
+                    item.position.set(lx, ly, yOffset);
                 } else {
                     if (item.parent) this.remove(item);
                 }

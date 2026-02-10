@@ -23,7 +23,7 @@ export class GardenSystem extends THREE.Object3D {
 	 * @class
 	 * @extends THREE.Object3D
 	 * @param {Object<string, THREE.Object3D>} models - Loaded model assets (e.g., block model containing DirtRefPlane).
-	 * @param {THREE.Mesh} bgPlane - Background plane mesh whose material may be swapped/restored.
+	 * @param {Object} bgData - The background element data containing group and empties.
 	 * @param {Array<THREE.Object3D>} prisms - Prism objects used to seed/update garden state.
 	 * @param {Object} [gardenSettings={}] - Configuration for garden generation/behavior.
 	 * @param {Object} [blockSettings={}] - Configuration for block generation/behavior.
@@ -31,15 +31,30 @@ export class GardenSystem extends THREE.Object3D {
 	 * @param {string} [seed='default_seed'] - Seed for deterministic PRNG.
 	 * @param {THREE.Camera} camera - Scene camera used for view-dependent effects.
 	 */
-    constructor(models, bgPlane, prisms, gardenSettings, blockSettings, grassSettings, seed = 'default_seed', camera) {
+    constructor(models, bgData, prisms, gardenSettings, blockSettings, grassSettings, seed = 'default_seed', camera) {
 
 		// call parent constructor
         super();
 
 		// save our refs
         this.models = models;
-        this.bgPlane = bgPlane;
+        this.bgData = bgData;
         this.camera = camera;
+
+        // Extract plane mesh from bgData
+        this.bgPlane = null;
+        if (this.bgData && this.bgData.group) {
+            this.bgData.group.traverse(child => {
+                if (child.isMesh && child.name.includes('plane')) {
+                    this.bgPlane = child;
+                }
+            });
+            if (!this.bgPlane) {
+                this.bgData.group.traverse(child => {
+                    if (child.isMesh) this.bgPlane = child;
+                });
+            }
+        }
 
 		// save our settings
         this.gardenSettings = gardenSettings || {};
@@ -69,7 +84,7 @@ export class GardenSystem extends THREE.Object3D {
         this.shadowSettings = {};
 
 		// we're going to store the original material of the background plane so we can restore it later if needed
-        this.originalPlaneMaterial = this.bgPlane.material;
+        this.originalPlaneMaterial = this.bgPlane ? this.bgPlane.material : null;
 
 		// the garden block mesh has a dirt reference plane with textures
         this.dirtTextures = { map: null, normalMap: null };
@@ -321,7 +336,13 @@ export class GardenSystem extends THREE.Object3D {
         if (this.shadowEnabled) {
             this.grassMesh.receiveShadow = true;
         }
-        this.add(this.grassMesh);
+
+        // Add to background center instead of this object
+        if (this.bgData && this.bgData.empties && this.bgData.empties.center) {
+            this.bgData.empties.center.add(this.grassMesh);
+        } else {
+            this.add(this.grassMesh);
+        }
 
 		// set up the uvs for the dirt plane in the background
         const uvScale = settings.dirtUVScale || 4.0;
@@ -468,9 +489,18 @@ export class GardenSystem extends THREE.Object3D {
 	 * @param {number} time - The current time in seconds
 	 * @param {number} dt - The delta time since the last update
 	 */
-    updateAnimation(time, dt) {
-
-		// wave grass blades
+    	updateAnimation(time, dt) {
+    
+            // Sync positions with bgPlane for parallax
+            if (this.bgPlane) {
+                if (this.grassMesh) this.grassMesh.position.copy(this.bgPlane.position);
+                Object.values(this.scatterers).forEach(s => {
+                    if (s) s.position.copy(this.bgPlane.position);
+                });
+            }
+    
+    		// wave grass blades
+    
         if (this.grassMaterial && this.grassMaterial.userData.shader)
             this.grassMaterial.userData.shader.uniforms.uTime.value = time;
 
@@ -497,7 +527,7 @@ export class GardenSystem extends THREE.Object3D {
 		// remove the scatterer if settings are invalid
         if (!settings || !model || settings.density <= 0) {
             if (this.scatterers[key]) {
-                this.remove(this.scatterers[key]);
+                if (this.scatterers[key].parent) this.scatterers[key].parent.remove(this.scatterers[key]);
                 this.scatterers[key].cleanup();
                 this.scatterers[key] = null;
             }
@@ -510,7 +540,11 @@ export class GardenSystem extends THREE.Object3D {
 		// create or update the scatterer
         if (!this.scatterers[key]) {
             this.scatterers[key] = new GardenScatter(model, this.bgPlane, prisms, mergedSettings);
-            this.add(this.scatterers[key]);
+            if (this.bgData && this.bgData.empties && this.bgData.empties.center) {
+                this.bgData.empties.center.add(this.scatterers[key]);
+            } else {
+                this.add(this.scatterers[key]);
+            }
         } else {
             this.scatterers[key].update(prisms, mergedSettings);
         }
@@ -542,7 +576,7 @@ export class GardenSystem extends THREE.Object3D {
 		// clean up all scatterers
         Object.keys(this.scatterers).forEach(key => {
             if (this.scatterers[key]) {
-                this.remove(this.scatterers[key]);
+                if (this.scatterers[key].parent) this.scatterers[key].parent.remove(this.scatterers[key]);
                 this.scatterers[key].cleanup();
                 this.scatterers[key] = null;
             }
@@ -557,7 +591,7 @@ export class GardenSystem extends THREE.Object3D {
 
 		// clean up the grass mesh and material
         if (this.grassMesh) {
-            this.remove(this.grassMesh);
+            if (this.grassMesh.parent) this.grassMesh.parent.remove(this.grassMesh);
             if (this.grassMesh.geometry) this.grassMesh.geometry.dispose();
             this.grassMesh = null;
         }
