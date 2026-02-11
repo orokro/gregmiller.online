@@ -1,8 +1,8 @@
 <!--
- 	app/app.vue
+ 	app/layouts/default.vue
 	-----------
 
-	The root component of the application. It sets up the main layout and initializes the 3D system.
+	The root layout component of the application. It sets up the main layout and initializes the 3D system.
 -->
 <script setup>
 
@@ -24,17 +24,21 @@ import ContainerCustom3D from '../components/ContainerCustom3D.vue';
 // composables
 const { initThree } = useThree();
 const { themeCSSVars } = useTheming();
-const { has3DCapability } = useDeviceContext();
+const { has3DCapability, classObject } = useDeviceContext();
 
 
 // refs
 const canvasRef = ref(null);
 
-// update theme CSS variables in the document head whenever they change
-watch(themeCSSVars, (vars) => {
+// update theme CSS variables and device classes in the document head whenever they change
+watch([themeCSSVars, classObject], ([vars, classes]) => {
 	useHead({
 		htmlAttrs: {
 			style: vars,
+			class: Object.entries(classes)
+				.filter(([_, value]) => value)
+				.map(([key]) => key)
+				.join(' '),
 		},
 	});
 }, { immediate: true });

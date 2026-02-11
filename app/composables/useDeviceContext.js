@@ -54,6 +54,9 @@ const probeWebGL = () => {
 
 export const useDeviceContext = () => {
 
+	// SETTINGS
+	const no3DOnMobile = true; // Set to true to disable 3D on mobile by default
+
 	// "Real" detection
 	const detectedIsMobile = useState('devicectx_detectedIsMobile', () => false);
 	const detectedHas3D = useState('devicectx_detectedHas3D', () => false);
@@ -65,6 +68,31 @@ export const useDeviceContext = () => {
 	const refresh = () => {
 		detectedIsMobile.value = detectMobile();
 		detectedHas3D.value = probeWebGL();
+
+		// URL Override check (?3d=true or #3d=false etc)
+		if (process.client) {
+			const params = new URLSearchParams(window.location.search);
+			const hash = window.location.hash;
+			
+			const check = (val) => {
+				if (val === 'true' || val === '1') return true;
+				if (val === 'false' || val === '0') return false;
+				return null;
+			};
+
+			// Check query params
+			let override = check(params.get('3d'));
+			
+			// Check hash params (e.g. #3d=false)
+			if (override === null && hash.includes('3d=')) {
+				const hashParams = new URLSearchParams(hash.substring(1));
+				override = check(hashParams.get('3d'));
+			}
+
+			if (override !== null) {
+				forcedHas3D.value = override;
+			}
+		}
 	};
 
 	onMounted(() => {
@@ -78,14 +106,24 @@ export const useDeviceContext = () => {
 	});
 
 	const has3DCapability = computed(() => {
+		// 1. Check manual overrides (URL or Debug Console)
 		if (forcedHas3D.value === true) return true;
 		if (forcedHas3D.value === false) return false;
+		
+		// 2. Apply Mobile Default Policy
+		if (no3DOnMobile && isMobile.value) {
+			return false;
+		}
+
+		// 3. Fallback to hardware detection
 		return detectedHas3D.value;
 	});
 
 	const classObject = computed(() => ({
 		'is-mobile': isMobile.value,
+		'is-desktop': !isMobile.value,
 		'is-3d': has3DCapability.value,
+		'no-3d': !has3DCapability.value,
 	}));
 
 	const setMobileOverride = (v) => {
