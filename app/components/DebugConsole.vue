@@ -218,6 +218,33 @@ const commands = computed(() => ({
 		manager.requestRender();
 	},
 
+	snapshot: async () => {
+		const manager = await getThree();
+		if (!manager || !manager.renderer || !manager.canvas) {
+			log("ThreeManager or Renderer not available.");
+			return;
+		}
+
+		try {
+			// FORCE RENDER to ensure the drawing buffer is fresh for capture
+			// (Otherwise the canvas might be blank or old depending on preserveDrawingBuffer setting)
+			manager.renderer.render(manager.scene, manager.camera);
+			
+			const dataUrl = manager.canvas.toDataURL('image/png');
+			
+			const newWindow = window.open();
+			if (newWindow) {
+				newWindow.document.write(`<img src="${dataUrl}" alt="3D Snapshot" style="max-width:100%; height:auto;" />`);
+				newWindow.document.title = "3D Scene Snapshot";
+				log("Snapshot opened in new tab.");
+			} else {
+				log("Failed to open new tab. Check your popup blocker.");
+			}
+		} catch (e) {
+			log(`Snapshot error: ${String(e)}`);
+		}
+	},
+
 	cls: () => {
 		clearLog();
 	},
