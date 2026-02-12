@@ -176,6 +176,48 @@ const commands = computed(() => ({
 		log(`Mouse light set to ${v ? 'ON' : 'OFF'}.`);
 	},
 
+	bg: async (...args) => {
+		const manager = await getThree();
+		if (!manager) {
+			log("ThreeManager not available.");
+			return;
+		}
+
+		const data = manager.getRegisteredElementByName('app-cover-bg');
+		if (!data || !data.empties || !data.empties.center) {
+			log("Background element 'app-cover-bg' not found or not ready.");
+			return;
+		}
+
+		// Find the plane mesh
+		let plane = null;
+		data.empties.center.traverse(child => {
+			if (child.isMesh && child.name.includes('plane')) plane = child;
+		});
+		if (!plane) {
+			// Fallback: any mesh in center
+			data.empties.center.traverse(child => {
+				if (child.isMesh) plane = child;
+			});
+		}
+
+		if (!plane) {
+			log("Background plane mesh not found.");
+			return;
+		}
+
+		// Handle parameters
+		if (args.length > 0 && (args[0] === true || args[0] === false)) {
+			plane.visible = args[0];
+			log(`Background plane visibility set to ${args[0]}.`);
+		} else {
+			plane.visible = !plane.visible;
+			log(`Background plane visibility toggled ${plane.visible ? 'ON' : 'OFF'}.`);
+		}
+		
+		manager.requestRender();
+	},
+
 	cls: () => {
 		clearLog();
 	},
