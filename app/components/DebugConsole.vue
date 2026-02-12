@@ -245,6 +245,55 @@ const commands = computed(() => ({
 		}
 	},
 
+	wireframe: async (...args) => {
+		const manager = await getThree();
+		if (!manager) {
+			log("ThreeManager not available.");
+			return;
+		}
+
+		let target = (args.length > 0) ? args[0] : null;
+		
+		manager.scene.traverse(node => {
+			if (node.isMesh && node.material) {
+				const materials = Array.isArray(node.material) ? node.material : [node.material];
+				materials.forEach(mat => {
+					if (target === true || target === false) {
+						mat.wireframe = target;
+					} else {
+						mat.wireframe = !mat.wireframe;
+					}
+				});
+			}
+		});
+
+		log(`Wireframe mode toggled/set.`);
+		manager.requestRender();
+	},
+
+	list: async () => {
+		const manager = await getThree();
+		if (!manager) {
+			log("ThreeManager not available.");
+			return;
+		}
+
+		if (manager.registeredElements.size === 0) {
+			log("No registered elements found.");
+			return;
+		}
+
+		log(`Registered Elements (${manager.registeredElements.size}):`);
+		const vPos = new THREE.Vector3();
+		manager.registeredElements.forEach((data, id) => {
+			vPos.setFromMatrixPosition(data.group.matrixWorld);
+			const name = data.options?.name || data.type || 'unknown';
+			const pos = `pos:(${vPos.x.toFixed(0)}, ${vPos.y.toFixed(0)}, ${vPos.z.toFixed(0)})`;
+			const scale = `scale:(${data.group.scale.x.toFixed(1)}, ${data.group.scale.y.toFixed(1)})`;
+			log(`- [${id.substring(0, 8)}] ${name} | ${pos} | ${scale}`);
+		});
+	},
+
 	cls: () => {
 		clearLog();
 	},
