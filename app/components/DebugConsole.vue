@@ -5,9 +5,11 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDeviceContext } from '~/composables/useDeviceContext';
 import { useDebugging } from '~/composables/useDebugging';
 import { useThree } from '~/composables/useThree';
+import { useTheming } from '~/composables/useTheming';
 
 const { isMobile, has3DCapability, detectedIsMobile, detectedHas3D, forcedIsMobile, forcedHas3D, setMobileOverride, set3DOverride, refresh } = useDeviceContext();
 const { getThree } = useThree();
+const { themes, setTheme } = useTheming();
 const { debugVars, logEntries, log, clearLog, setDebugVar } = useDebugging();
 
 const isOpen = ref(false);
@@ -292,6 +294,34 @@ const commands = computed(() => ({
 			const scale = `scale:(${data.group.scale.x.toFixed(1)}, ${data.group.scale.y.toFixed(1)})`;
 			log(`- [${id.substring(0, 8)}] ${name} | ${pos} | ${scale}`);
 		});
+	},
+
+	theme: (...args) => {
+		if (args.length === 0 || args[0] === 'list') {
+			log("Available Themes:");
+			themes.value.forEach((t, i) => {
+				log(`${i}: ${t.name}`);
+			});
+			return;
+		}
+
+		const arg = args[0];
+		
+		// By index
+		if (typeof arg === 'number') {
+			const theme = themes.value[arg];
+			if (theme) {
+				setTheme(theme.name);
+				log(`Switching to theme: ${theme.name}`);
+			} else {
+				log(`Invalid theme index: ${arg}`);
+			}
+			return;
+		}
+
+		// By name
+		setTheme(arg);
+		log(`Attempting to switch to theme: ${arg}`);
 	},
 
 	cls: () => {
