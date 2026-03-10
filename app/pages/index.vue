@@ -69,7 +69,7 @@ const categoryLinks = {
 <template>
 
 	<div align="center">
-		<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" />
+		<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
 	</div>
 	<br/><br/>
 

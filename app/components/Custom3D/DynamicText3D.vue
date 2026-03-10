@@ -1,7 +1,7 @@
 <script setup>
 
 // vue
-import { ref, toRefs } from 'vue';
+import { computed, ref, toRefs } from 'vue';
 
 // components
 import ContainerCustom3D from '../ContainerCustom3D.vue';
@@ -11,6 +11,7 @@ import * as THREE from 'three';
 
 // composables
 import { use3DLettering } from '@/composables/use3DLettering'; // Adjust path as needed
+import { useDeviceContext } from '@/composables/useDeviceContext';
 
 // define props
 const props = defineProps({
@@ -45,16 +46,41 @@ const props = defineProps({
 		default: -90,
 	},
 
+	// fallback image url
+	fallbackImage: {
+		type: String,
+		default: '',
+	},
+
+	// fallback scale (background-size)
+	fallbackScale: {
+		type: String,
+		default: 'contain',
+	},
+
 
 });
 
 const { text } = toRefs(props);
 const { loadAndMeasureLetters, assembleTextGroup } = use3DLettering();
+const { has3DCapability } = useDeviceContext();
 
 // References
 const el = ref(null);
 let textGroup = null;
 let glassMaterial = null;
+
+const fallbackStyle = computed(() => {
+	if (has3DCapability.value || !props.fallbackImage) return {};
+	return {
+		backgroundImage: `url(${props.fallbackImage})`,
+		backgroundSize: props.fallbackScale,
+		backgroundPosition: 'center',
+		backgroundRepeat: 'no-repeat',
+		transform: 'translateY(30%)', // Adjust as needed to visually align with 3D version
+
+	};
+});
 
 
 // --- DRY Helper for Transforms ---
@@ -185,6 +211,8 @@ function tick(root, LockManager, time) {
 	<ContainerCustom3D
 		ref="el"
 		class="dynamic-text-container"
+		:class="{ 'has-fallback': !has3DCapability && fallbackImage }"
+		:style="fallbackStyle"
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
@@ -199,7 +227,7 @@ function tick(root, LockManager, time) {
 	.dynamic-text-container {
 
 		height: 150px;
-		// border: 1px solid blue; // Debug
+		border: 1px solid blue; // Debug
 
 	}// .dynamic-text-container
 
