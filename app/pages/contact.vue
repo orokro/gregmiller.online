@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
 <template>
 
 	<div align="center">
-		<DynamicText3D text="Contact" :scale="0.70" :x-offset="20" />
+		<DynamicText3D text="Contact" :scale="0.70" :x-offset="20" fallback-image="img/2D_headers/H_CONTACT.png" />
 	</div>
 
 	<div class="static-page">

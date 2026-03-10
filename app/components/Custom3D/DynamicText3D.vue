@@ -72,13 +72,20 @@ let glassMaterial = null;
 
 const fallbackStyle = computed(() => {
 	if (has3DCapability.value || !props.fallbackImage) return {};
+	
+	let url = props.fallbackImage;
+	if (url && !url.startsWith('/') && !url.startsWith('http')) {
+		url = '/' + url;
+	}
+
 	return {
-		backgroundImage: `url(${props.fallbackImage})`,
+		backgroundImage: `url("${url}")`,
 		backgroundSize: props.fallbackScale,
 		backgroundPosition: 'center',
 		backgroundRepeat: 'no-repeat',
 		transform: 'translateY(30%)', // Adjust as needed to visually align with 3D version
-
+		border: 'none',
+		backgroundColor: 'transparent',
 	};
 });
 
@@ -227,7 +234,6 @@ function tick(root, LockManager, time) {
 	.dynamic-text-container {
 
 		height: 150px;
-		border: 1px solid blue; // Debug
 
 	}// .dynamic-text-container
 

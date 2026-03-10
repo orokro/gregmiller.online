@@ -19,7 +19,7 @@ const slug = route.params.slug;
 <template>
 
 	<div align="center">
-		<DynamicText3D text="Tag" :scale="0.7" :x-offset="20" />
+		<DynamicText3D text="Tag" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_OTHER.png" />
 	</div>
 
 	<div class="static-page">

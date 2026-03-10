@@ -26,7 +26,7 @@ const { data, pending, error } = await useFetch('/api/posts/by-category', {
 <template>
 
 	<div align="center">
-		<DynamicText3D text="UE Articles" :scale="0.7" :x-offset="20" />
+		<DynamicText3D text="UE Articles" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_URBEX.png" />
 	</div>
 
 	<div class="static-page">

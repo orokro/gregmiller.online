@@ -71,6 +71,7 @@ export const useDeviceContext = () => {
 
 		// URL Override check (?3d=true or #3d=false etc)
 		if (process.client) {
+			
 			const params = new URLSearchParams(window.location.search);
 			const hash = window.location.hash;
 			
@@ -80,13 +81,24 @@ export const useDeviceContext = () => {
 				return null;
 			};
 
-			// Check query params
+			// 1. Check Query / Hash
 			let override = check(params.get('3d'));
-			
-			// Check hash params (e.g. #3d=false)
 			if (override === null && hash.includes('3d=')) {
 				const hashParams = new URLSearchParams(hash.substring(1));
 				override = check(hashParams.get('3d'));
+			}
+
+			// 2. Persist to SessionStorage if found
+			if (override !== null) {
+				sessionStorage.setItem('gm_forcedHas3D', String(override));
+			}
+
+			// 3. Read from SessionStorage if override is still null
+			if (override === null) {
+				const stored = sessionStorage.getItem('gm_forcedHas3D');
+				if (stored !== null) {
+					override = check(stored);
+				}
 			}
 
 			if (override !== null) {

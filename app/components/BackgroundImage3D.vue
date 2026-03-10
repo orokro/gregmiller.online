@@ -8,10 +8,11 @@
 <script setup>
 
 // vue
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 // app
 import { useThree } from '~/composables/useThree';
+import { useDeviceContext } from '~/composables/useDeviceContext';
 
 const props = defineProps({
 	src: { type: String, required: true },
@@ -30,11 +31,24 @@ let threeManagerInstance = null;
 
 // composable
 const { getThree } = useThree();
+const { has3DCapability } = useDeviceContext();
 
 const toPx = (v) => {
 	const n = Number(v);
 	return Number.isFinite(n) ? `${n}px` : `${v}`;
 };
+
+const fallbackStyle = computed(() => {
+	if (has3DCapability.value) return {};
+	return {
+		backgroundImage: `url(${props.src})`,
+		backgroundSize: 'contain',
+		backgroundPosition: 'center',
+		backgroundRepeat: 'no-repeat',
+		opacity: props.opacity,
+		mixBlendMode: props.mode === 'normal' ? 'normal' : props.mode,
+	};
+});
 
 onMounted(async () => {
 
@@ -119,6 +133,7 @@ onUnmounted(() => {
 		:style="{
 			width: toPx(width),
 			height: toPx(height),
+			...fallbackStyle
 		}"
 		aria-hidden="true"
 	>

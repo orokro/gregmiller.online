@@ -19,7 +19,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 <template>
 
 	<div align="center">
-		<DynamicText3D text="Urbex" :scale="0.7" :x-offset="10" />
+		<DynamicText3D text="Urbex" :scale="0.7" :x-offset="10" fallback-image="img/2D_headers/H_URBEX.png" />
 	</div>
 
 	<div class="static-page">

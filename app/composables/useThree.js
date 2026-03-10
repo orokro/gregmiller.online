@@ -26,9 +26,14 @@ export const useThree = () => {
 	 * * @param {HTMLCanvasElement} canvas - The canvas to render on.
 	 */
 	const initThree = (canvas) => {
-		if (!threeManager && canvas) {
-			threeManager = new ThreeManager(canvas);
-			resolveInit(threeManager); // 🚀 BLAST OFF
+		if (!threeManager) {
+			if (canvas) {
+				threeManager = new ThreeManager(canvas);
+				resolveInit(threeManager); // 🚀 BLAST OFF
+			} else {
+				// If no canvas, we still resolve so getThree() doesn't hang forever
+				resolveInit(null);
+			}
 		}
 		return threeManager;
 	};

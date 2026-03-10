@@ -8,8 +8,9 @@
 <script setup>
 
 // Imports
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useThree } from '~/composables/useThree';
+import { useDeviceContext } from '~/composables/useDeviceContext';
 
 // Props
 const props = defineProps({
@@ -24,6 +25,7 @@ const registeredId = ref(null);
 
 // Composable
 const { getThree } = useThree();
+const { has3DCapability } = useDeviceContext();
 
 // We store the raw manager instance here for cleanup later
 let threeManagerInstance = null;
@@ -31,10 +33,13 @@ let threeManagerInstance = null;
 onMounted(async () => {
 
 	// 1. Immediate Fail check
-	if (!window.WebGLRenderingContext) {
+	if (!window.WebGLRenderingContext || !has3DCapability.value) {
 		isFallback.value = true;
-		return;
 	}
+
+	watch(has3DCapability, (val) => {
+		isFallback.value = !val || !window.WebGLRenderingContext;
+	}, { immediate: true });
 
 	// 2. Wait for ThreeManager to boot
 	// This will pause execution until App.vue calls initThree()
@@ -42,7 +47,7 @@ onMounted(async () => {
 	threeManagerInstance = mgr; // Save for unmount
 
 	// 3. Register
-	if (mgr.isOk && el.value) {
+	if (mgr && mgr.isOk && el.value) {
 
 		const result = mgr.register(el.value, 'box', {
 			tickFn: props.tickFn,
@@ -103,8 +108,8 @@ onUnmounted(() => {
 	box-sizing: border-box;
 
 	&.no-3d {
-		background: #f0f0f0;
-		border: 1px solid #ddd;
+		// background: #f0f0f0;
+		// border: 1px solid #ddd;
 	}
 
 

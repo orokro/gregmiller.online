@@ -47,10 +47,8 @@ watch([themeCSSVars, classObject], ([vars, classes]) => {
 // Start up the 3D system when the component mounts
 onMounted(() => {
 
-	// Initialize the 3D System
-	if (canvasRef.value	&& has3DCapability.value) {
-		initThree(canvasRef.value);
-	}
+	// Initialize the 3D System (even if disabled, to unblock getThree() promises)
+	initThree(has3DCapability.value ? canvasRef.value : null);
 });
 
 

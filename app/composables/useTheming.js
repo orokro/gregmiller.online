@@ -135,10 +135,12 @@ const setTheme = (theme) => {
 	// tell ThreeManager to switch themes (calls init/unload on themes as needed)
 	const { getThree } = useThree();
 	getThree().then(threeManager => {
-		threeManager.setTheme(currentTheme.value.themeClass);
-		nextTick(() => {
-			threeManager.requestRender();
-		});
+		if (threeManager) {
+			threeManager.setTheme(currentTheme.value.themeClass);
+			nextTick(() => {
+				threeManager.requestRender();
+			});
+		}
 	});
 };
 
