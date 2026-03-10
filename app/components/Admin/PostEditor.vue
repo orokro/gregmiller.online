@@ -2,7 +2,12 @@
 	PostEditor.vue
 	---------------
 
-	Admin post editor component
+	Admin post editor component.
+
+	We'll use as the main UI layer for the editor,
+	but the actual rich text editing will be handled by a child component (PostRichEditor.vue)
+	which will manage the editor state and content, and provide a v-model interface for
+	the parent to get/set the post content.
 -->
 <script setup>
 
@@ -567,6 +572,7 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
 $post-settings-width: 280px;
 
+// main wrapper for the post editor page
 .post-editor-wrapper{
 
 	// box settings
@@ -591,31 +597,48 @@ $post-settings-width: 280px;
 		// area with the main post editing textarea
 		.post-edit-area {
 
-			flex: 1;
-			min-width: 0; // Prevent flex blowout
-			display: flex;
-			flex-direction: column;
-			height: 100%;
-
-			position: relative; // Just context
+			// box settings
+			position: relative;
 			padding: 0;
 
-			/* ====== TABS ====== */
+			// sizing
+			min-width: 0; // Prevent flex blowout
+			height: 100%;
+
+			// layout
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+
+			// tabs at the top - now deprecated
 			.tabs {
 
+				// deprecated
+				display: none;
+
+				// box settings
+				padding: 10px;
+
+				// layout
 				flex: 0 0 auto;
 				display: flex;
 				gap: 8px;
-				padding: 10px;
-				display: none;
 
+				// an individual tab
 				.tab {
+
+					// box settings
 					padding: 6px 10px;
 					border-radius: 10px;
 					border: 1px solid $border;
+
+					// appear clickable
 					cursor: pointer;
+
+					// text settings
 					font-size: 13px;
 
+					// when active
 					&.active {
 						border-color: $secondary;
 						color: $secondary;
@@ -627,36 +650,42 @@ $post-settings-width: 280px;
 
 			} // .tabs
 
-			/* ====== EDITOR BODY ====== */
+			// where the main body of the editor lives (textarea or rich editor)
 			.editor-body {
 
-				flex: 1;
-				min-height: 0; // Allow shrinking
+				// box settings
 				position: relative;
-				width: 100%;
-
-				display: flex;
-				flex-direction: column;
-
 				// Removed padding as flexbox handles separation now
 				padding: 0;
 				box-sizing: border-box;
+
+
+				// sizing
+				min-height: 0; // Allow shrinking
+				width: 100%;
+
+				// layout
+				flex: 1;
+				display: flex;
+				flex-direction: column;
 
 				// Rich Editor Component
 				.rich-editor-instance {
 					width: 100%;
 					height: 100%;
-				}
+				}// .rich-editor-instance
 
 				// text area box
+				// which is the fall back for posts that aren't converted to Rich Text yet
 				.textarea {
 
+					// sizing
 					width: 100%;
 					height: 100%;
-					
-					// box settings
 					min-height: 0;
 					resize: none;
+
+					// box settings
 					border-radius: 12px;
 					border: 1px solid $border;
 					overflow: auto;
@@ -683,31 +712,40 @@ $post-settings-width: 280px;
 		// area with post action buttons
 		.post-buttons-area {
 
+			// layout & positioning
 			// Stacked at bottom of Main Content column
 			flex: 0 0 auto;
-			
+			z-index: 10;
+
+			// box settings
 			background: #fff;
 			padding: 8px 12px;
 			border-top: 1px solid $border;
-			z-index: 10;
 
 		}// .post-buttons-area
 
 		// area with post settings like categories, tags, etc
+		// (i.e. the right column of the post editor)
 		.post-settings-area {
 
+			// layout
 			flex: 0 0 $post-settings-width;
+			display: flex;
+			flex-direction: column;
+
+			// sizing
 			width: $post-settings-width;
+			height: 100%;
 
 			// box settings
 			border-left: 3px solid white;
-			display: flex;
-			flex-direction: column;
 			background: #fff;
 			overflow-x: hidden;
-			height: 100%;
 
+			// header for the settings area
 			.settings-header {
+
+				// box settings
 				padding: 12px 14px;
 				border-bottom: 1px solid $border;
 				background: #fafafa;
@@ -717,47 +755,60 @@ $post-settings-width: 280px;
 					font-size: 14px;
 					font-weight: 600;
 					color: $text;
-				}
-			}
+				}// h3
 
+			}// .settings-header
+
+			// list of settings
 			.settings-list {
 				flex: 1;
 				overflow-y: auto;
 				overflow-x: hidden;
 				padding: 14px;
-			}
 
-			.setting-row {
-				margin-bottom: 16px;
+				// row in the list of settings
+				.setting-row {
+					margin-bottom: 16px;
 
-				.label {
-					display: block;
-					font-size: 12px;
-					font-weight: 500;
-					margin-bottom: 4px;
-					color: rgba($text, 0.7);
-				}
+					// label for the row
+					.label {
+						display: block;
+						font-size: 12px;
+						font-weight: 500;
+						margin-bottom: 4px;
+						color: rgba($text, 0.7);
+					}// .label
 
-				&.centered {
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-					text-align: center;
-				}
-			}
+					&.centered {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						text-align: center;
+					}// .centered
 
-			/* ====== MINI THUMBNAIL ====== */
+				}// .setting-row
+
+			}// .settings-list
+
+
+			// thumbnail selection area
 			.thumb-box-mini {
+
+				// box settings
 				width: 80px;
 				height: 80px;
 				border: 1px solid $border;
 				background: #f0f0f0;
+				overflow: hidden;
+				padding: 0;
+
+				// appear clickable
 				cursor: pointer;
+
+				// layout
 				display: flex;
 				align-items: center;
 				justify-content: center;
-				overflow: hidden;
-				padding: 0;
 
 				&:hover {
 					border-color: $primary;
@@ -770,27 +821,39 @@ $post-settings-width: 280px;
 				}
 
 				.thumb-placeholder-text {
+
+					// text settings
 					font-size: 11px;
 					color: $secondary;
 					font-weight: 600;
-				}
-			}
+				}// .thumb-placeholder-text
 
-			.mini-path {
-				font-size: 10px;
-				color: #999;
-				margin-top: 4px;
-				max-width: 100%;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
+				// file path renderer for thumbnail
+				.mini-path {
 
+					// box settings
+					margin-top: 4px;
+					max-width: 100%;
+					overflow: hidden;
+
+					// text settings
+					font-size: 10px;
+					color: #999;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+
+				}// .mini-path
+
+			}// .thumb-box-mini
+
+
+			// for extra tall bois
 			.tall-input {
 				height: 54px;
 				resize: none;
 				font-family: inherit;
-			}
+
+			}// .tall-input
 
 		}// .post-settings-area
 
@@ -798,42 +861,54 @@ $post-settings-width: 280px;
 
 }// .post-editor-wrapper
 
-/* ====== FORM CONTROLS ====== */
+// broadly style our controls
 .input{
+
+	// box settings
 	border: 1px solid $border;
 	border-radius: 12px;
 	padding: 8px 10px;
-	font-size: 14px;
 	background: #fff;
-	color: $text;
 	width: 100%;
 	box-sizing: border-box;
+
+	// text settings
+	font-size: 14px;
+	color: $text;
 
 	&:focus{
 		outline: none;
 		border-color: $primary;
 		box-shadow: 0 0 0 3px rgba($primary, .12);
 	}
-}
+}// input
 
 .row{
 	display: flex;
 	gap: 10px;
 	align-items: center;
-}
+}// .row
 
+// wrap utility for rows that might need to break on smaller screens
 .wrap{
 	flex-wrap: wrap;
 }
 
+// broadly style buttons
 .btn{
+
+	// box settings
 	border-radius: 12px;
 	padding: 8px 12px;
 	border: 1px solid rgba($primary, .4);
 	background: #fff;
+
+	// text settings
 	color: $text;
-	cursor: pointer;
 	font-size: 14px;
+
+	// appear clickable
+	cursor: pointer;
 
 	&:hover{
 		box-shadow: 0 0 0 3px rgba($primary, .1);
@@ -843,6 +918,6 @@ $post-settings-width: 280px;
 		border-color: #e54848;
 		color: #e54848;
 	}
-}
+}// .btn
 
 </style>

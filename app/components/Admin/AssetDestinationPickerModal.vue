@@ -2,7 +2,8 @@
 	AssetDestinationPickerModal.vue
 	-------------------------------
 
-	Folder picker modal for VueFinder
+	Folder picker modal for VueFinder, used in the custom "Move to…" context menu action in AssetBrowser.vue.
+	This is a standalone component that can be used anywhere you need to pick a folder from the asset system.
 -->
 <script setup>
 
@@ -89,7 +90,9 @@ function onSelectionChanged(items) {
 
 	<div v-if="show" class="modal-backdrop" @mousedown="onBackdrop">
 
+		<!-- main modal wrapper -->
 		<div class="modal">
+
 			<div class="modal-header">
 				<div class="modal-title">{{ title }}</div>
 
@@ -160,86 +163,149 @@ function onSelectionChanged(items) {
 </template>
 <style scoped lang="scss">
 
+// main wrapper that fills the page and is the backdrop for the modal
 .modal-backdrop{
+
+	// postitioning and sizing
 	position: fixed;
 	inset: 0;
+	z-index: 9999;
+
+	// box settings
 	background: rgba(0,0,0,.45);
+
+	// layout
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	z-index: 9999;
-}
 
-.modal{
-	width: min(1100px, 92vw);
-	height: min(720px, 86vh);
-	background: white;
-	border-radius: 10px;
-	overflow: hidden;
-	box-shadow: 0 12px 40px rgba(0,0,0,.25);
-	display: flex;
-	flex-direction: column;
-}
 
-.modal-header{
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 10px 12px;
-	border-bottom: 1px solid rgba(0,0,0,.12);
-}
+	// main modal box itself
+	.modal{
 
-.modal-title{
-	font-weight: bold;
-}
+		// sixing
+		width: min(1100px, 92vw);
+		height: min(720px, 86vh);
 
-.modal-x{
-	background: transparent;
-	border: 0;
-	font-size: 22px;
-	line-height: 1;
-	cursor: pointer;
-	padding: 4px 10px;
-}
+		// box settings
+		background: white;
+		border-radius: 10px;
+		overflow: hidden;
+		box-shadow: 0 12px 40px rgba(0,0,0,.25);
 
-.modal-body{
-	flex: 1;
-	min-height: 0;
-	padding: 10px 12px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
+		// layout
+		display: flex;
+		flex-direction: column;
 
-.hint{
-	font-size: 12px;
-	opacity: .8;
-}
+		// header for the modal
+		.modal-header{
 
-.vf-picker{
-	flex: 1;
-	min-height: 0;
-	border: 1px solid rgba(0,0,0,.12);
-	border-radius: 8px;
-	overflow: hidden;
-}
+			// box settings
+			padding: 10px 12px;
+			border-bottom: 1px solid rgba(0,0,0,.12);
 
-.modal-footer{
-	display: flex;
-	justify-content: flex-end;
-	gap: 10px;
-	padding: 10px 12px;
-	border-top: 1px solid rgba(0,0,0,.12);
-}
+			// layout
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
 
-.btn{
-	border: 0;
-	border-radius: 999px;
-	padding: 8px 14px;
-	cursor: pointer;
-}
+			// title for the modal (in the header)
+			.modal-title{
+				font-weight: bold;
+			}// .modal-title
 
-.primary{ background: #00ABAE; color: white; }
-.secondary{ background: #eee; color: #333; }
+			// close button for the header
+			.modal-x{
+
+				// box settings
+				background: transparent;
+				border: 0;
+				padding: 4px 10px;
+
+				// text styles
+				font-size: 22px;
+				line-height: 1;
+
+				// appear clickable
+				cursor: pointer;
+
+			}// .modal-x
+
+		}// .modal-header
+
+		// main body of the modal where we'll host the vuefinder instance
+		.modal-body{
+
+			// box settings
+			min-height: 0;
+			padding: 10px 12px;
+
+			// layout
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+
+			// useful details
+			.hint{
+
+				// text styles
+				font-size: 12px;
+
+				// make it a bit less prominent since it's just extra info
+				opacity: .8;
+			}// .hint
+
+			// styles for our VueFinder instance in the modal
+			.vf-picker{
+
+				// box settings
+				border: 1px solid rgba(0,0,0,.12);
+				border-radius: 8px;
+				overflow: hidden;
+
+				// size
+				min-height: 0;
+
+				// layout
+				flex: 1;
+
+			}// .vf-picker
+
+		}// .modal-body
+
+	}// .modal
+
+	// styles for the footer with the move/cancel buttons
+	.modal-footer{
+
+		// box settings
+		padding: 10px 12px;
+		border-top: 1px solid rgba(0,0,0,.12);
+
+		// layout
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+
+		// move/cancel button styles along the bottom
+		.btn{
+			// box settings
+			border: 0;
+			border-radius: 999px;
+			padding: 8px 14px;
+
+			// appear clickable
+			cursor: pointer;
+
+		}// .btn
+
+		// button colors
+		.primary{ background: #00ABAE; color: white; }
+		.secondary{ background: #eee; color: #333; }
+
+	}// .modal-footer
+
+}// .modal-backdrop
 
 </style>

@@ -181,28 +181,39 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 /* ====== LEFT COLUMN ====== */
 .left-column {
 
+	// allow nothing to escape
 	overflow: hidden;
+
+	// box settings
 	position: relative;
 
 	// row in the left column
 	.row{
+
+		// lay out
 		display: flex;
 		gap: 10px;
 		margin-bottom: 10px;
 
 	}// .row
 
+	// row with the search box & new button
 	.controls {
+
+		// box settings
 		padding: 10px;
 		border-bottom: 1px solid $border;
 		background: #fff;
 
+		// the search text box
 		input {
 			width: 160px;
 			border-radius: 8px;
 			padding: 4px;
-		}
+		}// input
 
+
+		// the "new" button
 		button {
 
 			// box styles

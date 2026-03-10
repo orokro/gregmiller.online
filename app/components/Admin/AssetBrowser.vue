@@ -3,6 +3,8 @@
 	----------------
 
 	Admin component for browsing and selecting assets
+
+	Uses VueFinder to provide a full-featured file browser interface, with a custom context menu item for moving files to a new location.
 -->
 <script setup>
 
@@ -168,6 +170,8 @@ defineExpose({
 	<div class="asset-manager" ref="rootRef">
 
 		<PanelTitleBar>Asset Browser</PanelTitleBar>
+
+		<!-- use our vue-finder library to provide a full-featured file browser interface -->
 		<vue-finder
 			id="gm_asset_manager"
 			:driver="driver"
@@ -201,6 +205,7 @@ defineExpose({
 			}"
 		/>
 
+		<!-- modal for picking a destination when moving files -->
 		<AssetDestinationPickerModal
 			:show="moveModalOpen"
 			:driver="driver"
@@ -214,11 +219,15 @@ defineExpose({
 </template>
 <style scoped lang="scss">
 
+	// main outer-wrapper
 	.asset-manager{
+
+		// box model and sizing
 		height: 100%;
 		min-height: 0;
 		padding-left: 3px;
 
+		// layout
 		display: flex;
 		flex-direction: column;
 
@@ -227,17 +236,21 @@ defineExpose({
 			flex: 1;
 			min-height: 0;
 			height: 100% !important; // Force it to respect flex container
-			
+
 			.vf-main {
 				height: 100%; // Ensure internal container fills
-			}
-		}
-	}
+			}// .vf-main
 
+		}// :deep(#gm_asset_manager)
+
+	}// .asset-manager
+
+	// prevent dragging of images from the asset browser (since we handle it with custom logic)
+	// and the browsers default drag is to move the image file itself, which is not what we want
 	:deep(.vf-item img),
 	:deep(img){
 		-webkit-user-drag: none;
 		user-select: none;
-	}
+	}// :deep(.vf-item img), :deep(img)
 
 </style>

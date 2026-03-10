@@ -43,6 +43,14 @@ let emitTimer = null;
 let isApplyingExternalContent = false;
 let lastAppliedJson = '';
 
+
+/**
+ * Stable stringify that returns empty string on failure (e.g. circular structure)
+ * We use this to compare incoming modelValue with current editor content without deep-watching or expensive comparisons.
+ *
+ * @param obj - object to stringify
+ * @returns stable JSON string or empty string on failure
+ */
 function stableStringify(obj) {
 	try {
 		return JSON.stringify(obj);
@@ -51,6 +59,11 @@ function stableStringify(obj) {
 	}
 }
 
+
+/**
+ * scheduleEmitJson - schedule emitting the editor content as JSON after a short delay, to batch rapid updates and avoid emitting during external content application.
+ *
+ */
 function scheduleEmitJson() {
 
 	if (!editor.value)

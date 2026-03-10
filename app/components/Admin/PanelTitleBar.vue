@@ -24,7 +24,9 @@ $text: #101828;
 $border: rgba(16, 24, 40, 0.12);
 $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 
-.panel-title-bar{
+
+// main outer-wrapper
+.panel-title-bar {
 
 	// box settings
 	background: linear-gradient(
@@ -34,7 +36,6 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 	);
 	padding: 2px 24px;
 
-
 	h1{
 		margin: 0;
 
@@ -42,7 +43,8 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 		color: white;
 		font-size: 1rem;
 		font-weight: bold;
-	}
+
+	}// h1
 
 }// .panel-title-bar
 
