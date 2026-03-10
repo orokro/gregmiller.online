@@ -4,6 +4,9 @@
 
 	Example implementation of <ContainerCustom3D>:
 
+	NOTE: this isn't actually used anywhere on the site,
+	it's just a demo of how to use ContainerCustom3D with a custom GLB model and material.
+
 	- Calls defaultBuild() / defaultUpdate() so the active theme can still stylize the CustomContainer box.
 	- Adds an extra cube that spins when update() is called.
 -->
@@ -95,6 +98,7 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	threeManager.requestRender();
 }
 
+
 function update(defaultUpdate, customRoot, threeManager) {
 
 	if(!el.value) return;
@@ -110,8 +114,8 @@ function update(defaultUpdate, customRoot, threeManager) {
 		model.position.set(0, 30, (1 - scale/200) * -90);
 	}
 
-
 }
+
 
 function destroy(customRoot, threeManager) {
 
@@ -140,7 +144,7 @@ function tick(root, LockManager, time){
 
 	<ContainerCustom3D
 		ref="el"
-		class="spinning-cube-container"
+		class="text-container"
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
@@ -151,7 +155,7 @@ function tick(root, LockManager, time){
 <style lang="scss" scoped>
 
 	// we can still style the main container box from here, and it will be applied to the 3D version too since we're calling defaultBuild() in our build function
-	.spinning-cube-container {
+	.text-container {
 
 		// make it a bit bigger than the default so our cube fits better
 		// width: 650px;
@@ -161,6 +165,6 @@ function tick(root, LockManager, time){
 		// for debug
 		// border: 1px solid red;
 
-	}// .spinning-cube-container
+	}// .text-container
 
 </style>

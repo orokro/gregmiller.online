@@ -480,61 +480,66 @@ const commands = computed(() => {
 } });
 
 const runCommand = (rawLine) => {
-	const line = (rawLine || '').trim();
-	if (!line)
+	const fullLine = (rawLine || '').trim();
+	if (!fullLine)
 		return;
 
 	// Add to history
-	history.value.unshift(line);
+	history.value.unshift(fullLine);
 	historyIndex.value = -1;
 
 	// Always log the entered command
-	log(`> ${line}`);
+	log(`> ${fullLine}`);
 
-	// Command matching: tokenize on spaces
-	const tokens = line.split(/\s+/).filter(Boolean);
-	let head = (tokens[0] || '').toLowerCase();
+	const segments = fullLine.split(';').map(s => s.trim()).filter(Boolean);
 
-	// 1) Match command functions
-	const cmdMap = commands.value;
-	if (head && cmdMap[head]) {
-		const rawArgs = tokens.slice(1);
-		const parsedArgs = rawArgs.map(parseToken);
-		try {
-			cmdMap[head].apply(null, parsedArgs);
-		} catch (e) {
-			log(`Command error: ${String(e)}`);
-		}
-		return;
-	}
+	for (const line of segments) {
 
-	// 2) No command match -> try debug vars (split on first space rule)
-	const vars = debugVars.value || {};
+		// Command matching: tokenize on spaces
+		const tokens = line.split(/\s+/).filter(Boolean);
+		let head = (tokens[0] || '').toLowerCase();
 
-	// head is already lowercased for command lookup; for vars we resolve case-insensitively
-	const realKey = findKeyInsensitive(vars, tokens[0] || '');
-
-	if (realKey){
-
-		// Rejoin tail exactly as you described
-		const tail = tokens.slice(1).join(' ').trim();
-
-		// Parse tail as boolean/number/null if possible; otherwise keep string
-		const parsed = tail === '' ? true : parseToken(tail);
-
-		const before = vars[realKey].value;
-		const result = setDebugVar(realKey, parsed);
-
-		if (result.ok) {
-			log(`Set debug var "${realKey}" = ${String(parsed)} (was ${String(result.before)}).`);
-		} else {
-			log(`Failed to set debug var "${realKey}".`);
+		// 1) Match command functions
+		const cmdMap = commands.value;
+		if (head && cmdMap[head]) {
+			const rawArgs = tokens.slice(1);
+			const parsedArgs = rawArgs.map(parseToken);
+			try {
+				cmdMap[head].apply(null, parsedArgs);
+			} catch (e) {
+				log(`Command error: ${String(e)}`);
+			}
+			continue;
 		}
 
-		return;
-	}
+		// 2) No command match -> try debug vars (split on first space rule)
+		const vars = debugVars.value || {};
 
-	log(`Unknown command/var: "${head}". Try: status`);
+		// head is already lowercased for command lookup; for vars we resolve case-insensitively
+		const realKey = findKeyInsensitive(vars, tokens[0] || '');
+
+		if (realKey){
+
+			// Rejoin tail exactly as you described
+			const tail = tokens.slice(1).join(' ').trim();
+
+			// Parse tail as boolean/number/null if possible; otherwise keep string
+			const parsed = tail === '' ? true : parseToken(tail);
+
+			const before = vars[realKey].value;
+			const result = setDebugVar(realKey, parsed);
+
+			if (result.ok) {
+				log(`Set debug var "${realKey}" = ${String(parsed)} (was ${String(result.before)}).`);
+			} else {
+				log(`Failed to set debug var "${realKey}".`);
+			}
+
+			continue;
+		}
+
+		log(`Unknown command/var: "${head}". Try: status`);
+	}
 };
 
 const onKeyDown = (e) => {
