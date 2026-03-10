@@ -613,9 +613,6 @@ $post-settings-width: 280px;
 			// tabs at the top - now deprecated
 			.tabs {
 
-				// deprecated
-				display: none;
-
 				// box settings
 				padding: 10px;
 
@@ -623,6 +620,9 @@ $post-settings-width: 280px;
 				flex: 0 0 auto;
 				display: flex;
 				gap: 8px;
+
+				// deprecated
+				display: none;
 
 				// an individual tab
 				.tab {
