@@ -305,6 +305,48 @@ const commands = computed(() => {
 		manager.requestRender();
 	},
 
+	tonemapping: async (...args) => {
+		const manager = await getThree();
+		if (!manager || !manager.renderer) return;
+
+		const types = {
+			none: THREE.NoToneMapping,
+			linear: THREE.LinearToneMapping,
+			reinhard: THREE.ReinhardToneMapping,
+			cineon: THREE.CineonToneMapping,
+			aces: THREE.ACESFilmicToneMapping
+		};
+
+		if (args.length > 0) {
+			const val = String(args[0]).toLowerCase();
+			if (types[val] !== undefined) {
+				manager.renderer.toneMapping = types[val];
+			} else if (args[0] === false || args[0] === 'false') {
+				manager.renderer.toneMapping = THREE.NoToneMapping;
+			}
+		} else {
+			// Toggle between None and ACES
+			manager.renderer.toneMapping = (manager.renderer.toneMapping === THREE.NoToneMapping) 
+				? THREE.ACESFilmicToneMapping 
+				: THREE.NoToneMapping;
+		}
+		
+		const current = Object.keys(types).find(k => types[k] === manager.renderer.toneMapping) || manager.renderer.toneMapping;
+		log(`Tone mapping: ${current} (${manager.renderer.toneMapping})`);
+		manager.requestRender();
+	},
+
+	exposure: async (...args) => {
+		const manager = await getThree();
+		if (!manager || !manager.renderer) return;
+
+		if (args.length > 0 && typeof args[0] === 'number') {
+			manager.renderer.toneMappingExposure = args[0];
+		}
+		log(`Exposure: ${manager.renderer.toneMappingExposure.toFixed(2)}`);
+		manager.requestRender();
+	},
+
 	snapshot: async () => {
 		const manager = await getThree();
 		if (!manager || !manager.renderer || !manager.canvas) {
