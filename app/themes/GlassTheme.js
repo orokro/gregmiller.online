@@ -19,6 +19,7 @@ export class GlassTheme {
 		bgAccent1: '#f8f8f8',
 		bgAccent2: '#e6e6e6',
 		colorScroll: '#ffffff',
+		fallbackBg: '#f8f8f8',
 	};
 
 	// other CSS vars not specifically colors

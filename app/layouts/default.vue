@@ -66,6 +66,9 @@ onMounted(() => {
 
 	<div class="app-root">
 
+		<!-- static fallback background for when 3D is disabled -->
+		<div v-if="!has3DCapability" class="static-bg-layer"></div>
+
 		<!-- three graphics rendered below everything else -->
 		<canvas v-show="has3DCapability" ref="canvasRef" class="webgl-canvas"></canvas>
 
@@ -158,6 +161,17 @@ body {
 	@media (min-width: 900px) {
 		padding-left: 260px;
 	}
+}
+
+.static-bg-layer {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: -2;
+	background: var(--fallback-bg);
+	transition: background 0.5s ease;
 }
 
 .webgl-canvas {

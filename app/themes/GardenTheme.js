@@ -18,6 +18,7 @@ export class GardenTheme {
 		bgAccent1: '#eaf8ffff',
 		bgAccent2: '#d9e3f0ff',
 		colorScroll: '#ffffff',
+		fallbackBg: '#eaf8ff',
 	};
 
 	static themeStyles = {

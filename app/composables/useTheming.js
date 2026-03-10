@@ -32,6 +32,7 @@ function getThemeColorsDefaults() {
 		textColor: '#3a414bff',
 		hoverColor: '#FFFFFF',
 		scrollColor:  '#FFFFFF',
+		fallbackBg: '#E1EEF5',
 	}
 }
 
@@ -69,6 +70,7 @@ const themeCSSVars = computed(() => {
 		--color-text: ${themeColors.value.textColor};
 		--color-hover: ${themeColors.value.hoverColor};
 		--color-scroll: ${themeColors.value.scrollColor};
+		--fallback-bg: ${themeColors.value.fallbackBg};
 		--content-frame-shadow: ${themeStyles.value.contentFrameShadow};
 		--content-header-text-color: ${themeStyles.value.contentHeaderTextColor};
 		--content-header-bg-color: ${themeStyles.value.contentHeaderBGColor};
