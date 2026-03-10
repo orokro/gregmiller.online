@@ -317,6 +317,6 @@ watch(depth, () => {
 
 .bg-cover-container {
 	position: relative;
-}
+}// .bg-cover-container
 
 </style>

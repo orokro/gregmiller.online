@@ -197,6 +197,7 @@ function tick(root, LockManager, time) {
 <style lang="scss" scoped>
 
 	.dynamic-text-container {
+
 		height: 150px;
 		// border: 1px solid blue; // Debug
 

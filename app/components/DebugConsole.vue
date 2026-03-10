@@ -1,6 +1,7 @@
 <!-- app/components/DebugConsole.vue -->
 <script setup>
 
+import * as THREE from 'three';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDeviceContext } from '~/composables/useDeviceContext';
 import { useDebugging } from '~/composables/useDebugging';
@@ -98,7 +99,21 @@ const findKeyInsensitive = (obj, wantedKey) => {
 	return null;
 };
 
-const commands = computed(() => ({
+const commands = computed(() => {
+
+	const findBgPlane = (manager) => {
+		const data = manager.getRegisteredElementByName('app-cover-bg');
+		if (!data || !data.empties || !data.empties.center) return null;
+		let plane = null;
+		data.empties.center.traverse(child => {
+			if (child.isMesh) {
+				if (!plane || child.name.includes('plane')) plane = child;
+			}
+		});
+		return plane;
+	};
+
+	return {
 
 	mobile: (...args) => {
 		if (args.length < 1) {
@@ -185,24 +200,7 @@ const commands = computed(() => ({
 			return;
 		}
 
-		const data = manager.getRegisteredElementByName('app-cover-bg');
-		if (!data || !data.empties || !data.empties.center) {
-			log("Background element 'app-cover-bg' not found or not ready.");
-			return;
-		}
-
-		// Find the plane mesh
-		let plane = null;
-		data.empties.center.traverse(child => {
-			if (child.isMesh && child.name.includes('plane')) plane = child;
-		});
-		if (!plane) {
-			// Fallback: any mesh in center
-			data.empties.center.traverse(child => {
-				if (child.isMesh) plane = child;
-			});
-		}
-
+		const plane = findBgPlane(manager);
 		if (!plane) {
 			log("Background plane mesh not found.");
 			return;
@@ -217,6 +215,93 @@ const commands = computed(() => ({
 			log(`Background plane visibility toggled ${plane.visible ? 'ON' : 'OFF'}.`);
 		}
 		
+		manager.requestRender();
+	},
+
+	'bg-color': async (...args) => {
+		const manager = await getThree();
+		if (!manager) return;
+
+		const plane = findBgPlane(manager);
+		if (!plane) {
+			log("Background plane mesh not found.");
+			return;
+		}
+
+		const colorStr = args[0] || '#FFFFFF';
+		const color = new THREE.Color(colorStr);
+
+		// If not already a replacement, replace it with standard (lit) material
+		if (!plane.material.userData?.isReplacement) {
+			const newMat = new THREE.MeshStandardMaterial({
+				color: color,
+				roughness: 1,
+				metalness: 0,
+				envMapIntensity: 0
+			});
+			newMat.userData.isReplacement = true;
+			plane.material = newMat;
+		} else {
+			plane.material.color.copy(color);
+		}
+
+		log(`Background color set to ${colorStr}.`);
+		manager.requestRender();
+	},
+
+	'bg-shadows': async (...args) => {
+		const manager = await getThree();
+		if (!manager) return;
+
+		const plane = findBgPlane(manager);
+		if (!plane) {
+			log("Background plane mesh not found.");
+			return;
+		}
+
+		if (args.length > 0 && (args[0] === true || args[0] === false)) {
+			plane.receiveShadow = args[0];
+		} else {
+			plane.receiveShadow = !plane.receiveShadow;
+		}
+
+		log(`Background shadow receiving: ${plane.receiveShadow ? 'ON' : 'OFF'}.`);
+		manager.requestRender();
+	},
+
+	'bg-lighting': async (...args) => {
+		const manager = await getThree();
+		if (!manager) return;
+
+		const plane = findBgPlane(manager);
+		if (!plane) {
+			log("Background plane mesh not found.");
+			return;
+		}
+
+		const isLit = !(plane.material instanceof THREE.MeshBasicMaterial);
+		const nextLit = (args.length > 0 && (args[0] === true || args[0] === false)) ? args[0] : !isLit;
+
+		const color = plane.material.color.clone();
+		let newMat;
+
+		if (nextLit) {
+			newMat = new THREE.MeshStandardMaterial({
+				color: color,
+				roughness: 1,
+				metalness: 0,
+				envMapIntensity: 0
+			});
+		} else {
+			newMat = new THREE.MeshBasicMaterial({
+				color: color
+			});
+		}
+
+		newMat.userData.isReplacement = true;
+		plane.material = newMat;
+
+		log(`Background lighting set to ${nextLit ? 'ON' : 'OFF'} (${nextLit ? 'MeshStandard' : 'MeshBasic'}).`);
 		manager.requestRender();
 	},
 
@@ -350,7 +435,7 @@ const commands = computed(() => ({
 		}
 	},
 
-}));
+} });
 
 const runCommand = (rawLine) => {
 	const line = (rawLine || '').trim();
