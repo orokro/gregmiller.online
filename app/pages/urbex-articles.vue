@@ -10,6 +10,7 @@
 import { ref } from 'vue';
 
 // components
+import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import CategoryGrid from '../components/CategoryGrid.vue';
