@@ -27,6 +27,12 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 		<Container3D>
 			<h1><span>Resume</span></h1>
+			<a href="/assets/Resume.Greg.Miller.pdf" target="_blank">
+				<div class="dl-pdf" align="center">
+					<div class="icon"></div>
+					PDF
+				</div>
+			</a>
 			<Resume />
 		</Container3D>
 
@@ -384,6 +390,36 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 </template>
 <style lang="scss" scoped>
+
+	.dl-pdf {
+
+		// position
+		position: absolute;
+		top: 0px;
+		right: 10px;
+
+		// text styles
+		font-size: 12px;
+
+		// look clickable
+		cursor: pointer;
+
+		// box styles
+		background: rgba(255, 255, 255, 0.8);
+		border-radius: 10px;
+		padding: 10px 10px 10px 10px;
+
+		.icon {
+			// border: 1px solid red;
+			width: 24px;
+			height: 24px;
+			background: url('/img/dl.png') no-repeat;
+			background-size: cover;
+
+			opacity: 0.7;
+			margin-bottom: 2px;
+		}
+	}
 
 	.flex-grid {
 		display: flex;

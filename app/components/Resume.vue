@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
 
 						<!-- bio list -->
 						<ul>
-							<li>Been developing and 3D modeling for fun and professionally for 22 years</li>
+							<li>Been developing and 3D modeling for fun and professionally for 26 years</li>
 							<li>My work has been featured on Fox News, Time Magazine, IGN, Gamespot, The Verge and more!
 							</li>
 							<li>International coverage for my (3D) Virtual Reality project,
@@ -115,6 +115,21 @@ onBeforeUnmount(() => {
 
 					<!-- experience area -->
 					<div class="resumeAreaHeader darkGrayFont boldFont">EXPERIENCE</div>
+
+					<div class="resumeLeftColumnItem">
+						<div class="topRow">
+							<div class="dateRange lightGrayFont" align="right">2023-2025</div>
+							<div class="plus lightGrayFont">+</div>
+							<div class="company darkGrayFont">Nike <small><small>(via Insight Global)</small></small></div>
+						</div>
+						<div class="secondRow">
+							<div class="jobTitle lightGrayFont">3D-Pipline Software Developer</div>
+							<div class="jobDesc mediumGrayFont">
+								Developing custom in house 3D software using tools like Blender,<br/>
+								Electron, ThreeJS, Vue3, NodeJS, Substance Painter, and others.
+							</div>
+						</div>
+					</div>
 
 					<div class="resumeLeftColumnItem">
 						<div class="topRow">
@@ -180,7 +195,7 @@ onBeforeUnmount(() => {
 						</div>
 					</div>
 
-					<div class="resumeLeftColumnItem">
+					<!-- <div class="resumeLeftColumnItem">
 						<div class="topRow">
 							<div class="dateRange lightGrayFont" align="right">2012 - 2014</div>
 							<div class="plus lightGrayFont">+</div>
@@ -193,7 +208,7 @@ onBeforeUnmount(() => {
 								internal use, server maintenance, cable runs, and customer support.
 							</div>
 						</div>
-					</div>
+					</div> -->
 
 					<!--
 					<div class="resumeLeftColumnItem">
@@ -277,14 +292,23 @@ onBeforeUnmount(() => {
 					<div class="resumeAreaHeader darkGrayFont boldFont">EXPERTISE</div>
 
 					<div class="resumeSmallAreaHeader mediumGrayFont">ENGINEERING</div>
-					<div class="resumeSmallItemText mediumGrayFont spacing">C#, Unity, CSS, HTML, JavaScript, Sass, jQuery,
-						Python, PHP, MySQL, JSON, Apache, Arduino, C++, Java</div>
+					<div class="resumeSmallItemText mediumGrayFont spacing">
+						NodeJS, Vue, React, R3F,
+						Electron, C#, Unity, CSS,
+						HTML, JavaScript, Sass,
+						ThreeJS, Python, PHP,
+						MySQL, MongoDB JSON,
+						Apache, Arduino, C++, Java
+					</div>
 
 					<!-- spacer between areas -->
 					<div class="itemSpacer2"></div>
 
 					<div class="resumeSmallAreaHeader mediumGrayFont">3D / 2D MEDIA</div>
-					<div class="resumeSmallItemText mediumGrayFont spacing">MAYA, ZBrush, Blender, Photoshop, Illustrator,
+					<div class="resumeSmallItemText mediumGrayFont spacing">
+						Blender, Photoshop, Illustrator,
+						Davinci Resolve, Procreate,
+						MAYA, ZBrush, Aseprite,
 						Premiere, After Effects</div>
 
 				<!-- /.resumeRightColumn -->
@@ -608,7 +632,7 @@ onBeforeUnmount(() => {
 						.secondRow {
 
 							// add margin to indent to match top row
-							margin-left: 9.5em;
+							margin-left: 8.95em;
 
 							// style for job title line
 							.jobTitle {
