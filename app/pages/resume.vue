@@ -409,6 +409,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 		padding: 10px 10px 10px 10px;
 
 		.icon {
+
 			// border: 1px solid red;
 			width: 24px;
 			height: 24px;
@@ -417,23 +418,32 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 			opacity: 0.7;
 			margin-bottom: 2px;
-		}
-	}
+
+		}// .icon
+
+	}// .dl-pdf
 
 	.flex-grid {
+
+		// box settings
+		overflow: visible;
+
+		// layout
 		display: flex;
 		flex-wrap: wrap;
 		gap: 30px;
 		align-content: flex-start;
-		overflow: visible;
-	}
+		justify-content: center;
+	}// .flex-grid
 
 	.flex-grid > * {
+
 		/* force consistent cell size */
 		flex: 0 0 100px;   /* fixed column width */
 		height: 100px;     /* fixed row height */
 		display: grid;
 		place-items: center;
-	}
+
+	}// .flex-grid > *
 
 </style>
