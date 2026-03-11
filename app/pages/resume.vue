@@ -25,7 +25,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 		</div>
 	</div>
 
-	<div class="static-page">
+	<div class="static-page smaller">
 
 		<Container3D>
 			<h1><span>Resume</span></h1>
