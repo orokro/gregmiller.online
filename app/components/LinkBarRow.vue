@@ -106,12 +106,9 @@ function close() {
 			align-items: center;
 
 			// make icon white by default
-			&:deep {
-				path, circle, rect, polygon {
-
-					transition: fill 0.3s ease;
-					fill: var(--color-secondary);
-				}
+			:deep(path), :deep(circle), :deep(rect), :deep(polygon) {
+				transition: fill 0.3s ease;
+				fill: var(--color-secondary);
 			}
 
 		}// .icon
@@ -155,10 +152,8 @@ function close() {
 				background-position-x: 140px;
 			}
 
-			.icon:deep {
-				path, circle, rect, polygon {
-					fill: var(--color-hover);
-				}
+			:deep(path), :deep(circle), :deep(rect), :deep(polygon) {
+				fill: var(--color-hover);
 			}
 
 			.text {

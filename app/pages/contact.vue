@@ -327,22 +327,21 @@ onBeforeUnmount(() => {
 	gap: 20px;
 	justify-content: center;
 
-	&:deep {
 
-		// since I'm re-using the SocialIcon component,
-		// I'll just adjust a couple of the inner styles manually here
-		.icon-row {
-			width: 75px;
-			height: 75px;
 
-			.icon {
-				left: 9px;
-				width: 80px;
-				height: 80px;
-			}
-		}// :deep .icon-row
+	// since I'm re-using the SocialIcon component,
+	// I'll just adjust a couple of the inner styles manually here
+	&:deep(.icon-row) {
+		width: 75px;
+		height: 75px;
 
-	}// :deep .icon-row
+		.icon {
+			left: 9px;
+			width: 80px;
+			height: 80px;
+		}
+	}// &:deep(.icon-row)
+
 
 }// .icon-list
 

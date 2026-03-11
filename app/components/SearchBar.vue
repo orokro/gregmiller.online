@@ -92,11 +92,10 @@ const { searchQuery, searchActive } = useSearch();
 			transition: opacity 0.1s ease;
 
 			// ret heme
-			&:deep {
-				svg, path, circle, rect, polygon {
-					fill: var(--color-secondary);
-				}
+			&:deep(svg, path, circle, rect, polygon) {
+				fill: var(--color-secondary);
 			}
+
 
 		}// .search-icon
 

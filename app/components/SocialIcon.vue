@@ -95,12 +95,9 @@ const props = defineProps({
 			align-items: center;
 
 			// make icon white by default
-			&:deep {
-				path, circle, rect, polygon {
-
-					transition: fill 0.3s ease;
-					fill: var(--color-secondary);
-				}
+			:deep(path), :deep(circle), :deep(rect), :deep(polygon) {
+				transition: fill 0.3s ease;
+				fill: var(--color-secondary);
 			}
 
 		}// .icon
@@ -116,11 +113,8 @@ const props = defineProps({
 				background-position-x: 140px;
 			}
 
-			.icon:deep {
-
-				path, circle, rect, polygon {
-					fill: white;
-				}
+			:deep(path), :deep(circle), :deep(rect), :deep(polygon) {
+				fill: white;
 			}
 
 		}// &:hover

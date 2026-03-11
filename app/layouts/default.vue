@@ -269,7 +269,7 @@ body {
 
 .header-3d-wrapper {
 	// border: 1px solid red;
-	max-width: clamp(22rem, 92vw, 60rem);
+	max-width: clamp(18rem, 92vw, 60rem);
 }
 
 /* reusable per-page styling */
@@ -346,8 +346,12 @@ body {
 		// box settings
         background: var(--content-box-bg-color);
         border-radius: 3px;
-        padding: 2rem 1rem;
+        padding: 1rem 0.75rem;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+        @media (min-width: 600px) {
+            padding: 2rem 1rem;
+        }
 
         /* backdrop blur */
         backdrop-filter: blur(var(--content-box-bg-blur, 10px));
