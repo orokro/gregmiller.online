@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
 
 		<Spacer3D/>
 
-		<Container3D style="min-width: 330px;">
+		<Container3D>
 
 			<h1><span>Message Me</span></h1>
 			<div class="white-box">

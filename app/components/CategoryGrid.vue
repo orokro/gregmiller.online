@@ -64,10 +64,10 @@ const { data, pending, error } = await useFetch(fetchPath, {
 </script>
 <template>
 
-	<Container3D style="min-width: 400px;">
+	<Container3D>
 
 		<h1><span>{{ props.title }}</span></h1>
-		<div class="white-box" style="min-width: 390px;">
+		<div class="white-box">
 
 			<div v-if="data && data.posts && data.posts.length" class="grid">
 

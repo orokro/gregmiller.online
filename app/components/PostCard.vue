@@ -158,9 +158,14 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 
 	// layout
 	display: grid;
-    grid-template-columns: 150px 1fr;
+    grid-template-columns: 1fr;
     gap: 14px;
-    padding: 6px;
+    padding: 10px;
+
+    @media (min-width: 500px) {
+        grid-template-columns: 150px 1fr;
+        padding: 6px;
+    }
 
 	// hover animation
 	transition: translate 0.3s, box-shadow 0.3s;
@@ -188,6 +193,11 @@ const resolvedThumb = computed(() => props.thumbUrl || '');
 		width: 150px;
 		height: 150px;
 		position: relative;
+        margin: 0 auto;
+
+        @media (min-width: 500px) {
+            margin: 0;
+        }
 
 		.thumb-clipper {
 
