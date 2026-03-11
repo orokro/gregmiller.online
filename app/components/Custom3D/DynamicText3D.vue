@@ -71,7 +71,9 @@ let textGroup = null;
 let glassMaterial = null;
 
 const fallbackStyle = computed(() => {
-	if (has3DCapability.value || !props.fallbackImage) return {};
+	// Show fallback if 3D is disabled OR if it's not ready yet
+	const isReady = el.value?.is3DReady || false;
+	if (!props.fallbackImage || (has3DCapability.value && isReady)) return {};
 	
 	let url = props.fallbackImage;
 	if (url && !url.startsWith('/') && !url.startsWith('http')) {
@@ -112,7 +114,7 @@ function applyTransform(object3d, containerWidth) {
 }
 
 
-async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
+async function build(defaultBuild, customRoot, threeManager, rebuildCustom, setReady) {
 
 	if (!rebuildCustom)
 		return;
@@ -166,6 +168,7 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 		}
 	});
 
+	if (setReady) setReady(true);
 	threeManager.requestRender();
 }
 
@@ -218,7 +221,7 @@ function tick(root, LockManager, time) {
 	<ContainerCustom3D
 		ref="el"
 		class="dynamic-text-container"
-		:class="{ 'has-fallback': !has3DCapability && fallbackImage }"
+		:class="{ 'has-fallback': (!has3DCapability || !el?.is3DReady) && fallbackImage }"
 		:style="fallbackStyle"
 		:buildFn="build"
 		:updateFn="update"

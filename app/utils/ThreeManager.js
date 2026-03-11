@@ -424,6 +424,29 @@ export class ThreeManager {
 		// Set configuration on the data object so the component can read it
 		data.bgConfig = this.currentBgConfig;
 
+		// If the material has a map that isn't loaded yet, we should keep it hidden
+		if (material && material.map && material.map.image === null) {
+			// Find the mesh if it exists
+			data.group.traverse(child => {
+				if (child.isMesh) child.visible = false;
+			});
+
+			// We need a way to know when it's ready. 
+			// If it's a standard texture being loaded, we can poll or use a proxy.
+			// For now, let's just use a simple timer or check if the theme can tell us.
+			const checkLoad = () => {
+				if (material.map.image) {
+					data.group.traverse(child => {
+						if (child.isMesh) child.visible = true;
+					});
+					this.requestRender();
+				} else {
+					setTimeout(checkLoad, 100);
+				}
+			};
+			checkLoad();
+		}
+
 		// FORCE UPDATE: Ensure the component re-evaluates its state immediately
 		this.updateElementPosition(data.id);
 		this.requestRender();
@@ -963,7 +986,7 @@ export class ThreeManager {
 		group.add(empties.br);
 
 		// pack up the data and save it
-		const data = { id, element, group, type, empties, options };
+		const data = { id, element, group, type, empties, options, ready: false };
 		this.registeredElements.set(id, data);
 
 		// Apply global background config if this is the background element
@@ -1246,6 +1269,7 @@ export class ThreeManager {
 			if (this.currentTheme && typeof this.currentTheme.buildBox === 'function') {
 				this.currentTheme.buildBox(this, data);
 			}
+			data.ready = true;
 			return;
 		}
 
@@ -1266,11 +1290,16 @@ export class ThreeManager {
 				empties: data.empties,
 			};
 
+			const setReady = (isReady = true) => {
+				data.ready = isReady;
+			};
+
 			// If a custom buildFn exists, it replaces default theming unless it calls defaultBuild()
 			if (data.options && typeof data.options.buildFn === 'function') {
-				data.options.buildFn(defaultBuild, customRoot, this, rebuildCustom);
+				data.options.buildFn(defaultBuild, customRoot, this, rebuildCustom, setReady);
 			} else {
 				defaultBuild();
+				data.ready = true;
 			}
 		}
 	}

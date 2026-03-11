@@ -59,12 +59,18 @@ const props = defineProps({
 
 // State
 const el = ref(null);
-const isFallback = ref(false);
+const isFallback = ref(true); // Default to true while loading
+const is3DReady = ref(false);
 const registeredId = ref(null);
 
 // Composable
 const { getThree } = useThree();
 const { has3DCapability } = useDeviceContext();
+
+defineExpose({
+	is3DReady,
+	isFallback
+});
 
 // We store the raw manager instance here for cleanup later
 let threeManagerInstance = null;
@@ -78,7 +84,9 @@ onMounted(async () => {
 	}
 
 	watch(has3DCapability, (val) => {
-		isFallback.value = !val || !window.WebGLRenderingContext;
+		if (!val || !window.WebGLRenderingContext) {
+			isFallback.value = true;
+		}
 	}, { immediate: true });
 
 	// 2. Wait for ThreeManager to boot
@@ -93,7 +101,20 @@ onMounted(async () => {
 			buildFn: props.buildFn,
 			updateFn: props.updateFn,
 			cleanFn: props.clean,
-			tickFn: props.tickFn,
+			tickFn: (root, tm, time) => {
+				// Poll the ready state from the manager data
+				if (registeredId.value) {
+					const data = tm.registeredElements.get(registeredId.value);
+					if (data && data.ready !== is3DReady.value) {
+						is3DReady.value = data.ready;
+						if (is3DReady.value) {
+							isFallback.value = false;
+						}
+					}
+				}
+				// Call user tick if provided
+				if (props.tickFn) props.tickFn(root, tm, time);
+			},
 		};
 		if(props.name)
 			options.name = props.name;
