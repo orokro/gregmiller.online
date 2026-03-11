@@ -62,7 +62,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						source-size="128"
 						size="24"
 						link="https://nuxt.com/"
-						text="I love VueJS, so Nuxt is a natural extension of that. This site, gregmiller.only / gmiller.net are built in Nuxt."
+						text="I love VueJS, so Nuxt is a natural extension of that. This site, gregmiller.online / gmiller.net are built in Nuxt."
 						title="Nuxt"
 					/>
 					<SkillIcon

@@ -283,7 +283,7 @@ onBeforeUnmount(() => {
 
 					<!-- portfolio area -->
 					<div class="resumeAreaHeader darkGrayFont boldFont">PORTFOLIO</div>
-					<div class="resumeSmallItemText mediumGrayFont portfolioLink">www.gmiller.net</div>
+					<div class="resumeSmallItemText mediumGrayFont portfolioLink">www.gregmiller.online</div>
 
 					<!-- spacer between areas -->
 					<div class="itemSpacer"></div>
