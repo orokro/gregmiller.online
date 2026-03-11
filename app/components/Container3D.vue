@@ -108,8 +108,11 @@ onUnmounted(() => {
 	box-sizing: border-box;
 
 	&.no-3d {
-		// background: #f0f0f0;
-		// border: 1px solid #ddd;
+		border-style: solid;
+		// border-width: 24px 30px 42px 30px;
+		border-width: 10px 10px 32px 10px;
+		border-image: url(/img/2d_frame.png) 150 30 42 30 fill / 150px 30px 42px 30px;
+		background: transparent;
 	}
 
 
