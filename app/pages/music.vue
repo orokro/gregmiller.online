@@ -43,10 +43,4 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 </template>
 <style lang="scss" scoped>
 
-.white-box {
-
-	padding: 2rem 1rem;;
-
-}// .white-box
-
 </style>

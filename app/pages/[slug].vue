@@ -18,10 +18,4 @@
 </template>
 <style scoped>
 
-.static-page {
-	padding: 4rem;
-	text-align: center;
-	font-family: sans-serif;
-}
-
 </style>

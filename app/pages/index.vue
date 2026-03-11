@@ -105,15 +105,8 @@ const categoryLinks = {
 </template>
 <style lang="scss" scoped>
 
-.static-page {
-	max-width: 1200px;
-	margin: 0 auto;
-	padding: 2rem;
-	font-family: "Alumni Sans Pinstripe", sans-serif;
-}
-
 .home-size {
-	max-width: clamp(22rem, 92vw, 69rem);
+	max-width: clamp(22rem, 92vw, 73rem);
 }
 
 </style>

@@ -50,10 +50,4 @@ const { data, pending, error } = await useFetch('/api/posts/by-category', {
 </template>
 <style lang="scss" scoped>
 
-.white-box {
-
-	padding: 2rem 1rem;;
-
-}// .white-box
-
 </style>

@@ -265,23 +265,35 @@ onBeforeUnmount(() => {
 
 // Responsive Contact Grid
 .contact-grid {
+
+	// box settings
+	width: 100%;
+
+	// layout
 	display: grid;
 	grid-template-columns: max-content 1fr;
 	gap: 1rem 2rem;
 	align-items: baseline;
+
+	// text settings
 	text-align: left;
-	width: 100%;
 	color: var(--color-text);
 
+	// labels for items in grid
 	.label {
 		font-weight: bold;
 		text-align: right;
 	}
 
+	// content
 	.value {
 		text-align: left;
-		word-break: break-word; // Prevent overflow
-		min-width: 0; // Allow flex/grid item to shrink below content size
+
+		// Prevent overflow
+		word-break: break-word;
+
+		// Allow flex/grid item to shrink below content size
+		min-width: 0;
 	}
 
 	// Stack columns on small screens
@@ -302,8 +314,9 @@ onBeforeUnmount(() => {
 		.value {
 			margin-bottom: 0.5rem;
 		}
-	}
-}
+
+	}// @media (max-width: 550px)
+}// .contact-grid
 
 // list of social media icons
 .icon-list {

@@ -78,6 +78,12 @@ onBeforeUnmount(() => {
 			<!-- main resume border container -->
 			<div class="resumeContainer">
 
+				<a href="/assets/Resume.Greg.Miller.pdf" target="_blank">
+					<div class="dl-pdf" align="center">
+						<div class="icon"></div>
+					</div>
+				</a>
+
 				<!-- header area for resume -->
 				<div class="resumeHeader" align="center">
 
@@ -412,6 +418,38 @@ onBeforeUnmount(() => {
 			// border: 1px solid #CCC;
 			background: #FFF;
 			border-radius: 3px !important;
+
+			// dl button for getting pdf
+			.dl-pdf {
+
+				// position
+				position: absolute;
+				top: .1rem;
+				left: .1rem;
+				z-index: 9001;
+
+				// look clickable
+				cursor: pointer;
+
+				// box styles
+				background: rgba(255, 255, 255, 0.8);
+				border-radius: 1rem;
+				padding: .5rem;
+
+				.icon {
+
+					// border: 1px solid red;
+					width: 1.0rem;
+					height: 1.0rem;
+					background: url('/img/dl.png') no-repeat;
+					background-size: cover;
+
+					opacity: 0.7;
+					margin-bottom: .2rem;
+
+				}// .icon
+
+			}// .dl-pdf
 
 			// styles for resume header area
 			.resumeHeader {

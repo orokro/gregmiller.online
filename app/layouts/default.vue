@@ -202,7 +202,7 @@ body {
 	z-index: 1; /* above canvas */
 	overflow-x: clip; /* modern overflow clamp */
 
-.app-main {
+	.app-main {
 
         position: relative;
         width: 100%;
@@ -274,58 +274,79 @@ body {
 /* reusable per-page styling */
 .static-page {
 
+	// box settings
     padding: 4rem;
+	min-height: 100vh;
+
+	// text settings
     text-align: center;
     font-family: sans-serif;
 
-    min-height: 100vh;
 
+	// pages that use smaller max width can add the "smaller" class for a tighter clamp
 	&.smaller {
 		max-width: clamp(22rem, 92vw, 60rem);
 	}
 
     h1 {
+
+		// box settings
         padding-top: 15px;
         margin-bottom: 15px;
+
+		// text settings
         font-family: "Alumni Sans Pinstripe", sans-serif;
         font-weight: 400;
         text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor;
         letter-spacing: 1px;
         color: var(--content-header-text-color);
+
         span {
+
+			// box settings
 			display: inline-block;
 			padding: 0em 1em;
 			background: var(--content-header-bg-color);
 			border-radius: 40px;
+
+			// text settings
 			font-weight: 400;
 			white-space: nowrap;
 
 			/* backdrop blur */
 			backdrop-filter: blur(var(--content-box-bg-blur, 10px));
-        }
-	}
+
+		}// span
+
+	}// h1
 
     h3 {
         margin-bottom: 2rem;
         color: var(--content-header-text-color);
-    }
+
+    }// h3
 
     .white-box {
+
+		// box settings
         background: var(--content-box-bg-color);
         border-radius: 3px;
-        padding: 1rem;
+        padding: 2rem 1rem;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
         /* backdrop blur */
         backdrop-filter: blur(var(--content-box-bg-blur, 10px));
 
         &.text {
+
+            // text settings
             text-align: left !important;
             color: var(--color-text);
             font-size: 16px;
             font-family: "Quicksand", sans-serif;
             font-optical-sizing: auto;
-        }
+        }// .text
+
     }/* .white-box */
 
 	.grid {
@@ -334,7 +355,7 @@ body {
 		gap: 1rem 1rem;
 		padding-right: 0px;
 		justify-content: center;
-	}
+	}// .grid
 
 }/* .static-page */
 
