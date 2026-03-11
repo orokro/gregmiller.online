@@ -103,7 +103,7 @@ onMounted(() => {
 </template>
 <style lang="scss">
 
-// variable for page border radius
+/* variable for page border radius */
 :root {
 	--border-radius: 55px;
 }
@@ -202,130 +202,118 @@ body {
 	z-index: 1; /* above canvas */
 	overflow-x: clip; /* modern overflow clamp */
 
-	.app-main {
+.app-main {
 
-		// border: 1px solid red;
+        position: relative;
+        width: 100%;
+        min-width: 0;
+        padding: 2rem 1rem;
 
-		position: relative;
-		width: 100%;
-		min-width: 0;
-		padding: 2rem 1rem;
+        /* hard clamp overflow sources */
+        overflow-x: hidden;
 
-		/* hard clamp overflow sources */
-		overflow-x: hidden;
+        /* desktop: reserve space for the pinned sidebar */
+        @media (min-width: 900px) {
+            padding-left: calc(var(--sidebar-w) + 1rem);
+            padding-right: 2rem;
+        }
 
-		/* desktop: reserve space for the pinned sidebar */
-		@media (min-width: 900px) {
-			padding-left: calc(var(--sidebar-w) + 1rem);
-			padding-right: 2rem;
-		}
+        .main-inner {
 
-		.main-inner {
+            width: 100%;
+            min-width: 0;
+            margin: 0 auto;
 
-			// border: 1px solid green;
+            /* Responsive reading column without "mobile breakpoints":
+               - grows with viewport (vw)
+               - caps at a comfortable max on desktop
+               - stays near full width on mobile
+            */
+            max-width: clamp(22rem, 92vw, 60rem);
 
-			width: 100%;
-			min-width: 0;
-			margin: 0 auto;
+            /* Clamp common overflow culprits */
+            img,
+            video,
+            svg,
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
 
-			/* Responsive reading column without "mobile breakpoints":
-			   - grows with viewport (vw)
-			   - caps at a comfortable max on desktop
-			   - stays near full width on mobile
-			*/
-			max-width: clamp(22rem, 92vw, 60rem);
+            pre,
+            code {
+                max-width: 100%;
+            }
 
-			/* Clamp common overflow culprits */
-			img,
-			video,
-			svg,
-			canvas {
-				max-width: 100%;
-				height: auto;
-			}
+            pre {
+                overflow-x: auto;
+            }
 
-			pre,
-			code {
-				max-width: 100%;
-			}
+        }/* .main-inner */
 
-			pre {
-				overflow-x: auto;
-			}
+    }/* .app-main */
 
-		}// .main-inner
-
-	}// .app-main
-
-}// .app-shell
+}/* .app-shell */
 
 .app-shell {
-	// min-height: 100vh;
-	overflow: hidden; /* not clip */
+    /* min-height: 100vh; */
+    overflow: hidden; /* not clip */
 }
 
 .app-shell .app-main {
-	overflow: visible; /* not hidden on y */
+    overflow: visible; /* not hidden on y */
 }
 
 
-// reusable per-page styling
+/* reusable per-page styling */
 .static-page {
 
-	padding: 4rem;
-	text-align: center;
-	font-family: sans-serif;
+    padding: 4rem;
+    text-align: center;
+    font-family: sans-serif;
 
-	min-height: 100vh;
-	// for debug
-	// border: 1px solid red;
+    min-height: 100vh;
 
-	h1 {
-		padding-top: 15px;
-		margin-bottom: 15px;
-		font-family: "Alumni Sans Pinstripe", sans-serif;
-		font-weight: bolder;
-		letter-spacing: 1px;
-		color: var(--content-header-text-color);
-		span {
-			display: inline-block;
-			padding: 0em 1em;
-			background: var(--content-header-bg-color);
-			border-radius: 40px;
+    h1 {
+        padding-top: 15px;
+        margin-bottom: 15px;
+        font-family: "Alumni Sans Pinstripe", sans-serif;
+        font-weight: bolder;
+        letter-spacing: 1px;
+        color: var(--content-header-text-color);
+        span {
+            display: inline-block;
+            padding: 0em 1em;
+            background: var(--content-header-bg-color);
+            border-radius: 40px;
 
-			// inset border
-			// box-shadow: inset 0 0 0 1px #ddd;
+            /* backdrop blur */
+            backdrop-filter: blur(var(--content-box-bg-blur, 10px));
+        }
+    }
 
-			// backdrop blur
-		backdrop-filter: blur(var(--content-box-bg-blur, 10px));
-		}
-	}
+    h3 {
+        margin-bottom: 2rem;
+        color: var(--content-header-text-color);
+    }
 
-	h3 {
-		margin-bottom: 2rem;
-		color: var(--content-header-text-color);
-	}
+    .white-box {
+        background: var(--content-box-bg-color);
+        border-radius: 3px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
-	.white-box {
-		background: var(--content-box-bg-color);
-		border-radius: 3px;
-		padding: 1rem;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        /* backdrop blur */
+        backdrop-filter: blur(var(--content-box-bg-blur, 10px));
 
-		// backdrop blur
-		backdrop-filter: blur(var(--content-box-bg-blur, 10px));
-
-		// opacity: 0;
-		// pointer-events: none;
-
-		&.text {
-			text-align: left !important;
-			color: var(--color-text);
-			font-size: 16px;
-			font-family: "Quicksand", sans-serif;
-  			font-optical-sizing: auto;
-		}
-	}// .white-box
+        &.text {
+            text-align: left !important;
+            color: var(--color-text);
+            font-size: 16px;
+            font-family: "Quicksand", sans-serif;
+            font-optical-sizing: auto;
+        }
+    }/* .white-box */
 
 	.grid {
 		display: grid;
@@ -335,6 +323,6 @@ body {
 		justify-content: center;
 	}
 
-}// .static-page
+}/* .static-page */
 
 </style>
