@@ -146,6 +146,7 @@ body {
 	overflow-x: hidden; /* Prevent horizontal scroll from 3D canvas if any */
 	font-family: "Alumni Sans Pinstripe", sans-serif;
 	background: var(--color-primary);
+	background: #DDD;
 }
 
 .app-root {
@@ -162,14 +163,18 @@ body {
 }
 
 .static-bg-layer {
-	position: fixed;
+	position: absolute;
 	top: 0;
 	left: 0;
 	width: 100%;
 	height: 100%;
 	z-index: -2;
-	background: var(--fallback-bg);
+	background-color: var(--fallback-bg);
+	background-image: var(--fallback-bg-image);
+	background-size: 1000px 1000px;
+	background-repeat: repeat;
 	transition: background 0.5s ease;
+	opacity: 0.5;
 }
 
 .webgl-canvas {

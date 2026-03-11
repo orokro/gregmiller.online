@@ -33,6 +33,7 @@ function getThemeColorsDefaults() {
 		hoverColor: '#FFFFFF',
 		scrollColor:  '#FFFFFF',
 		fallbackBg: '#E1EEF5',
+		fallbackBgImage: 'url(/textures/bg_graph_paper_ALBEDO.png)',
 	}
 }
 
@@ -71,6 +72,7 @@ const themeCSSVars = computed(() => {
 		--color-hover: ${themeColors.value.hoverColor};
 		--color-scroll: ${themeColors.value.scrollColor};
 		--fallback-bg: ${themeColors.value.fallbackBg};
+		--fallback-bg-image: ${themeColors.value.fallbackBgImage};
 		--content-frame-shadow: ${themeStyles.value.contentFrameShadow};
 		--content-header-text-color: ${themeStyles.value.contentHeaderTextColor};
 		--content-header-bg-color: ${themeStyles.value.contentHeaderBGColor};
