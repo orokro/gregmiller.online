@@ -182,6 +182,8 @@ const displayTitle = computed(() => {
 				font-size: 40px;
 				color: var(--color-secondary);
 				font-family: "Alumni Sans Pinstripe", sans-serif;
+				font-weight: 400;
+				text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor;
 				line-height: 1;
 			}// .arrow
 
@@ -199,7 +201,8 @@ const displayTitle = computed(() => {
 
 		// text styles
 		font-family: "Alumni Sans Pinstripe", sans-serif;
-		font-weight: 700;
+		font-weight: 400;
+		text-shadow: 0.3px 0 0 currentColor, -0.3px 0 0 currentColor;
 		font-size: 22px;
 		line-height: 1.1;
 		color: var(--color-secondary);

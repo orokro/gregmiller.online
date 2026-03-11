@@ -58,7 +58,7 @@ onMounted(() => {
 
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital,wght@0,400;1,400&family=Alumni+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
 
@@ -278,19 +278,21 @@ body {
         padding-top: 15px;
         margin-bottom: 15px;
         font-family: "Alumni Sans Pinstripe", sans-serif;
-        font-weight: bolder;
+        font-weight: 400;
+        text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor;
         letter-spacing: 1px;
         color: var(--content-header-text-color);
         span {
-            display: inline-block;
-            padding: 0em 1em;
-            background: var(--content-header-bg-color);
-            border-radius: 40px;
+        	display: inline-block;
+        	padding: 0em 1em;
+        	background: var(--content-header-bg-color);
+        	border-radius: 40px;
+        	font-weight: 400;
+        	white-space: nowrap;
 
-            /* backdrop blur */
-            backdrop-filter: blur(var(--content-box-bg-blur, 10px));
-        }
-    }
+        	/* backdrop blur */
+        	backdrop-filter: blur(var(--content-box-bg-blur, 10px));
+        }    }
 
     h3 {
         margin-bottom: 2rem;

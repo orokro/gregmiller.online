@@ -119,20 +119,26 @@ function close() {
 		// the text for the link
 		.text {
 
-			// border: 1px solid red;
-
-			// right of the icon, with some padding
+			// positioned absolutely to fill the row to the right of the icon
 			position: absolute;
-			inset: 0px 0px 0px 60px;
+			left: 60px;
+			right: 0;
+			top: 0;
+			bottom: 0;
 
-			// spacing
-			padding-top: 6px;
+			// center content
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
 
 			// font settings
+			font-family: "Alumni Sans Pinstripe", sans-serif;
 			font-size: 26px;
-			font-weight: bold;
+			font-weight: 400;
+			text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor;
 			color: var(--color-primary);
 			letter-spacing: 1px;
+			white-space: nowrap;
 
 			// animate color on hover
 			transition: color 0.3s ease;

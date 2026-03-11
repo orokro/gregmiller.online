@@ -256,10 +256,16 @@ const sideBarWidth = computed(() => {
 		.brand {
 
 			// text styling
+			font-family: "Alumni Sans Pinstripe", sans-serif;
 			font-size: 2.7rem;
-			font-weight: bold;
+			font-weight: 400;
+			text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor;
 			text-decoration: none;
 			color: #FFFFFF;
+			white-space: nowrap;
+			display: block;
+			text-align: center;
+
 
 		}// .brand
 

@@ -108,7 +108,8 @@ const seeAllLink = computed(() => {
 		.category-title {
 			font-family: "Alumni Sans Pinstripe", sans-serif;
 			font-size: 32px;
-			font-weight: 700;
+			font-weight: 400;
+			text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor;
 			margin-bottom: 15px;
 			color: var(--color-text, #333);
 			border-bottom: 1px solid rgba(0,0,0,0.1);
