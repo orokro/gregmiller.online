@@ -30,7 +30,6 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 			<a href="/assets/Resume.Greg.Miller.pdf" target="_blank">
 				<div class="dl-pdf" align="center">
 					<div class="icon"></div>
-					PDF
 				</div>
 			</a>
 			<Resume />
@@ -395,8 +394,8 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
 		// position
 		position: absolute;
-		top: 0px;
-		right: 10px;
+		top: 10px;
+		left: 10px;
 
 		// text styles
 		font-size: 12px;

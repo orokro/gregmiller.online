@@ -128,7 +128,7 @@ onUnmounted(() => {
 
 	&.no-3d {
 		border-style: solid;
-		border-width: 10px 10px 32px 10px;
+		border-width: 0px 10px 32px 10px;
 		border-image: url(/img/2d_frame.png) 150 30 42 30 fill / 150px 30px 42px 30px;
 		background: transparent;
 	}

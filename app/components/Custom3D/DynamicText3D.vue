@@ -85,9 +85,6 @@ const fallbackStyle = computed(() => {
 		backgroundSize: props.fallbackScale,
 		backgroundPosition: 'center',
 		backgroundRepeat: 'no-repeat',
-		transform: 'translateY(30%)', // Adjust as needed to visually align with 3D version
-		border: 'none',
-		backgroundColor: 'transparent',
 	};
 });
 
@@ -221,13 +218,18 @@ function tick(root, LockManager, time) {
 	<ContainerCustom3D
 		ref="el"
 		class="dynamic-text-container"
-		:class="{ 'has-fallback': (!has3DCapability || !el?.is3DReady) && fallbackImage }"
-		:style="fallbackStyle"
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
 		:tickFn="tick"
 	>
+		<!-- dedicated fallback image layer that won't affect container measurements -->
+		<div 
+			v-if="(!has3DCapability || !el?.is3DReady) && fallbackImage" 
+			class="fallback-image-layer" 
+			:style="fallbackStyle"
+		></div>
+
 		<slot />
 	</ContainerCustom3D>
 
@@ -237,6 +239,15 @@ function tick(root, LockManager, time) {
 	.dynamic-text-container {
 
 		height: 150px;
+		position: relative;
+
+		.fallback-image-layer {
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			transform: translateY(30%);
+			z-index: 0;
+		}
 
 	}// .dynamic-text-container
 
