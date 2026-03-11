@@ -44,7 +44,9 @@ console.log('Homepage content:', homeContent.value);
 <template>
 
 	<div align="center">
-		<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" />
+		<div class="header-3d-wrapper">
+			<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" />
+		</div>
 	</div>
 	<br/><br/>
 

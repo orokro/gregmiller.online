@@ -19,7 +19,7 @@ import CategorySampler from '../components/CategorySampler.vue';
 const { data: homeContent } = await useFetch('/api/posts/homepage', {
     method: 'POST',
     body: {
-		count: 4,
+		count: 5,
         categories: [
             "Urban Ex",
             "Graffiti Yards",
@@ -40,12 +40,12 @@ homeContent.value["Posts"] = homeContent.value.any;
 // our list of categories in the order we want to display them. Any category not in this list will be ignored, and any category in the list that doesn't exist in the data will simply show an empty section.
 const orderedCategories = [
 	"Posts",
-	"Urban Ex",
-	"Graffiti Yards",
+	"Code Projects",
 	"3D Modeling",
 	"Art",
 	"Other Projects",
-	"Code Projects",
+	"Urban Ex",
+	"Graffiti Yards",
 	"Favorite Musicians",
 	"My Music",
 	"Technology Reviews"
@@ -69,11 +69,13 @@ const categoryLinks = {
 <template>
 
 	<div align="center">
-		<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
+		<div class="header-3d-wrapper">
+			<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
+		</div>
 	</div>
 	<br/><br/>
 
-	<div class="static-page">
+	<div class="static-page home-size">
 
 		<div
 			v-for="cat in orderedCategories"
@@ -108,6 +110,10 @@ const categoryLinks = {
 	margin: 0 auto;
 	padding: 2rem;
 	font-family: "Alumni Sans Pinstripe", sans-serif;
+}
+
+.home-size {
+	max-width: clamp(22rem, 92vw, 69rem);
 }
 
 </style>

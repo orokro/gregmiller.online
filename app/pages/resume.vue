@@ -20,7 +20,9 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 <template>
 
 	<div align="center">
-		<DynamicText3D text="Resume" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_RESUME.png" />
+		<div class="header-3d-wrapper">
+			<DynamicText3D text="Resume" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_RESUME.png" />
+		</div>
 	</div>
 
 	<div class="static-page">

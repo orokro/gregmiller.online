@@ -83,7 +83,7 @@ onMounted(() => {
 				name="app-cover-bg"
 			>
 				<main class="app-main">
-					<div class="main-inner">
+					<div class="main-inner" align="center">
 						<NuxtPage />
 					</div>
 				</main>
@@ -229,7 +229,8 @@ body {
                - caps at a comfortable max on desktop
                - stays near full width on mobile
             */
-            max-width: clamp(22rem, 92vw, 60rem);
+            // max-width: clamp(22rem, 92vw, 60rem);
+			max-width: clamp(22rem, 92vw, 90rem);
 
             /* Clamp common overflow culprits */
             img,
@@ -265,6 +266,11 @@ body {
 }
 
 
+.header-3d-wrapper {
+	// border: 1px solid red;
+	max-width: clamp(22rem, 92vw, 60rem);
+}
+
 /* reusable per-page styling */
 .static-page {
 
@@ -273,6 +279,10 @@ body {
     font-family: sans-serif;
 
     min-height: 100vh;
+
+	&.smaller {
+		max-width: clamp(22rem, 92vw, 60rem);
+	}
 
     h1 {
         padding-top: 15px;
@@ -283,16 +293,17 @@ body {
         letter-spacing: 1px;
         color: var(--content-header-text-color);
         span {
-        	display: inline-block;
-        	padding: 0em 1em;
-        	background: var(--content-header-bg-color);
-        	border-radius: 40px;
-        	font-weight: 400;
-        	white-space: nowrap;
+			display: inline-block;
+			padding: 0em 1em;
+			background: var(--content-header-bg-color);
+			border-radius: 40px;
+			font-weight: 400;
+			white-space: nowrap;
 
-        	/* backdrop blur */
-        	backdrop-filter: blur(var(--content-box-bg-blur, 10px));
-        }    }
+			/* backdrop blur */
+			backdrop-filter: blur(var(--content-box-bg-blur, 10px));
+        }
+	}
 
     h3 {
         margin-bottom: 2rem;
