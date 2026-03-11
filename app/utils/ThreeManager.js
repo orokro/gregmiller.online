@@ -491,7 +491,10 @@ export class ThreeManager {
 		});
 
 		this.registeredElements.forEach((data) => {
-			this.buildRegisteredElement(data);
+			const signalReady = (isReady = true) => {
+				data.ready = isReady;
+			};
+			this.buildRegisteredElement(data, false, signalReady);
 		});
 
 		// make sure everything is positioned correctly for the new theme
@@ -1000,7 +1003,11 @@ export class ThreeManager {
 
 		// make sure the new element is positioned correctly in the first place
 		this.updateElementPosition(id);
-		this.buildRegisteredElement(data);
+		
+		const signalReady = (isReady = true) => {
+			data.ready = isReady;
+		};
+		this.buildRegisteredElement(data, true, signalReady);
 
 		// make sure to re-render now that we have a new element
 		this.requestRender();
@@ -1229,9 +1236,10 @@ export class ThreeManager {
 	 * Builds a registered element by calling the appropriate theme build function based on the element type.
 	 *
 	 * @param {Object} data - the data about registered object
-	 * @param {boolean} rebuildCustom - whether to rebuild custom boxes (if false, skips straight to default theme build for custom boxes, which is useful for theme switches where we want to preserve custom builds but re-apply theming)
+	 * @param {boolean} rebuildCustom - whether to rebuild custom boxes
+	 * @param {Function} setReady - optional callback to signal readiness
 	 */
-	buildRegisteredElement(data, rebuildCustom = true) {
+	buildRegisteredElement(data, rebuildCustom = true, setReady = null) {
 
 		if (!data)
 			return;
@@ -1267,9 +1275,15 @@ export class ThreeManager {
 		if (data.type === 'box') {
 
 			if (this.currentTheme && typeof this.currentTheme.buildBox === 'function') {
-				this.currentTheme.buildBox(this, data);
+				const result = this.currentTheme.buildBox(this, data);
+				// If theme returns false, it means it's not ready to build yet
+				if (result !== false) {
+					data.ready = true;
+				}
+			} else {
+				// No theme logic, consider ready
+				data.ready = true;
 			}
-			data.ready = true;
 			return;
 		}
 
@@ -1280,8 +1294,10 @@ export class ThreeManager {
 			const defaultBuild = () => {
 
 				if (this.currentTheme && typeof this.currentTheme.buildCustomBox === 'function') {
-					this.currentTheme.buildCustomBox(this, data);
+					const result = this.currentTheme.buildCustomBox(this, data);
+					return result;
 				}
+				return true; // No theme logic
 			};
 
 			// Provide full access to group + empties so custom components can pick corners, etc.
@@ -1290,16 +1306,19 @@ export class ThreeManager {
 				empties: data.empties,
 			};
 
-			const setReady = (isReady = true) => {
+			const signalReady = (isReady = true) => {
 				data.ready = isReady;
+				if (setReady) setReady(isReady);
 			};
 
 			// If a custom buildFn exists, it replaces default theming unless it calls defaultBuild()
 			if (data.options && typeof data.options.buildFn === 'function') {
-				data.options.buildFn(defaultBuild, customRoot, this, rebuildCustom, setReady);
+				data.options.buildFn(defaultBuild, customRoot, this, rebuildCustom, signalReady);
 			} else {
-				defaultBuild();
-				data.ready = true;
+				const result = defaultBuild();
+				if (result !== false) {
+					signalReady(true);
+				}
 			}
 		}
 	}

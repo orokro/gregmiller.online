@@ -397,8 +397,9 @@ export class GlassTheme {
 	 * @param {Object} data - info about the box we're building from the ThreeManagers registered element system
 	 */
 	buildBox(manager, data) {
-		if (!this.isReady) return;
+		if (!this.isReady) return false;
 		this._buildGlassSlices(manager, data);
+		return true;
 	}
 
 
@@ -422,8 +423,9 @@ export class GlassTheme {
 	 * @param {Object} data - info about the custom box we're building from the ThreeManagers registered element system
 	 */
 	buildCustomBox(manager, data) {
-		if (!this.isReady) return;
+		if (!this.isReady) return false;
 		this._buildGlassSlices(manager, data);
+		return true;
 	}
 
 

@@ -427,25 +427,25 @@ export class KoiPondTheme {
 	 *
 	 * @param {ThreeManager} manager - reference to our ThreeManager instance
 	 * @param {Object} data - info about the box we're building from the ThreeManagers registered element system
-	 */
-	buildBox(manager, data) {
+	 buildBox(manager, data) {
 
-		// gtfo if not ready yet
-		if (!this.isReady)
-			return;
+	 	// gtfo if not ready yet
+	 	if (!this.isReady)
+	 		return false;
 
-		if(!data.lilyGroup){
-			data.lilyGroup = new LilyGroup(manager, this.models);
-			data.lilyGroup.buildLilyGroup(data);
-		}else
-		{
-			data.lilyGroup.updateLilyGroup(data);
-		}
+	 	if(!data.lilyGroup){
+	 		data.lilyGroup = new LilyGroup(manager, this.models);
+	 		data.lilyGroup.buildLilyGroup(data);
+	 	}else
+	 	{
+	 		data.lilyGroup.updateLilyGroup(data);
+	 	}
 
-		// ensure it's added to the scene (in case it was removed by manager cleanup during rebuild)
-		data.empties.center.add(data.lilyGroup);
+	 	// ensure it's added to the scene (in case it was removed by manager cleanup during rebuild)
+	 	data.empties.center.add(data.lilyGroup);
 
-		// // Add a wireframe cube to the center
+	 	return true;
+	 }
 		// // We'll scale it in updateBox
 		// const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.boxMaterial);
 		// cube.name = "debug_cube";
@@ -505,10 +505,16 @@ export class KoiPondTheme {
 	 */
 	buildCustomBox(manager, data) {
 
+		// gtfo if not ready yet
+		if (!this.isReady)
+			return false;
+
 		// A simple cyan wireframe outline (no corner cubes)
 		const lines = new THREE.LineSegments(this.customEdgesGeometry, this.customLineMaterial);
 		lines.name = "debug_custom_outline";
 		data.empties.center.add(lines);
+
+		return true;
 	}
 
 
