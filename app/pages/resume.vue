@@ -16,6 +16,10 @@ import Resume from '../components/Resume.vue';
 import SkillIcon from '../components/SkillIcon.vue';
 import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 
+// composables
+import { useDeviceContext } from '../composables/useDeviceContext';
+const { isMobile } = useDeviceContext();
+
 </script>
 <template>
 
@@ -47,7 +51,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="0"
 						image-y="0"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://vuejs.org/"
 						text="I Love, love, love VueJS. I used it extensively at Nike, and all my personal WebDev projects are built with VueJS. I have a lot of experience with it, and it's my go-to framework for WebDev."
 						title="VUE"
@@ -57,7 +61,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="128"
 						image-y="0"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://nuxt.com/"
 						text="I love VueJS, so Nuxt is a natural extension of that. This site, gregmiller.online / gmiller.net are built in Nuxt."
 						title="Nuxt"
@@ -67,7 +71,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="256"
 						image-y="0"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.electronjs.org/"
 						text="VueJS + Electron is my goto combo for desktop apps. I have used it in a professional capacity at Nike, and have built several personal projects with it as well. I have a lot of experience with it, and really enjoy it."
 						title="ElectronJS"
@@ -77,7 +81,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="384"
 						image-y="0"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://threejs.org/"
 						text="I love ThreeJS, and have been using it professionally at AT&amp;T and Nike, and personally for a long time. I have a lot of experience with it, and really enjoy it."
 						title="ThreeJS"
@@ -87,7 +91,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="512"
 						image-y="0"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://nodejs.org/en"
 						text="I have used NodeJS for all of my professional WebDev work since 2016, prior to that I used LAMP stack."
 						title="NodeJS"
@@ -97,7 +101,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="640"
 						image-y="0"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://en.wikipedia.org/wiki/JavaScript"
 						text="While I enjoy C#, I haven't done much with TypeScript, that said I enjoy the vanilla JavaScript experience."
 						title="JavaScript"
@@ -107,7 +111,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="0"
 						image-y="128"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://en.wikipedia.org/wiki/HTML"
 						text="Ah yes, HTML5, Macromedia Flash is almost fully replaced now ;)"
 						title="HTML_5"
@@ -117,7 +121,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="128"
 						image-y="128"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://en.wikipedia.org/wiki/CSS"
 						text="CSS Only getting better &amp; Better. Prefer SASS syntax, but now that it's supported natively in new browsers, I'm happy to use it as well."
 						title="CSS_3"
@@ -127,7 +131,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="256"
 						image-y="128"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://react.dev/"
 						text="My second choice after Vue, I have used React in a professional capacity at AT&amp;T (With Next.js), and to a lesser extent at Nike, but I prefer VueJS and Nuxt for WebDev work."
 						title="React"
@@ -137,7 +141,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="384"
 						image-y="128"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.mongodb.com/"
 						text="My first Document database, which is now my go-to for WebDev work. I have used it in a professional capacity at AT&amp;T and Nike, as well as for personal projects, and I really enjoy it."
 						title="MongoDB"
@@ -147,7 +151,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="512"
 						image-y="128"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.json.org/json-en.html"
 						text="Lol, I guess this is a tech Icon I should include."
 						title="JSON"
@@ -157,7 +161,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="640"
 						image-y="128"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://unity.com/"
 						text="I love working in Unity, and made several games and VR experiences professionally, including at YouVisit, Unified Field, and AT&amp;T. However, I am out of practise and unfamiliar with some of the newer DOTS/ECS stuff, but I can hop back in and reactivate those neurons when needed."
 						title="Unity"
@@ -167,7 +171,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="0"
 						image-y="256"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://dotnet.microsoft.com/en-us/languages/csharp"
 						text="My favorite typed language, and pairs perfectly with Unity. Some .NET experience as well, but I prefer to use C# in Unity, and NodeJS for WebDev work. One day I wish to learn GODOT with C#, but for now I have a lot of experience with C# in Unity, and I really enjoy it."
 						title="CSharp"
@@ -177,7 +181,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="128"
 						image-y="256"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://en.wikipedia.org/wiki/C_(programming_language)"
 						text="From time to time I enjoy programming roms for retro consoles in C. Not rom-hacks, but scratch written roms for GameBoy/Color, GameGear, Master System, Sega Genesis, and others. Working on learning SNES development when I find time."
 						title="C"
@@ -187,7 +191,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="256"
 						image-y="256"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://en.wikipedia.org/wiki/C%2B%2B"
 						text="While not my favorite langauge, I am looking forward to getting better at Unreal someday, and will probably prefer C++ oover blueprints, so I want to get more experience with it."
 						title="Cpp"
@@ -197,7 +201,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="384"
 						image-y="256"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://expressjs.com/"
 						text="I have used expressJS in a professional capacity at AT&amp;T, and have built several personal projects with it as well."
 						title="ExpressJS"
@@ -207,7 +211,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="512"
 						image-y="256"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://sass-lang.com/"
 						text="While now mostly deprecated due to modern / native CSS support, I have a lot of experience with SASS and still prefer it for larger projects, but I'm happy to use native CSS for smaller projects as well."
 						title="SASS"
@@ -217,7 +221,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="640"
 						image-y="256"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.python.org/"
 						text="While not my go-to langauge in any context, I enjoy using it inside Blender, and for quick scripts over a shell script."
 						title="Python"
@@ -227,7 +231,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="0"
 						image-y="384"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.php.net/"
 						text="I started my WebDev career with a LAMP stack, and have used PHP in a professional capacity at YouVisit, but I prefer NodeJS for WebDev work, and haven't used PHP in a while, but I can hop back in and reactivate those neurons when needed."
 						title="PHP"
@@ -237,7 +241,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="128"
 						image-y="384"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.mysql.com/"
 						text="While I appreciate relational databases, I prefer the flexibility of a document database like MongoDB for WebDev work, but I have used MySQL in a professional capacity at YouVisit, and I can hop back in and reactivate those neurons when needed."
 						title="MySQL"
@@ -247,7 +251,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="256"
 						image-y="384"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://jquery.com/"
 						text="I STILL think jQuery has a better API/syntax than vanilla JavaScript, and can happily use jQuery, but the reality is that it's pretty dated and useless for modern WebDev work, so I haven't used it in a while, but I can hop back in and reactivate those neurons when needed."
 						title="jQuery"
@@ -257,7 +261,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="384"
 						image-y="384"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.arduino.cc/"
 						text="I made a custom Aruino based arcade controller professionally for Unified Field, and is currently controlling an experience at the New York Aquarium. I also have done some really fun personal projects with Arduino, and I really enjoy working with it, but I haven't done much with it in a while, so I can hop back in and reactivate those neurons when needed."
 						title="Arduino"
@@ -267,7 +271,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="512"
 						image-y="384"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://httpd.apache.org/"
 						text="While I need too hop on and learn Nginx or others, I am hosting all my personal sites on a Linode running Apache, with both LAMP and proxy setup ups for NodeJS apps."
 						title="Apache"
@@ -277,7 +281,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="640"
 						image-y="384"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.java.com/en/"
 						text="I used to really like the Promise of Java, and while I've done very mimal professional work with it, these days I prefer C# or just JavaScript for most of my programming work, but I can hop back in and reactivate those neurons when needed."
 						title="Java"
@@ -302,7 +306,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="0"
 						image-y="512"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.blender.org/"
 						text="Been using Blender since 2000. Regularly use it, and used it in a professional capacity at Google, YouVisit, Unified Field, AT&amp;T, and Nike."
 						title="Blender"
@@ -312,7 +316,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="128"
 						image-y="512"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.adobe.com/products/photoshop.html"
 						text="Been using Photoshop since 2000, used in a professional capacity at every Job I've had since then, including Google, YouVisit, Unified Field, AT&amp;T, and Nike."
 						title="Photoshop"
@@ -322,7 +326,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="256"
 						image-y="512"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.adobe.com/products/illustrator.html"
 						text="Have only casually used Illustrator in a professional setting, but do have a lot of personal experience."
 						title="Illustrator"
@@ -332,7 +336,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="384"
 						image-y="512"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.adobe.com/products/premiere.html"
 						text="Have used Premeire in a semi professional capacity, making intro videos or tutorial help videos, at YouVisit and Nike."
 						title="Premeire"
@@ -342,7 +346,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="512"
 						image-y="512"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.blackmagicdesign.com/products/davinciresolve"
 						text="Recently switched away from Premeire to Resolve, really enjoying it and building lots of experience with it."
 						title="Resolve"
@@ -352,7 +356,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="640"
 						image-y="512"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://procreate.com/"
 						text="I have only used Procreate on my iPad Pro for personal projects, but I have a lot of experience with it and really enjoy it."
 						title="Procreate"
@@ -362,7 +366,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="0"
 						image-y="640"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.autodesk.com/products/maya/overview"
 						text="I used MAYA Proofessionally at Google, but I am rusty with it - though I can always hop back in and reactivate those neurons when needed."
 						title="MAYA"
@@ -372,7 +376,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 						image-x="128"
 						image-y="640"
 						source-size="128"
-						size="24"
+						:size="isMobile ? 64 : 96"
 						link="https://www.maxon.net/en/zbrush"
 						text="I used ZBrush professionally at Google, but I am rusty with it - though I can always hop back in and reactivate those neurons when needed."
 						title="ZBrush"
@@ -395,19 +399,29 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 		// layout
 		display: flex;
 		flex-wrap: wrap;
-		gap: 30px;
+		gap: 15px;
 		align-content: flex-start;
 		justify-content: center;
+
+        @media (min-width: 600px) {
+            gap: 30px;
+        }
 	}// .flex-grid
 
 	.flex-grid > * {
 
 		/* force consistent cell size */
-		flex: 0 0 100px;   /* fixed column width */
-		height: 100px;     /* fixed row height */
+		flex: 0 0 70px;
+		height: 70px;
 		display: grid;
 		place-items: center;
 
+        @media (min-width: 600px) {
+            flex: 0 0 110px;
+            height: 110px;
+        }
+
 	}// .flex-grid > *
+
 
 </style>

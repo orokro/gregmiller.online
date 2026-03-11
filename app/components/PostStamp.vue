@@ -94,13 +94,20 @@ const displayTitle = computed(() => {
 
 	display: flex;
 	flex-direction: column;
-	width: 150px; /* Fixed width to match your previous thumb size */
-	gap: 10px;
+
+	// Responsive box settings
+	width: 140px; /* balanced for mobile 2-col */
+	gap: 8px;
 	text-decoration: none;
 	color: inherit;
 	padding-bottom: 5px;
 	border-radius: 4px;
 	background: white;
+
+    @media (min-width: 450px) {
+        width: 150px;
+        gap: 10px;
+    }
 
 	// hover animation
 	transition: transform 0.3s, box-shadow 0.3s;
@@ -111,7 +118,7 @@ const displayTitle = computed(() => {
 
 		.stamp-thumb {
 			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-			transform: scale(1.2) translate(0px, -10px);
+			transform: scale(1.08) translate(0px, -4px);
 		}
 	}// &:hover
 
@@ -128,8 +135,13 @@ const displayTitle = computed(() => {
 	.stamp-thumb {
 
 		// box styles
-		width: 150px;
-		height: 150px;
+		width: 100%; /* fills postStamp width */
+		height: 140px; /* square by default on mobile */
+
+        @media (min-width: 450px) {
+            height: 150px;
+        }
+
 		border-radius: 4px;
 		background: rgba(0, 0, 0, 0.05);
 		overflow: hidden;
@@ -198,6 +210,10 @@ const displayTitle = computed(() => {
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+
+		// text settings
+		padding: 0px 5px;
+		text-align: center;
 
 		// text styles
 		font-family: "Alumni Sans Pinstripe", sans-serif;

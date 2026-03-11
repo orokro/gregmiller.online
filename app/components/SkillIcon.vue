@@ -92,7 +92,13 @@ const iconStyle = computed(() => {
 <template>
 
 	<!-- main wrapper -->
-	<div class="skill-icon" :style="{ '--size': `${Number(size) || 24}px` }">
+	<div 
+		class="skill-icon" 
+		:style="{ 
+			'--size': `${Number(size)}px`,
+			'--source-size': Number(sourceSize)
+		}"
+	>
 
 		<!-- if link enabled, generate the icon wrapped in an anchor -->
 		<a
@@ -156,14 +162,11 @@ const iconStyle = computed(() => {
 
 			// scale the sprite-tile (sourceSize) to component size
 			display: block;
-			width: 100%;
-			height: 100%;
 			background-color: transparent;
 			image-rendering: auto;
 
-			// the background-position is set in px for source-size.
-			// scale the rendered sprite to fit the component square.
-			transform: scale(calc(var(--size) / 1px / (var(--sourceSize, 32))));
+			// We scale the native-size sprite (defined in iconStyle computed) to match the container --size.
+			transform: scale(calc(var(--size) / 1px / var(--source-size)));
 			transform-origin: top left;
 
 		}// .sprite
@@ -190,8 +193,19 @@ const iconStyle = computed(() => {
 			left: 50%;
 			top: calc(100% + 10px);
 			transform: translateX(-50%) translateY(-4px);
-			min-width: 340px;
-			max-width: 640px;
+
+            // Responsive sizing:
+            // near full screen on mobile, caps at reasonable mins/maxes on desktop
+			width: 86vw;
+			min-width: 0;
+			max-width: 380px;
+
+            @media (min-width: 600px) {
+                width: auto;
+                min-width: 340px;
+                max-width: 640px;
+            }
+
 			z-index: 200;
 
 			padding: 10px 12px;

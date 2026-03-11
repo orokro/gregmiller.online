@@ -8,8 +8,20 @@
 
 // vue
 import { computed } from 'vue';
+import { useDeviceContext } from '~/composables/useDeviceContext';
 
 // components
+import PostStamp from './PostStamp.vue';
+import PostCard from './PostCard.vue';
+
+const { windowWidth } = useDeviceContext();
+
+// Use PostCard on narrow mobile screens (single column mode)
+const useCards = computed(() => {
+	// If the screen is narrow enough that PostStamps would only fit one column,
+	// swap to PostCards for better layout.
+	return windowWidth.value < 350;
+});
 const props = defineProps({
 
 	// The name of the category (e.g. "Urban Ex")
@@ -69,19 +81,34 @@ const seeAllLink = computed(() => {
 			{{ category }}
 		</h3>
 
-		<div class="grid">
+		<div class="grid" :class="{ 'as-cards': useCards }">
 
-			<PostStamp
-				v-for="post in posts"
-				:key="post.slug"
-				:post="post"
-			/>
+            <template v-if="useCards">
+                <PostCard
+                    v-for="post in posts"
+                    :key="post.slug"
+                    :post="post"
+                    :thumb-url="post.featuredImage"
+                />
+                <PostCard
+                    v-if="!disableSeeAll"
+                    :post="{ title: 'See All...', slug: '' }"
+                    :to="seeAllLink"
+                />
+            </template>
+            <template v-else>
+                <PostStamp
+                    v-for="post in posts"
+                    :key="post.slug"
+                    :post="post"
+                />
 
-			<PostStamp
-				v-if="!disableSeeAll"
-				special-label="See All..."
-				:to="seeAllLink"
-			/>
+                <PostStamp
+                    v-if="!disableSeeAll"
+                    special-label="See All..."
+                    :to="seeAllLink"
+                />
+            </template>
 
 		</div>
 
@@ -96,12 +123,20 @@ const seeAllLink = computed(() => {
 		.grid {
 			display: flex;
 			flex-wrap: wrap;
-			gap: 20px;
+			gap: 10px; /* tighter gap for mobile 2-col */
+            justify-content: center;
 
-			/* If you want a strict grid instead of flex-wrap, use this:
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-			*/
+            @media (min-width: 600px) {
+                gap: 20px;
+                justify-content: flex-start;
+            }
+
+            &.as-cards {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                justify-content: flex-start;
+            }
 
 		}// .grid
 

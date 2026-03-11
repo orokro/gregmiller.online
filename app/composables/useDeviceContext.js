@@ -1,5 +1,5 @@
 // app/composables/useDeviceContext.js
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 
 const detectMobile = () => {
 	if (!process.client)
@@ -64,10 +64,14 @@ export const useDeviceContext = () => {
 	// Forced overrides (null = no override)
 	const forcedIsMobile = useState('devicectx_forcedIsMobile', () => null);
 	const forcedHas3D = useState('devicectx_forcedHas3D', () => null);
+	const windowWidth = useState('devicectx_windowWidth', () => process.client ? window.innerWidth : 1200);
 
 	const refresh = () => {
 		detectedIsMobile.value = detectMobile();
 		detectedHas3D.value = probeWebGL();
+        if (process.client) {
+            windowWidth.value = window.innerWidth;
+        }
 
 		// URL Override check (?3d=true or #3d=false etc)
 		if (process.client) {
@@ -109,6 +113,15 @@ export const useDeviceContext = () => {
 
 	onMounted(() => {
 		refresh();
+		if (process.client) {
+			window.addEventListener('resize', refresh, { passive: true });
+		}
+	});
+
+	onUnmounted(() => {
+		if (process.client) {
+			window.removeEventListener('resize', refresh);
+		}
 	});
 
 	const isMobile = computed(() => {
@@ -155,6 +168,7 @@ export const useDeviceContext = () => {
 		// effective
 		isMobile,
 		has3DCapability,
+		windowWidth,
 
 		// raw
 		detectedIsMobile,
