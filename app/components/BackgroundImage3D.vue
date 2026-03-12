@@ -30,7 +30,7 @@ const registeredId = ref(null);
 let threeManagerInstance = null;
 
 // composable
-const { getThree } = useThree();
+const { getThree, threeManager } = useThree();
 const { has3DCapability } = useDeviceContext();
 
 const toPx = (v) => {
@@ -50,16 +50,21 @@ const fallbackStyle = computed(() => {
 	};
 });
 
-onMounted(async () => {
+// Helper to register the element
+async function register() {
 
 	// fail fast
 	if (!window.WebGLRenderingContext)
 		return;
 
 	const mgr = await getThree();
-	threeManagerInstance = mgr;
+	
+	// If it already exists and we're already registered with it, skip
+	if (mgr && registeredId.value && registeredId.value.startsWith('mgr-' + mgr.id)) {
+		return;
+	}
 
-	if (!mgr.isOk || !el.value)
+	if (!mgr || !mgr.isOk || !el.value)
 		return;
 
 	const result = mgr.register(el.value, 'backgroundImage3D', {
@@ -73,54 +78,74 @@ onMounted(async () => {
 	if (result) {
 		registeredId.value = result.id;
 	}
+}
+
+onMounted(() => {
+	
+	// Watch for capability changes
+	watch(has3DCapability, (val) => {
+		if (val && !registeredId.value) {
+			register();
+		}
+	}, { immediate: true });
+
+	// Watch for ThreeManager changes (handles late init and layout remounts)
+	watch(threeManager, (mgr) => {
+		if (mgr) {
+			register();
+		} else {
+			// Manager lost
+			registeredId.value = null;
+		}
+	}, { immediate: true });
 });
 
 watch(() => props.src, (src) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.src = src;
-	threeManagerInstance.buildRegisteredElement(data);
-	threeManagerInstance.updateElementPosition(registeredId.value);
-	threeManagerInstance.requestRender();
+	threeManager.value.buildRegisteredElement(data);
+	threeManager.value.updateElementPosition(registeredId.value);
+	threeManager.value.requestRender();
 });
 
 watch(() => props.mode, (mode) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.mode = mode;
-	threeManagerInstance.buildRegisteredElement(data);
-	threeManagerInstance.requestRender();
+	threeManager.value.buildRegisteredElement(data);
+	threeManager.value.requestRender();
 });
 
 watch(() => props.opacity, (opacity) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.opacity = opacity;
-	threeManagerInstance.buildRegisteredElement(data);
-	threeManagerInstance.requestRender();
+	threeManager.value.buildRegisteredElement(data);
+	threeManager.value.requestRender();
 });
 
 watch(() => [props.width, props.height], ([w, h]) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.width = Number(w);
 	data.options.height = Number(h);
 
-	threeManagerInstance.updateElementPosition(registeredId.value);
-	threeManagerInstance.requestRender();
+	threeManager.value.updateElementPosition(registeredId.value);
+	threeManager.value.requestRender();
 });
 
 onUnmounted(() => {
-	if (registeredId.value && threeManagerInstance) {
-		threeManagerInstance.unregister(registeredId.value);
+	if (registeredId.value && threeManager.value) {
+		threeManager.value.unregister(registeredId.value);
 	}
 });
 

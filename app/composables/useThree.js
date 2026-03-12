@@ -3,60 +3,94 @@
 	-----------
 
 	Composable to provide the singleton ThreeManager instance to the app.
-	Uses a Promise pattern so components can strictly await the manager's existence.
+	Uses a reactive pattern so components can strictly await the manager's existence.
 */
 
 // imports
 import { ThreeManager } from '~/utils/ThreeManager';
+import { shallowRef, ref, watch } from 'vue';
 
 // Module-level Singleton State
-let threeManager = null;
-let resolveInit = null;
-
-// This promise will sit pending until initThree is called
-const initPromise = new Promise((resolve) => {
-	resolveInit = resolve;
-});
+// These persist across the entire app lifecycle in the browser
+const threeManager = shallowRef(null);
+const isInitialized = ref(false);
 
 export const useThree = () => {
 
 	/**
-	 * Initialize the manager (Call once from App.vue).
-	 * Resolves the global promise, unblocking any waiting components.
-	 * * @param {HTMLCanvasElement} canvas - The canvas to render on.
+	 * Initialize the manager (Call once from Layout).
+	 * 
+	 * @param {HTMLCanvasElement} canvas - The canvas to render on.
 	 */
 	const initThree = (canvas) => {
-		if (!threeManager) {
-			if (canvas) {
-				threeManager = new ThreeManager(canvas);
-				resolveInit(threeManager); // 🚀 BLAST OFF
-			} else {
-				// If no canvas, we still resolve so getThree() doesn't hang forever
-				resolveInit(null);
+		
+		// 1. If we already have a manager, check if it's the same canvas
+		if (threeManager.value) {
+			
+			// If it's the same canvas, we're already good
+			if (threeManager.value.canvas === canvas) {
+				isInitialized.value = true;
+				return threeManager.value;
 			}
+			
+			// If it's a different canvas (or null), we MUST destroy the old manager
+			// because WebGL contexts cannot be transferred between canvases.
+			console.log('useThree: Canvas changed, destroying old ThreeManager');
+			threeManager.value.destroy();
+			threeManager.value = null;
 		}
-		return threeManager;
+
+		// 2. Create the new manager if a canvas is provided
+		if (canvas) {
+			console.log('useThree: Initializing ThreeManager with canvas');
+			threeManager.value = new ThreeManager(canvas);
+		} else {
+			console.warn('useThree: initThree called with null canvas');
+		}
+
+		// Mark as initialized so getThree() can resolve
+		isInitialized.value = true;
+
+		return threeManager.value;
 	};
 
 
 	/**
 	 * Get the active instance as a Promise.
-	 * * @returns {Promise<ThreeManager>}
+	 * 
+	 * This is the preferred way for components to get the manager as it 
+	 * handles the initial startup delay.
+	 * 
+	 * @returns {Promise<ThreeManager>}
 	 */
-	const getThree = () => {
+	const getThree = async () => {
 
-		// If already initialized (e.g. navigating to new page later), resolve immediately
-		if (threeManager) {
-			return Promise.resolve(threeManager);
+		// 1. If already initialized and we have a manager, return it immediately
+		if (threeManager.value) {
+			return threeManager.value;
 		}
 
-		// Otherwise wait for App.vue to finish init
-		return initPromise;
+		// 2. If we've already tried to initialize and got null, return null
+		if (isInitialized.value) {
+			return threeManager.value;
+		}
+
+		// 3. Otherwise wait for the initialization signal
+		return new Promise((resolve) => {
+			const unwatch = watch(isInitialized, (val) => {
+				if (val) {
+					unwatch();
+					resolve(threeManager.value);
+				}
+			});
+		});
 	};
 
 
 	return {
 		initThree,
-		getThree
+		getThree,
+		threeManager, // Exposed as a reactive ref
+		isInitialized // Exposed for status checking
 	};
 };

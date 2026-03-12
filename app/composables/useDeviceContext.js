@@ -28,26 +28,48 @@ const detectMobile = () => {
 	return Boolean(uaLooksMobile || isIpadDesktopMode || (hasTouch && coarsePointer));
 };
 
+// Shared result of the WebGL capability check to avoid repeated context creation
+let cachedHas3D = null;
+
 const probeWebGL = () => {
 	if (!process.client)
 		return false;
 
+	// Return the cached result if we've already probed
+	if (cachedHas3D !== null)
+		return cachedHas3D;
+
 	try {
-		if (!window.WebGLRenderingContext)
+		if (!window.WebGLRenderingContext) {
+			cachedHas3D = false;
 			return false;
+		}
 
 		const canvas = document.createElement('canvas');
 
 		// Try WebGL2 first, then WebGL1
 		const gl2 = canvas.getContext('webgl2', { antialias: false, alpha: true });
-		if (gl2)
+		if (gl2) {
+			// Explicitly lose the context if the extension is available (best practice)
+			const ext = gl2.getExtension('WEBGL_lose_context');
+			if (ext) ext.loseContext();
+			cachedHas3D = true;
 			return true;
+		}
 
 		const gl = canvas.getContext('webgl', { antialias: false, alpha: true })
 			|| canvas.getContext('experimental-webgl', { antialias: false, alpha: true });
 
-		return Boolean(gl);
+		const hasGL = Boolean(gl);
+		if (gl) {
+			const ext = gl.getExtension('WEBGL_lose_context');
+			if (ext) ext.loseContext();
+		}
+
+		cachedHas3D = hasGL;
+		return hasGL;
 	} catch (e) {
+		cachedHas3D = false;
 		return false;
 	}
 };

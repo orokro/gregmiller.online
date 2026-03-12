@@ -7,7 +7,7 @@
 <script setup>
 
 // vue
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useHead } from '#app';
 
 // app imports
@@ -47,8 +47,27 @@ watch([themeCSSVars, classObject], ([vars, classes]) => {
 // Start up the 3D system when the component mounts
 onMounted(() => {
 
-	// Initialize the 3D System (even if disabled, to unblock getThree() promises)
-	initThree(has3DCapability.value ? canvasRef.value : null);
+	// Initialize the 3D System
+	// We watch both the capability and the canvas ref to ensure we catch the moment
+	// when both are ready.
+	watch([has3DCapability, canvasRef], ([has3D, canvas]) => {
+		if (has3D && canvas) {
+			initThree(canvas);
+		} else if (!has3D) {
+			// If 3D is disabled, we still call initThree(null) to resolve the getThree() promise
+			initThree(null);
+		}
+	}, { immediate: true });
+});
+
+// Clean up when the layout is unmounted
+onUnmounted(() => {
+	const { threeManager } = useThree();
+	if (threeManager.value) {
+		console.log('Layout: Unmounting, destroying ThreeManager');
+		threeManager.value.destroy();
+		threeManager.value = null;
+	}
 });
 
 

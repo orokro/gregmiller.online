@@ -64,7 +64,7 @@ const is3DReady = ref(false);
 const registeredId = ref(null);
 
 // Composable
-const { getThree } = useThree();
+const { getThree, threeManager } = useThree();
 const { has3DCapability } = useDeviceContext();
 
 defineExpose({
@@ -72,27 +72,22 @@ defineExpose({
 	isFallback
 });
 
-// We store the raw manager instance here for cleanup later
-let threeManagerInstance = null;
+// Helper to register the element
+async function register() {
 
-
-onMounted(async () => {
-
-	// 1. Immediate Fail check
-	if (!window.WebGLRenderingContext || !has3DCapability.value) {
-		isFallback.value = true;
+	// 1. Wait for ThreeManager to boot
+	const mgr = await getThree();
+	
+	// If it already exists and we're already registered with it, skip
+	if (mgr && registeredId.value && registeredId.value.startsWith('mgr-' + mgr.id)) {
+		return;
 	}
 
-	watch(has3DCapability, (val) => {
-		if (!val || !window.WebGLRenderingContext) {
-			isFallback.value = true;
-		}
-	}, { immediate: true });
-
-	// 2. Wait for ThreeManager to boot
-	// This will pause execution until App.vue calls initThree()
-	const mgr = await getThree();
-	threeManagerInstance = mgr; // Save for unmount
+	// 2. Unregister if we have an old ID
+	if (registeredId.value && mgr) {
+		// mgr.unregister(registeredId.value);
+		// registeredId.value = null;
+	}
 
 	// 3. Register
 	if (mgr && mgr.isOk && el.value) {
@@ -129,39 +124,68 @@ onMounted(async () => {
 		// Manager loaded but reported error (e.g. WebGL disabled)
 		isFallback.value = true;
 	}
+}
+
+
+onMounted(() => {
+
+	// 1. Immediate Fail check
+	if (!window.WebGLRenderingContext || !has3DCapability.value) {
+		isFallback.value = true;
+	}
+
+	watch(has3DCapability, (val) => {
+		if (!val || !window.WebGLRenderingContext) {
+			isFallback.value = true;
+		} else if (val && !registeredId.value) {
+			register();
+		}
+	}, { immediate: true });
+
+	// 2. Watch for ThreeManager changes (handles late init and layout remounts)
+	watch(threeManager, (mgr) => {
+		if (mgr) {
+			register();
+		} else {
+			// Manager lost
+			is3DReady.value = false;
+			isFallback.value = true;
+			registeredId.value = null;
+		}
+	}, { immediate: true });
 
 });
 
 // If user swaps build/update hooks at runtime, update the registered element options
 watch(() => props.buildFn, (fn) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 	data.options.buildFn = fn;
-	threeManagerInstance.buildRegisteredElement(data);
-	threeManagerInstance.updateElementPosition(registeredId.value);
-	threeManagerInstance.requestRender();
+	threeManager.value.buildRegisteredElement(data);
+	threeManager.value.updateElementPosition(registeredId.value);
+	threeManager.value.requestRender();
 });
 
 watch(() => props.updateFn, (fn) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 	data.options.updateFn = fn;
-	threeManagerInstance.updateElementPosition(registeredId.value);
-	threeManagerInstance.requestRender();
+	threeManager.value.updateElementPosition(registeredId.value);
+	threeManager.value.requestRender();
 });
 
 watch(() => props.clean, (fn) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 	data.options.cleanFn = fn;
 });
 
 watch(() => props.tickFn, (fn) => {
-	if (!registeredId.value || !threeManagerInstance) return;
-	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManager.value) return;
+	const data = threeManager.value.registeredElements.get(registeredId.value);
 	if (!data) return;
 	data.options.tickFn = fn;
 });
@@ -169,8 +193,8 @@ watch(() => props.tickFn, (fn) => {
 onUnmounted(() => {
 
 	// Clean up 3D resources
-	if (registeredId.value && threeManagerInstance) {
-		threeManagerInstance.unregister(registeredId.value);
+	if (registeredId.value && threeManager.value) {
+		threeManager.value.unregister(registeredId.value);
 	}
 });
 

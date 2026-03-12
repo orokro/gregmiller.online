@@ -39,6 +39,7 @@ export class ThreeManager {
 
 		// save our references
 		this.canvas = canvas;
+		this.id = uuid();
 
 		// Configuration
 		this.config = {
@@ -80,7 +81,9 @@ export class ThreeManager {
 		// For lazy rendering
 		this.frameMode = 'lazy'; // 'lazy' or 'active' (60fps)
 
-		// Bindings for Visual Viewport (iOS Zoom Fix)
+		// Bound Event Handlers
+		this.onScrollBound = this.onScroll.bind(this);
+		this.onResizeBound = this.onResize.bind(this);
 		this.onVisualScroll = this.onScroll.bind(this);
 		this.onVisualResize = this.onResize.bind(this);
 
@@ -108,7 +111,7 @@ export class ThreeManager {
 		if (this.resizeObserver)
 			this.resizeObserver.disconnect();
 
-		window.removeEventListener('scroll', this.onScroll.bind(this));
+		window.removeEventListener('scroll', this.onScrollBound);
 
 		// Cleanup Visual Viewport listeners
 		if (window.visualViewport) {
@@ -124,6 +127,14 @@ export class ThreeManager {
 			this.renderer.dispose();
 			this.renderer = null;
 		}
+
+		// Stop any active loops
+		if (this._rafId) {
+			cancelAnimationFrame(this._rafId);
+			this._rafId = null;
+		}
+
+		this.isOk = false;
 	}
 
 
@@ -162,7 +173,7 @@ export class ThreeManager {
 		// this.setupBackground();
 
 		// Bind Events
-		window.addEventListener('scroll', this.onScroll.bind(this));
+		window.addEventListener('scroll', this.onScrollBound);
 
 		// NEW: Bind Visual Viewport events for iOS Zoom/Pan support
 		if (window.visualViewport) {
