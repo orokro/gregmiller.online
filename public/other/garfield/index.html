@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Random Comic Generator!</title>
+    <style type="text/css">
+        /* pretty frame */
+        #divContent {
+            width:760px;
+            padding:15px 10px 30px 10px;
+            border:#09F 1px solid;
+            background:#ECF4FF;
+            margin-left:auto;
+            margin-right:auto;
+        }
+        
+        /* actual comic */
+        #divComic {
+            background:#FFF;
+            border:#CCC 1px solid;
+            padding:5px;    
+            position:relative;
+            width:723px;
+            height:236px;
+            margin-left:auto;
+            margin-right:auto;
+            margin-top:10px;
+        }
+        
+        /* comic frames */
+        #imgA { position:absolute; left:5px; }
+        #imgB { position:absolute; left:246px; }
+        #imgC { position:absolute; left:487px; }
+        .comicFrame {
+            width: 236px;
+            height: 236px;
+            top:5px;
+        }
+        
+        /* link section */
+        #divLink {
+            padding-top: 15px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+        }
+        #txtLink {
+            margin-top: 5px;
+            padding: 5px;
+            border: 1px solid #CCC;
+            width: 500px;
+        }
+
+        /* generate button */
+        #divButton {
+            padding:15px;   
+        }
+    </style>
+</head>
+
+<body>
+    <div id="divWrapper" align="center">
+        <div id="divContent">
+            Randomly Generated Comic!
+            <div id="divComic">
+                <img id="imgA" class="comicFrame" width="236" height="236" />
+                <img id="imgB" class="comicFrame" width="236" height="236" />
+                <img id="imgC" class="comicFrame" width="236" height="236" />
+            </div><!-- /divComic -->
+            
+            <div id="divLink">
+                Link this comic!<br />
+                <input id="txtLink" name="txtLink" type="text" onclick="this.select();" readonly="readonly" />
+            </div><!-- /divLink -->
+
+            <div id="divButton" align="center">
+                <button type="button" onclick="generate_comic(true);">Generate New</button>
+            </div><!-- /divButton -->
+        </div><!-- /divContent -->
+    </div><!-- /divWrapper -->
+    
+    <script type="text/javascript">
+        var Limits = new Array();
+        Limits['G']=52;
+        Limits['L']=5;
+        Limits['O']=7;
+        Limits['TV']=7;
+            
+        var onTopic=false;
+        
+        //create a comic:
+        function generate_comic(isNew){
+            onTopic=false;
+            
+            var topic = chooseTopic();
+            var frameA = randomInt(1, Limits[topic]);
+            var frameB = randomInt(1, Limits[topic]);
+            var frameC = randomInt(1, Limits[topic]);
+            
+            display_comic(topic, frameA, frameB, frameC);
+
+            if (isNew) {
+                update_history(topic, frameA, frameB, frameC);
+            }
+        }//generate_comic()
+
+        // Display a specific comic
+        function display_comic(topic, a, b, c) {
+            var imgA = document.getElementById('imgA');
+            var imgB = document.getElementById('imgB');
+            var imgC = document.getElementById('imgC');
+            var txtLink = document.getElementById('txtLink');
+
+            imgA.src = ("MIXED/A_" + topic + "_" + a + ".png");
+            imgB.src = ("MIXED/B_" + topic + "_" + b + ".png");
+            imgC.src = ("MIXED/C_" + topic + "_" + c + ".png");
+
+            var cid = topic + '-' + a + '-' + b + '-' + c;
+            var fullUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?cid=' + cid;
+            txtLink.value = fullUrl;
+        }
+
+        // Update browser history
+        function update_history(topic, a, b, c) {
+            if (window.history && window.history.pushState) {
+                var cid = topic + '-' + a + '-' + b + '-' + c;
+                var url = window.location.pathname + '?cid=' + cid;
+                window.history.pushState({topic: topic, a: a, b: b, c: c}, "Garfield Comic " + cid, url);
+            }
+        }
+        
+        //choose topic:
+        function chooseTopic(){
+            var r = randomInt(1, 4);
+            switch(r){
+                case 1: //generic
+                    return 'G';
+                case 2: //liz/odie (originally used 'O' but switching to match Limits)
+                    return 'O';
+                case 3: //odie
+                    return 'O';
+                case 4: //TV
+                    return 'TV';
+                default:
+                    return 'G';
+            }
+        }//chooseTopic()
+        
+        //generate random frame number
+        function randomInt(Min, Max){
+            var i=0;
+            var n=0;
+            // Kept the original weird loop for "historical" accuracy as requested
+            for(i=0; i<(Math.floor(Math.random()*(80))+1); i++){
+                n = (Math.floor(Math.random()*(Max-Min+1))+Min);
+            }
+            return n;
+        }//randomFrame();
+
+        // Handle browser back/forward
+        window.onpopstate = function(event) {
+            if (event.state) {
+                display_comic(event.state.topic, event.state.a, event.state.b, event.state.c);
+            } else {
+                check_url();
+            }
+        };
+
+        // Check URL for CID
+        function check_url() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var cid = urlParams.get('cid');
+            if (cid) {
+                var parts = cid.split('-');
+                if (parts.length === 4) {
+                    display_comic(parts[0], parts[1], parts[2], parts[3]);
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Initial load
+        if (!check_url()) {
+            generate_comic(false);
+        }
+        
+    </script>
+</body>
+</html>

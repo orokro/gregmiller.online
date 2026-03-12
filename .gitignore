@@ -1,6 +1,11 @@
 # My directories and things
 misc
 public/wp-content
+public/other/garfield/A
+public/other/garfield/B
+public/other/garfield/C
+public/other/garfield/MIXED
+
 
 # Nuxt dev/build outputs
 .output
