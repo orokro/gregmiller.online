@@ -81,11 +81,22 @@
     <script type="text/javascript">
         var Limits = new Array();
         Limits['G']=52;
-        Limits['L']=5;
-        Limits['O']=7;
-        Limits['TV']=7;
+        Limits['L']=7;
+        Limits['O']=4;
+        Limits['TV']=10;
             
         var onTopic=false;
+
+        // Get the correct base URL for images and links
+        function get_base_url() {
+            var path = window.location.pathname;
+            if (path.endsWith('.html') || path.endsWith('.php')) {
+                path = path.substring(0, path.lastIndexOf('/') + 1);
+            } else if (!path.endsWith('/')) {
+                path += '/';
+            }
+            return window.location.protocol + '//' + window.location.host + path;
+        }
         
         //create a comic:
         function generate_comic(isNew){
@@ -109,13 +120,14 @@
             var imgB = document.getElementById('imgB');
             var imgC = document.getElementById('imgC');
             var txtLink = document.getElementById('txtLink');
+            var baseUrl = get_base_url();
 
-            imgA.src = ("MIXED/A_" + topic + "_" + a + ".png");
-            imgB.src = ("MIXED/B_" + topic + "_" + b + ".png");
-            imgC.src = ("MIXED/C_" + topic + "_" + c + ".png");
+            imgA.src = baseUrl + "MIXED/A_" + topic + "_" + a + ".png";
+            imgB.src = baseUrl + "MIXED/B_" + topic + "_" + b + ".png";
+            imgC.src = baseUrl + "MIXED/C_" + topic + "_" + c + ".png";
 
             var cid = topic + '-' + a + '-' + b + '-' + c;
-            var fullUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?cid=' + cid;
+            var fullUrl = baseUrl + '?cid=' + cid;
             txtLink.value = fullUrl;
         }
 
@@ -123,7 +135,8 @@
         function update_history(topic, a, b, c) {
             if (window.history && window.history.pushState) {
                 var cid = topic + '-' + a + '-' + b + '-' + c;
-                var url = window.location.pathname + '?cid=' + cid;
+                var baseUrl = get_base_url();
+                var url = baseUrl + '?cid=' + cid;
                 window.history.pushState({topic: topic, a: a, b: b, c: c}, "Garfield Comic " + cid, url);
             }
         }
@@ -132,17 +145,12 @@
         function chooseTopic(){
             var r = randomInt(1, 4);
             switch(r){
-                case 1: //generic
-                    return 'G';
-                case 2: //liz/odie (originally used 'O' but switching to match Limits)
-                    return 'O';
-                case 3: //odie
-                    return 'O';
-                case 4: //TV
-                    return 'TV';
-                default:
-                    return 'G';
+                case 1: return 'G';
+                case 2: return 'L';
+                case 3: return 'O';
+                case 4: return 'TV';
             }
+            return 'G';
         }//chooseTopic()
         
         //generate random frame number
@@ -151,7 +159,7 @@
             var n=0;
             // Kept the original weird loop for "historical" accuracy as requested
             for(i=0; i<(Math.floor(Math.random()*(80))+1); i++){
-                n = (Math.floor(Math.random()*(Max-Min+1))+Min);
+                n = (Math.floor(Math.random() * (Max - Min + 1)) + Min);
             }
             return n;
         }//randomFrame();
