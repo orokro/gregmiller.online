@@ -30,7 +30,14 @@ export default defineEventHandler(async (event) => {
 
 	const filter = {};
 	if (q) {
-		filter.$text = { $search: q };
+		// regex search for better partial matches in admin
+		const regex = { $regex: q, $options: 'i' };
+		filter.$or = [
+			{ title: regex },
+			{ slug: regex },
+			{ tags: regex },
+			{ content: regex },
+		];
 	}
 
 	const projection = {
@@ -44,7 +51,7 @@ export default defineEventHandler(async (event) => {
 	};
 
 	const posts = await Post.find(filter, projection)
-		.sort(q ? { score: { $meta: 'textScore' }, date: -1 } : { date: -1 })
+		.sort({ date: -1 })
 		.skip(skip)
 		.limit(limit)
 		.lean();

@@ -21,15 +21,20 @@ const props = defineProps({
 		type: Array,
 		required: true,
 	},
+
+	// current search query
+	search: {
+		type: String,
+		default: '',
+	},
 });
 
 
 // provide emits
-const emit = defineEmits(['newPostLoading', 'postChanged', 'refreshPosts', 'createDraft']);
+const emit = defineEmits(['newPostLoading', 'postChanged', 'refreshPosts', 'createDraft', 'update:search']);
 
 
 // refs
-const postSearch = ref('');
 const selectedId = ref('');
 
 
@@ -40,7 +45,7 @@ let refreshPostsTimer = null;
 // get filtered posts from parent component
 const filteredPosts = computed(() => {
 
-	const q = postSearch.value.trim().toLowerCase();
+	const q = (props.search || '').trim().toLowerCase();
 
 	if (!q)
 		return props.posts;
@@ -104,13 +109,16 @@ async function selectPost(id) {
 /**
  * Debounced refresh posts list
  */
-function refreshPostsDebounced() {
+function refreshPostsDebounced(e) {
+
+	const val = e.target.value;
+	emit('update:search', val);
 
 	if (refreshPostsTimer)
 		clearTimeout(refreshPostsTimer);
 
 	refreshPostsTimer = setTimeout(() => {
-		emit('refreshPosts');
+		emit('refreshPosts', val);
 	}, 200);
 }
 
@@ -132,7 +140,7 @@ function createDraft() {
 
 		<div class="row controls">
 			<input
-				v-model="postSearch"
+				:value="search"
 				class="input"
 				type="text"
 				placeholder="Search posts…"

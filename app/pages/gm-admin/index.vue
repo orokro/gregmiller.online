@@ -26,6 +26,9 @@ definePageMeta({
 // our total list of posts from the server
 const posts = ref([]);
 
+// current search query
+const currentSearch = ref('');
+
 // current selected post data
 const post = ref(null);
 
@@ -36,11 +39,18 @@ const postEditorRef = ref(null);
 
 /**
  * Refresh the list of posts from the server
+ *
+ * @param {string} q - search query
  */
-async function refreshPosts() {
+async function refreshPosts(q = null) {
+
+	if (q !== null) {
+		currentSearch.value = q;
+	}
 
 	try {
 		const res = await $fetch('/api/admin/posts', {
+			params: { q: currentSearch.value },
 			credentials: 'include',
 		});
 		posts.value = Array.isArray(res) ? res : [];
@@ -84,7 +94,8 @@ async function onCreateDraft() {
 			credentials: 'include',
 		});
 
-		await refreshPosts();
+		// clear search to ensure the new post is visible
+		await refreshPosts('');
 		post.value = created;
 
 	} catch (e) {
@@ -112,6 +123,7 @@ onMounted(async () => {
 		<div class="left-column">
 
 			<AdminSidebar
+				v-model:search="currentSearch"
 				:posts="posts"
 				@refresh-posts="refreshPosts"
 				@create-draft="onCreateDraft"
