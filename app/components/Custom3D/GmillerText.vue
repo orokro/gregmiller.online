@@ -50,8 +50,8 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 
 	model = await loadModel(threeManager);
 
-	if(!model) {
-		console.error("Failed to load model.");
+	// If the component was unmounted during loading, stop here
+	if (!model || !customRoot.group.parent) {
 		return;
 	}
 

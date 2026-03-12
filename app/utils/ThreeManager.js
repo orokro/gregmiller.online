@@ -1040,11 +1040,13 @@ export class ThreeManager {
 		// grab the group and element, unobserve it, remove it from the scene, clean up resources, and delete from registry
 		const data = this.registeredElements.get(id);
 		const { group, element } = data;
+		
+		// 1. Unobserve
 		if (this.resizeObserver && element) {
 			this.resizeObserver.unobserve(element);
 		}
 
-		// CustomContainer3D cleanup hook (optional)
+		// 2. CustomContainer3D cleanup hook (optional)
 		if (data.type === 'customBox' && data.options && typeof data.options.cleanFn === 'function') {
 			try {
 				data.options.cleanFn(this._getCustomRoot(data), this);
@@ -1053,33 +1055,74 @@ export class ThreeManager {
 			}
 		}
 
-		// background image types
+		// 3. Special handling for background image types
 		if (data.type === 'backgroundImage3D') {
-
 			this._disposeBackgroundImage3D(data);
-
-			// remove from camera (or whatever parent it has)
-			if (group && group.parent) {
-				group.parent.remove(group);
-			}
-
-			this.registeredElements.delete(id);
-			this.requestRender();
-			return;
 		}
 
-		this.scene.remove(group);
-		this.cleanGroupNonEmptyChildren(data.group, data.empties);
-		this.registeredElements.delete(id);
+		// 4. Robust Cleanup: 
+		// Even if scene.remove fails for some reason, we hide it and clear it.
+		if (group) {
+			group.visible = false;
+			if (group.parent) {
+				group.parent.remove(group);
+			}
+			this.cleanGroupNonEmptyChildren(group, data.empties);
+		}
 
-		// make sure to re-render now that it's gone
+		// 5. Finalize
+		this.registeredElements.delete(id);
 		this.requestRender();
+	}
+
+
+	/**
+	 * Recursively disposes of all children in a group, including their geometries and materials.
+	 * 
+	 * @param {THREE.Object3D} group - the group to clean
+	 */
+	cleanGroupChildren(group) {
+		if (!group) return;
+
+		const children = [...group.children];
+		children.forEach((child) => {
+			
+			// Recurse first
+			if (child.children && child.children.length > 0) {
+				this.cleanGroupChildren(child);
+			}
+
+			// Remove from parent
+			group.remove(child);
+
+			// Dispose Geometry
+			if (child.geometry) {
+				child.geometry.dispose();
+			}
+
+			// Dispose Material(s)
+			if (child.material) {
+				const materials = Array.isArray(child.material) ? child.material : [child.material];
+				materials.forEach((mat) => {
+					// Dispose Textures
+					Object.keys(mat).forEach((key) => {
+						const value = mat[key];
+						if (value && typeof value.dispose === 'function' && value.isTexture) {
+							value.dispose();
+						}
+					});
+					mat.dispose();
+				});
+			}
+		});
 	}
 
 
 	/**
 	 * Remove everything under the empties (but keep the empties themselves).
 	 * This is the missing piece that caused DebugTheme wireframes to persist.
+	 * 
+	 * @param {Object} empties - the empties object
 	 */
 	cleanEmptiesChildren(empties) {
 
@@ -1095,16 +1138,7 @@ export class ThreeManager {
 		].filter(Boolean);
 
 		emptyList.forEach((empty) => {
-			// disposes recursively (your code already expects this to exist)
-			if (typeof this.cleanGroupChildren === 'function') {
-				this.cleanGroupChildren(empty);
-				return;
-			}
-
-			// fallback: remove only
-			while (empty.children.length > 0) {
-				empty.remove(empty.children[0]);
-			}
+			this.cleanGroupChildren(empty);
 		});
 	}
 

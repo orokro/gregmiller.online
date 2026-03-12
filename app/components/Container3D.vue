@@ -38,6 +38,11 @@ async function register() {
 	// 1. Wait for ThreeManager to boot
 	const mgr = await getThree();
 	
+	// Guard: Component was unmounted while waiting, or manager changed
+	if (!el.value || mgr !== threeManager.value) {
+		return;
+	}
+
 	// If it already exists and we're already registered with it, skip
 	if (mgr && registeredId.value && registeredId.value.startsWith('mgr-' + mgr.id)) {
 		return;

@@ -146,8 +146,8 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 	const urls = mapKeys.map(i => i.url);
 	const assets = await threeManager.assetsReady(urls);
 
-	// If a new build started while we were loading, abort this one
-	if (myId !== buildId)
+	// If a new build started while we were loading, or if the component was unmounted, abort
+	if (myId !== buildId || !customRoot.group.parent)
 		return;
 
 	// 2. Process loaded textures

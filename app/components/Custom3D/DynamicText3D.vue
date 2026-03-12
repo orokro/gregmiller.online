@@ -137,6 +137,10 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom, setR
 	// 2. Load & Cache Letters
 	const letterData = await loadAndMeasureLetters(threeManager, text.value);
 
+	// If a new build started while we were loading, or if the component was unmounted, abort
+	if (myId !== buildId || !customRoot.group.parent)
+		return;
+
 	// 3. Assemble Group
 	textGroup = assembleTextGroup(text.value, letterData, glassMaterial);
 
