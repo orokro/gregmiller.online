@@ -22,6 +22,7 @@ const el = ref(null);
 const isFallback = ref(true);
 const is3DReady = ref(false);
 const registeredId = ref(null);
+let isMounted = false;
 
 // Composable
 const { getThree, threeManager } = useThree();
@@ -32,6 +33,9 @@ defineExpose({
 	isFallback
 });
 
+// We store the raw manager instance here for cleanup later
+let threeManagerInstance = null;
+
 // Helper to register the element
 async function register() {
 
@@ -39,19 +43,19 @@ async function register() {
 	const mgr = await getThree();
 	
 	// Guard: Component was unmounted while waiting, or manager changed
-	if (!el.value || mgr !== threeManager.value) {
+	if (!isMounted || !el.value || mgr !== threeManager.value) {
 		return;
 	}
 
 	// If it already exists and we're already registered with it, skip
-	if (mgr && registeredId.value && registeredId.value.startsWith('mgr-' + mgr.id)) {
+	if (mgr && registeredId.value && threeManagerInstance === mgr) {
 		return;
 	}
 
-	// 2. Unregister if we have an old ID
-	if (registeredId.value && mgr) {
-		// mgr.unregister(registeredId.value);
-		// registeredId.value = null;
+	// 2. Unregister if we have an old ID in a DIFFERENT manager
+	if (registeredId.value && threeManagerInstance && threeManagerInstance !== mgr) {
+		threeManagerInstance.unregister(registeredId.value);
+		registeredId.value = null;
 	}
 
 	// 3. Register
@@ -75,6 +79,7 @@ async function register() {
 
 		if (result) {
 			registeredId.value = result.id;
+			threeManagerInstance = mgr;
 		}
 
 	} else {
@@ -84,6 +89,7 @@ async function register() {
 }
 
 onMounted(() => {
+	isMounted = true;
 
 	// 1. Immediate Fail check
 	if (!window.WebGLRenderingContext || !has3DCapability.value) {
@@ -108,16 +114,22 @@ onMounted(() => {
 			is3DReady.value = false;
 			isFallback.value = true;
 			registeredId.value = null;
+			threeManagerInstance = null;
 		}
 	}, { immediate: true });
 
 });
 
 onUnmounted(() => {
+	isMounted = false;
 
 	// Clean up 3D resources
-	if (registeredId.value && threeManager.value) {
-		threeManager.value.unregister(registeredId.value);
+	// We use the LOCAL instance we registered with, not the global singleton 
+	// because the singleton might have been cleared by the layout already.
+	if (registeredId.value && threeManagerInstance) {
+		threeManagerInstance.unregister(registeredId.value);
+		registeredId.value = null;
+		threeManagerInstance = null;
 	}
 
 });

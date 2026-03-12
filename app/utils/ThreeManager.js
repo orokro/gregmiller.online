@@ -1077,7 +1077,8 @@ export class ThreeManager {
 
 
 	/**
-	 * Recursively disposes of all children in a group, including their geometries and materials.
+	 * Recursively disposes of all children in a group.
+	 * NOTE: We avoid disposing shared geometries/textures here; components/themes should handle their own unique resource disposal.
 	 * 
 	 * @param {THREE.Object3D} group - the group to clean
 	 */
@@ -1095,25 +1096,19 @@ export class ThreeManager {
 			// Remove from parent
 			group.remove(child);
 
-			// Dispose Geometry
-			if (child.geometry) {
-				child.geometry.dispose();
-			}
-
 			// Dispose Material(s)
 			if (child.material) {
 				const materials = Array.isArray(child.material) ? child.material : [child.material];
 				materials.forEach((mat) => {
-					// Dispose Textures
-					Object.keys(mat).forEach((key) => {
-						const value = mat[key];
-						if (value && typeof value.dispose === 'function' && value.isTexture) {
-							value.dispose();
-						}
-					});
-					mat.dispose();
+					// NOTE: We only dispose the material if it has a dispose method and is not shared
+					if (typeof mat.dispose === 'function') {
+						mat.dispose();
+					}
 				});
 			}
+
+			// NOTE: We do NOT dispose geometry here because it might be shared (e.g. DynamicText3D cache).
+			// If a component/theme created unique geometry, it should dispose it in its own destroy() function.
 		});
 	}
 

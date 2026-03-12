@@ -69,6 +69,7 @@ const { has3DCapability } = useDeviceContext();
 const el = ref(null);
 let textGroup = null;
 let glassMaterial = null;
+let buildId = 0; // Track build versions to prevent race conditions
 
 const fallbackStyle = computed(() => {
 	// Show fallback if 3D is disabled OR if it's not ready yet
@@ -115,6 +116,9 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom, setR
 
 	if (!rebuildCustom)
 		return;
+
+	// Increment build ID to invalidate any previous pending builds
+	const myId = ++buildId;
 
 	// 1. Create Material (Reused from GmillerText)
 	glassMaterial = new THREE.MeshPhysicalMaterial({
@@ -185,6 +189,9 @@ function update(defaultUpdate, customRoot, threeManager) {
 
 
 function destroy(customRoot, threeManager) {
+
+	// Cancel any pending builds
+	buildId++;
 
 	const center = customRoot.empties.center;
 

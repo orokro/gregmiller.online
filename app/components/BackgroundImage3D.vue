@@ -27,6 +27,7 @@ const props = defineProps({
 // state
 const el = ref(null);
 const registeredId = ref(null);
+let isMounted = false;
 let threeManagerInstance = null;
 
 // composable
@@ -60,13 +61,19 @@ async function register() {
 	const mgr = await getThree();
 	
 	// Guard: Component was unmounted while waiting, or manager changed
-	if (!el.value || mgr !== threeManager.value) {
+	if (!isMounted || !el.value || mgr !== threeManager.value) {
 		return;
 	}
 
 	// If it already exists and we're already registered with it, skip
-	if (mgr && registeredId.value && registeredId.value.startsWith('mgr-' + mgr.id)) {
+	if (mgr && registeredId.value && threeManagerInstance === mgr) {
 		return;
+	}
+
+	// 2. Unregister if we have an old ID in a DIFFERENT manager
+	if (registeredId.value && threeManagerInstance && threeManagerInstance !== mgr) {
+		threeManagerInstance.unregister(registeredId.value);
+		registeredId.value = null;
 	}
 
 	if (!mgr || !mgr.isOk || !el.value)
@@ -82,10 +89,12 @@ async function register() {
 
 	if (result) {
 		registeredId.value = result.id;
+		threeManagerInstance = mgr;
 	}
 }
 
 onMounted(() => {
+	isMounted = true;
 	
 	// Watch for capability changes
 	watch(has3DCapability, (val) => {
@@ -101,56 +110,60 @@ onMounted(() => {
 		} else {
 			// Manager lost
 			registeredId.value = null;
+			threeManagerInstance = null;
 		}
 	}, { immediate: true });
 });
 
 watch(() => props.src, (src) => {
-	if (!registeredId.value || !threeManager.value) return;
-	const data = threeManager.value.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.src = src;
-	threeManager.value.buildRegisteredElement(data);
-	threeManager.value.updateElementPosition(registeredId.value);
-	threeManager.value.requestRender();
+	threeManagerInstance.buildRegisteredElement(data);
+	threeManagerInstance.updateElementPosition(registeredId.value);
+	threeManagerInstance.requestRender();
 });
 
 watch(() => props.mode, (mode) => {
-	if (!registeredId.value || !threeManager.value) return;
-	const data = threeManager.value.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.mode = mode;
-	threeManager.value.buildRegisteredElement(data);
-	threeManager.value.requestRender();
+	threeManagerInstance.buildRegisteredElement(data);
+	threeManagerInstance.requestRender();
 });
 
 watch(() => props.opacity, (opacity) => {
-	if (!registeredId.value || !threeManager.value) return;
-	const data = threeManager.value.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.opacity = opacity;
-	threeManager.value.buildRegisteredElement(data);
-	threeManager.value.requestRender();
+	threeManagerInstance.buildRegisteredElement(data);
+	threeManagerInstance.requestRender();
 });
 
 watch(() => [props.width, props.height], ([w, h]) => {
-	if (!registeredId.value || !threeManager.value) return;
-	const data = threeManager.value.registeredElements.get(registeredId.value);
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
 	if (!data) return;
 
 	data.options.width = Number(w);
 	data.options.height = Number(h);
 
-	threeManager.value.updateElementPosition(registeredId.value);
-	threeManager.value.requestRender();
+	threeManagerInstance.updateElementPosition(registeredId.value);
+	threeManagerInstance.requestRender();
 });
 
 onUnmounted(() => {
-	if (registeredId.value && threeManager.value) {
-		threeManager.value.unregister(registeredId.value);
+	isMounted = false;
+	if (registeredId.value && threeManagerInstance) {
+		threeManagerInstance.unregister(registeredId.value);
+		registeredId.value = null;
+		threeManagerInstance = null;
 	}
 });
 
