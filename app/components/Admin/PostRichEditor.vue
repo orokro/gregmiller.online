@@ -195,6 +195,31 @@ function normalizeYouTubeEmbed(url) {
 	return '';
 }
 
+function insertIframe() {
+
+	if (!editor.value) return;
+
+	const url = window.prompt('Iframe URL:');
+	if (!url) return;
+
+	const height = window.prompt('Height (e.g. 500 or 500px):', '500');
+	if (height === null) return;
+
+	let finalHeight = height.trim();
+	if (finalHeight && !isNaN(finalHeight)) {
+		finalHeight = finalHeight + 'px';
+	}
+
+	editor.value.chain().focus().insertContent({
+		type: 'iframe',
+		attrs: {
+			src: url.trim(),
+			width: '100%',
+			height: finalHeight || '500px',
+		},
+	}).run();
+}
+
 function insertYouTube() {
 
 	if (!editor.value) return;
@@ -585,6 +610,7 @@ onBeforeUnmount(() => {
 
 				<button class="btn" :class="{ active: editor.isActive('link') }" @click="setLink()">Link</button>
 				<button class="btn" @click="insertImage()">Image</button>
+				<button class="btn" @click="insertIframe()">Iframe</button>
 				<button class="btn" @click="insertYouTube()">YouTube</button>
 
 				<span class="sep"></span>

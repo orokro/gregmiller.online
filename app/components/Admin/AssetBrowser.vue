@@ -181,6 +181,7 @@ defineExpose({
 				initialPath: 'local://',
 				persist: true,
 				showMenuBar: false,
+				maxFileSize: '100mb',
 			}"
 			:features="{
 				preview: true,
