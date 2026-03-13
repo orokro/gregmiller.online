@@ -68,6 +68,7 @@ const htmlToRender = computed(() => {
 		}
 
 		:deep(iframe),
+		:deep(video),
 		:deep(audio) {
 			max-width: 100%;
 			display: block;

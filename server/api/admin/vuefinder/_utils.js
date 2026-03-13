@@ -39,6 +39,12 @@ export function guessMime(name) {
 	if (ext === 'svg') return 'image/svg+xml';
 	if (ext === 'mp4') return 'video/mp4';
 	if (ext === 'webm') return 'video/webm';
+	if (ext === 'mov') return 'video/quicktime';
+	if (ext === 'mp3') return 'audio/mpeg';
+	if (ext === 'wav') return 'audio/wav';
+	if (ext === 'ogg') return 'audio/ogg';
+	if (ext === 'm4a') return 'audio/mp4';
+	if (ext === 'aac') return 'audio/aac';
 	if (ext === 'pdf') return 'application/pdf';
 	if (ext === 'txt') return 'text/plain';
 	if (ext === 'html' || ext === 'htm') return 'text/html';

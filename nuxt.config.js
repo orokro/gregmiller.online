@@ -16,6 +16,9 @@ export default defineNuxtConfig({
 		'/gm-admin/**': { ssr: false },
 	},
 
+	nitro: {
+		bodySizeLimit: '100mb'
+	},
 
 	runtimeConfig: {
 		message: '',

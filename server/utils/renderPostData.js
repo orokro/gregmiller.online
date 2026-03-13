@@ -172,6 +172,29 @@ async function getRenderer() {
 		},
 	});
 
+	const VideoNode = Node.create({
+
+		name: 'video',
+		group: 'block',
+		atom: true,
+
+		addAttributes() {
+			return {
+				src: { default: null },
+				controls: { default: true },
+				width: { default: '100%' },
+			};
+		},
+
+		parseHTML() {
+			return [ { tag: 'video' } ];
+		},
+
+		renderHTML({ HTMLAttributes }) {
+			return [ 'video', { ...HTMLAttributes, controls: 'controls' } ];
+		},
+	});
+
 	const extensions = [];
 
 	if (StarterKit) extensions.push(StarterKit);
@@ -206,6 +229,7 @@ async function getRenderer() {
 
 	extensions.push(Iframe);
 	extensions.push(AudioNode);
+	extensions.push(VideoNode);
 
 	_cached = { generateHTML, extensions };
 	return _cached;

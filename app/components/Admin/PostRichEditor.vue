@@ -380,6 +380,29 @@ onMounted(async () => {
 		},
 	});
 
+	const VideoNode = Node.create({
+
+		name: 'video',
+		group: 'block',
+		atom: true,
+
+		addAttributes() {
+			return {
+				src: { default: null },
+				controls: { default: true },
+				width: { default: '100%' },
+			};
+		},
+
+		parseHTML() {
+			return [ { tag: 'video' } ];
+		},
+
+		renderHTML({ HTMLAttributes }) {
+			return [ 'video', { ...HTMLAttributes, controls: 'controls' } ];
+		},
+	});
+
 	const extensions = [];
 
 	// Prevent duplicate names: StarterKit can include link/underline depending on version.
@@ -423,6 +446,7 @@ onMounted(async () => {
 
 	extensions.push(Iframe);
 	extensions.push(AudioNode);
+	extensions.push(VideoNode);
 
 	editor.value = new VueMod.Editor({
 		extensions,
@@ -449,15 +473,24 @@ onMounted(async () => {
 						const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
 
 						if (coordinates) {
-							// Determine if it's audio or image based on extension
+							// Determine type based on extension
 							const ext = text.split('.').pop().toLowerCase();
 							const isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext);
+							const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(ext);
+							const isImage = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext);
 
 							let node;
 							if (isAudio) {
 								node = schema.nodes.audio.create({ src: '/' + text });
-							} else {
+							} else if (isVideo) {
+								node = schema.nodes.video.create({ src: '/' + text });
+							} else if (isImage) {
 								node = schema.nodes.image.create({ src: '/' + text });
+							} else {
+								// Generic file link
+								const filename = text.split('/').pop();
+								const link = schema.marks.link.create({ href: '/' + text });
+								node = schema.text(filename, [link]);
 							}
 
 							const transaction = view.state.tr.insert(coordinates.pos, node);
@@ -704,13 +737,8 @@ onBeforeUnmount(() => {
 			background: rgba(0,0,0,0.03);
 		}
 
-		:deep(iframe){
-			max-width: 100%;
-			display: block;
-			margin: 1rem auto;
-			border: 0;
-		}
-
+		:deep(iframe),
+		:deep(video),
 		:deep(audio){
 			max-width: 100%;
 			display: block;
