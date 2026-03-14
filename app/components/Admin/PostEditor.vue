@@ -12,7 +12,7 @@
 <script setup>
 
 // vue
-import { ref, watch, computed, onMounted, toRaw, nextTick } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount, toRaw, nextTick } from 'vue';
 
 // components
 import PanelTitleBar from './PanelTitleBar.vue';
@@ -363,13 +363,42 @@ watch([draft, tagsText, categoryText], () => {
 
 
 /**
+ * Handle keyboard shortcuts
+ *
+ * @param {KeyboardEvent} e - keyboard event
+ */
+function onGlobalKeydown(e) {
+
+	// Ctrl+S or Cmd+S
+	if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+
+		// only save if we have a post loaded and aren't already saving
+		if (props.post && !saving.value) {
+			e.preventDefault();
+			saveDraft();
+		}
+	}
+}
+
+
+/**
  * When the component mounts, load initial data
  */
 onMounted(async () => {
 
+	window.addEventListener('keydown', onGlobalKeydown);
+
 	await Promise.all([
 		loadCategories(),
 	]);
+});
+
+
+/**
+ * Clean up event listeners
+ */
+onBeforeUnmount(() => {
+	window.removeEventListener('keydown', onGlobalKeydown);
 });
 
 </script>
