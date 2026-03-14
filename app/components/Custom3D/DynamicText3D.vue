@@ -75,7 +75,7 @@ const fallbackStyle = computed(() => {
 	// Show fallback if 3D is disabled OR if it's not ready yet
 	const isReady = el.value?.is3DReady || false;
 	if (!props.fallbackImage || (has3DCapability.value && isReady)) return {};
-	
+
 	let url = props.fallbackImage;
 	if (url && !url.startsWith('/') && !url.startsWith('http')) {
 		url = '/' + url;
@@ -204,7 +204,7 @@ function destroy(customRoot, threeManager) {
 		textGroup.traverse((child) => {
 			if (child.isMesh) {
 				// Don't dispose geometry if we want to keep the cache valid!
-				// Just unparent.
+				// Just un parent.
 			}
 		});
 	}
@@ -235,9 +235,9 @@ function tick(root, LockManager, time) {
 		:tickFn="tick"
 	>
 		<!-- dedicated fallback image layer that won't affect container measurements -->
-		<div 
-			v-if="(!has3DCapability || !el?.is3DReady) && fallbackImage" 
-			class="fallback-image-layer" 
+		<div
+			v-if="(!has3DCapability || !el?.is3DReady) && fallbackImage"
+			class="fallback-image-layer"
 			:style="fallbackStyle"
 		></div>
 
