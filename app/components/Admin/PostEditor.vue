@@ -66,6 +66,74 @@ const categoryText = ref('');
 // ref to our featured image file input
 const featuredInputEl = ref(null);
 
+// slug check timer
+let slugCheckTimer = null;
+
+
+/**
+ * Slugify a string
+ *
+ * @param {string} s - string to slugify
+ * @returns {string} - slugified string
+ */
+function slugify(s) {
+	return String(s || '')
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
+}
+
+
+/**
+ * Check if a slug is available and append a number if not
+ *
+ * @param {string} baseSlug - the slug to check
+ */
+async function ensureUniqueSlug(baseSlug) {
+
+	if (!baseSlug || !draft.value) return;
+
+	try {
+		const res = await $fetch('/api/admin/posts/check-slug', {
+			params: {
+				slug: baseSlug,
+				exclude: props.post?._id,
+			},
+			credentials: 'include',
+		});
+
+		if (res.available) {
+			draft.value.slug = baseSlug;
+		} else {
+			// Try appending numbers until one works
+			let i = 2;
+			let available = false;
+			let currentSlug = baseSlug;
+
+			while (!available && i < 100) {
+				currentSlug = `${baseSlug}-${i}`;
+				const check = await $fetch('/api/admin/posts/check-slug', {
+					params: {
+						slug: currentSlug,
+						exclude: props.post?._id,
+					},
+					credentials: 'include',
+				});
+				if (check.available) {
+					available = true;
+				} else {
+					i++;
+				}
+			}
+			draft.value.slug = currentSlug;
+		}
+
+	} catch (e) {
+		console.error('Failed to check slug availability', e);
+	}
+}
+
 
 /**
  * Clear notices
@@ -360,6 +428,30 @@ watch([draft, tagsText, categoryText], () => {
 	dirty.value = true;
 
 }, { deep: true });
+
+
+/*
+	Automatically update slug when title changes (if not loading)
+*/
+watch(() => draft.value?.title, (newTitle, oldTitle) => {
+
+	if (!draft.value || ignoreChanges.value || loadingPost.value)
+		return;
+
+	// Only auto-update if the title actually changed and wasn't just set from the post
+	if (newTitle === oldTitle) return;
+
+	const newSlug = slugify(newTitle);
+	if (!newSlug) return;
+
+	// Debounce the slug check and update
+	if (slugCheckTimer) clearTimeout(slugCheckTimer);
+
+	slugCheckTimer = setTimeout(() => {
+		ensureUniqueSlug(newSlug);
+	}, 500);
+
+});
 
 
 /**
