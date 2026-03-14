@@ -492,6 +492,15 @@ onMounted(async () => {
 						text = event.dataTransfer.getData('text/plain');
 					}
 
+					// Normalize text: it might be a full URL, or have a leading slash
+					if (text) {
+						// If it's a full URL to our own site, extract the path
+						if (text.includes('/wp-content/')) {
+							const parts = text.split('/wp-content/');
+							text = 'wp-content/' + parts[parts.length - 1];
+						}
+					}
+
 					// Check if it looks like our file path (wp-content/...)
 					if (text && text.startsWith('wp-content/')) {
 						const { schema } = view.state;
@@ -504,17 +513,19 @@ onMounted(async () => {
 							const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(ext);
 							const isImage = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext);
 
+							const src = '/' + text;
+
 							let node;
 							if (isAudio) {
-								node = schema.nodes.audio.create({ src: '/' + text });
+								node = schema.nodes.audio.create({ src });
 							} else if (isVideo) {
-								node = schema.nodes.video.create({ src: '/' + text });
+								node = schema.nodes.video.create({ src });
 							} else if (isImage) {
-								node = schema.nodes.image.create({ src: '/' + text });
+								node = schema.nodes.image.create({ src });
 							} else {
 								// Generic file link
 								const filename = text.split('/').pop();
-								const link = schema.marks.link.create({ href: '/' + text });
+								const link = schema.marks.link.create({ href: src });
 								node = schema.text(filename, [link]);
 							}
 

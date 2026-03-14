@@ -22,6 +22,7 @@ const moveStartPath = ref('local://');
 const itemsToMove = ref([]);
 const rootRef = ref(null);
 let vfInstance = null;
+let modalObserver = null;
 
 // provide emits
 const emit = defineEmits([ 'pick' ]);
@@ -134,27 +135,80 @@ function handleDragStart(e) {
 			const relPath = path.replace(/^local:\/\//, '');
 			const finalUrl = 'wp-content/' + relPath;
 
+			// Set the data for the editor
 			e.dataTransfer.setData('text/plain', finalUrl);
 			e.dataTransfer.setData('application/x-gm-asset', finalUrl);
 			e.dataTransfer.effectAllowed = 'copy';
+
+			// CRITICAL: For massive images (like 155MP), the browser might freeze or abort
+			// the drag if it tries to generate a ghost image of the source.
+			// We force a tiny, transparent ghost image to avoid this.
+			try {
+				const img = new Image();
+				// 1x1 transparent pixel
+				img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+				e.dataTransfer.setDragImage(img, 0, 0);
+			} catch (err) {
+				// fallback if setDragImage fails
+			}
+
 			e.stopPropagation();
 			return;
 		}
 	}
 }
 
-// setup dragstart listener
+// setup dragstart listener and modal observer
 onMounted(() => {
 	if (rootRef.value) {
 		rootRef.value.addEventListener('dragstart', handleDragStart, true);
 	}
+
+	// Watch for VueFinder modals (Rename, New Folder, etc.) and auto-focus/select the input
+	modalObserver = new MutationObserver((mutations) => {
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				if (node.nodeType === 1) { // ELEMENT_NODE
+					
+					// Look for the input. It might be the node itself or a child.
+					const input = node.matches?.('input') ? node : node.querySelector?.('input');
+
+					if (input) {
+						// Heuristic check: is this a VueFinder modal? 
+						// We check for common VueFinder classes or container IDs.
+						const isVF = node.closest?.('.vf-main-container') || 
+									node.closest?.('.vf-modal') ||
+									node.querySelector?.('.vf-modal') ||
+									node.classList?.contains('vf-modal') ||
+									document.querySelector('.vf-modal'); // Fallback to global check if modal just appeared
+
+						if (isVF) {
+							// Vue and the browser need a moment to settle before focus/select works reliably
+							setTimeout(() => {
+								input.focus();
+								if (typeof input.select === 'function') {
+									input.select();
+								}
+							}, 100);
+						}
+					}
+				}
+			}
+		}
+	});
+
+	modalObserver.observe(document.body, { childList: true, subtree: true });
 });
 
 
-// cleanup listener
+// cleanup listener and observer
 onBeforeUnmount(() => {
 	if (rootRef.value) {
 		rootRef.value.removeEventListener('dragstart', handleDragStart, true);
+	}
+
+	if (modalObserver) {
+		modalObserver.disconnect();
 	}
 });
 
@@ -249,9 +303,12 @@ defineExpose({
 	// prevent dragging of images from the asset browser (since we handle it with custom logic)
 	// and the browsers default drag is to move the image file itself, which is not what we want
 	:deep(.vf-item img),
+	:deep(.vf-item svg),
+	:deep(.vf-item i),
 	:deep(img){
 		-webkit-user-drag: none;
 		user-select: none;
-	}// :deep(.vf-item img), :deep(img)
+		pointer-events: none; // make it transparent to clicks so the parent item gets them
+	}// :deep(.vf-item img), ...
 
 </style>
