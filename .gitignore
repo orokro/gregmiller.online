@@ -6,7 +6,7 @@ public/other/garfield/B
 public/other/garfield/C
 public/other/garfield/MIXED
 
-storage/
+/storage/
 
 # Nuxt dev/build outputs
 .output
