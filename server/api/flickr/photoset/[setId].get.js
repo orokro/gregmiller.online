@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
 	const base = 'https://api.flickr.com/services/rest/';
 	const common = `&api_key=${encodeURIComponent(flickrApiKey)}&format=json&nojsoncallback=1`;
 
-	const extras = 'url_q,url_c,url_l,title';
+	const extras = 'url_q,url_n,url_c,url_l,title';
 	const photosUrl =
 		`${base}?method=flickr.photosets.getPhotos` +
 		`${common}` +
@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
 		.map((p) => ({
 			id: p.id,
 			title: p.title,
-			thumb: p.url_q,
+			thumb: p.url_n || p.url_q, // Use 320px if available, fallback to 150px
 			src: p.url_c || p.url_l,
 			large: p.url_l || p.url_c,
 			width: p.width_c || p.width_l || null,

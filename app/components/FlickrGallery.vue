@@ -387,23 +387,33 @@ onBeforeUnmount(() => {
 
 	.grid{
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-		gap: 10px;
+		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+		gap: 12px;
 	}
 
 	.thumb{
-		border: 0;
-		background: transparent;
+		border: 3px solid white;
+		background: #eee;
 		padding: 0;
 		cursor: pointer;
-		border-radius: 8px;
+		border-radius: 4px;
 		overflow: hidden;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+		transition: transform 0.3s, box-shadow 0.3s;
+		aspect-ratio: 4 / 3;
+
+		&:hover {
+			transform: scale(1.05);
+			box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+			z-index: 10;
+		}
 	}
 
 	.thumb img{
 		display: block;
 		width: 100%;
-		height: auto;
+		height: 100%;
+		object-fit: cover;
 	}
 
 	.modal{
