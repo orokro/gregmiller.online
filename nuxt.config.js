@@ -14,6 +14,11 @@ export default defineNuxtConfig({
 
 	routeRules: {
 		'/gm-admin/**': { ssr: false },
+		'/img/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+		'/assets/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+		'/models/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+		'/textures/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+		'/env/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
 	},
 
 	nitro: {

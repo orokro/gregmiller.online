@@ -36,6 +36,9 @@ export default defineEventHandler(async (event) => {
 		const mime = guessMime(relPath);
 		setHeader(event, 'Content-Type', mime);
 
+		// Cache for a long time (1 year) since these are static assets
+		setHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable');
+
 		return data;
 
 	} catch (e) {
