@@ -98,6 +98,9 @@ function handleBodyClick(event) {
 			display: block;
 			margin: 2rem auto;
 
+			// Jump below the floating thumbnail if it exists
+			clear: right;
+
 			// Sizing: 80% on desktop, 100% on mobile
 			width: 80%;
 			max-width: 100%;
