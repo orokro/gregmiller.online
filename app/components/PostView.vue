@@ -71,14 +71,6 @@ const processedContent = computed(() => {
 
 		<div class="white-box text">
 
-			<!-- Post Thumbnail (Floating Top Right) -->
-			<img
-				v-if="post.featuredImage"
-				:src="post.featuredImage"
-				class="post-thumbnail-float"
-				:alt="post.title"
-			/>
-
 			<!-- row to contain categories and tags -->
 			<div class="category-tags-row"  v-if="post.tags?.length">
 
@@ -102,6 +94,14 @@ const processedContent = computed(() => {
 				</div>
 
 			</div>
+
+			<!-- Post Thumbnail (Floating Top Right, below tags) -->
+			<img
+				v-if="post.featuredImage"
+				:src="post.featuredImage"
+				class="post-thumbnail-float"
+				:alt="post.title"
+			/>
 
 			<PostBody :post="post" />
 		</div>
