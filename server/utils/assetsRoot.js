@@ -19,10 +19,10 @@ export function getAssetsRoot() {
 
 	const { uploadRoot } = useRuntimeConfig();
 
-	// Default to <project>/public/wp-content
+	// Default to <project>/storage
 	const root = uploadRoot
 		? path.resolve(String(uploadRoot))
-		: path.resolve(process.cwd(), 'public', 'wp-content');
+		: path.resolve(process.cwd(), 'storage');
 
 	return root;
 }
@@ -41,5 +41,5 @@ export function resolveSafe(root, userPath) {
 
 export function toPublicUrl(userPath) {
 	const cleaned = String(userPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
-	return `/wp-content/${cleaned}`;
+	return `/storage/${cleaned}`;
 }
