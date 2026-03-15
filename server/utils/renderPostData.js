@@ -146,6 +146,14 @@ async function getRenderer() {
 				return [ 'div', { 'data-iframe-missing': '1' }, 'Missing iframe src' ];
 			}
 
+			// If it's a youtube embed, try to force high quality
+			if (attrs.src.includes('youtube.com/embed/') || attrs.src.includes('youtu.be/')) {
+				if (!attrs.src.includes('vq=')) {
+					const joiner = attrs.src.includes('?') ? '&' : '?';
+					attrs.src += `${joiner}vq=hd1080`;
+				}
+			}
+
 			return [ 'iframe', attrs ];
 		},
 	});

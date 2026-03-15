@@ -71,6 +71,14 @@ const processedContent = computed(() => {
 
 		<div class="white-box text">
 
+			<!-- Post Thumbnail (Floating Top Right) -->
+			<img
+				v-if="post.featuredImage"
+				:src="post.featuredImage"
+				class="post-thumbnail-float"
+				:alt="post.title"
+			/>
+
 			<!-- row to contain categories and tags -->
 			<div class="category-tags-row"  v-if="post.tags?.length">
 
@@ -170,6 +178,35 @@ const processedContent = computed(() => {
 	.white-box {
 
 		padding: 0.5rem 1rem 2rem 1rem;
+
+		// Floating thumbnail in top right
+		.post-thumbnail-float {
+			float: right;
+			width: 200px;
+			height: 200px;
+			object-fit: cover;
+			border: 3px solid white;
+			border-radius: 3px;
+			margin-left: 20px;
+			margin-bottom: 15px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+			@media (max-width: 600px) {
+				// optional: on very small screens, center it instead of floating?
+				// for now, just make it a bit smaller or keep float
+				width: 150px;
+				height: 150px;
+			}
+
+			@media (max-width: 400px) {
+				float: none;
+				display: block;
+				margin: 0 auto 20px auto;
+				width: 100%;
+				height: auto;
+				max-width: 250px;
+			}
+		}
 
 	}// .white-box
 
