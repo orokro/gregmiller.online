@@ -104,6 +104,8 @@ const processedContent = computed(() => {
 			/>
 
 			<PostBody :post="post" />
+
+			<div style="clear: both;"></div>
 		</div>
 	</Container3D>
 
