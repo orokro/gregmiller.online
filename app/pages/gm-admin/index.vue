@@ -35,6 +35,9 @@ const post = ref(null);
 // our asset browser / post-editor components refs
 const assetBrowserRef = ref(null);
 const postEditorRef = ref(null);
+const adminSidebarRef = ref(null);
+
+const route = useRoute();
 
 
 /**
@@ -113,6 +116,15 @@ onMounted(async () => {
 		refreshPosts(),
 		assetBrowserRef.value?.refreshAssets(),
 	]);
+
+	// Auto-select post by slug if provided in query
+	const slug = route.query.slug;
+	if (slug && posts.value.length) {
+		const found = posts.value.find(p => p.slug === slug);
+		if (found && adminSidebarRef.value) {
+			adminSidebarRef.value.selectPost(found._id);
+		}
+	}
 });
 
 </script>
@@ -123,6 +135,7 @@ onMounted(async () => {
 		<div class="left-column">
 
 			<AdminSidebar
+				ref="adminSidebarRef"
 				v-model:search="currentSearch"
 				:posts="posts"
 				@refresh-posts="refreshPosts"

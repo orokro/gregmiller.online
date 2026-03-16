@@ -115,6 +115,18 @@ const commands = computed(() => {
 
 	return {
 
+	edit: () => {
+		const route = useRoute();
+		const slug = route.params.slug;
+		if (slug) {
+			navigateTo(`/gm-admin?slug=${slug}`);
+			log(`Redirecting to admin for post: ${slug}`);
+		} else {
+			navigateTo('/gm-admin');
+			log('Not on a post page. Redirecting to admin dashboard.');
+		}
+	},
+
 	mobile: (...args) => {
 		if (args.length < 1) {
 			log(describeMobileStatus());
