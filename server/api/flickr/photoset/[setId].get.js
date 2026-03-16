@@ -12,7 +12,7 @@
 */
 
 // imports
-import { defineEventHandler, getRouterParam, createError } from 'h3';
+import { defineEventHandler, getRouterParam, getQuery, createError } from 'h3';
 
 
 // Cache settings
@@ -62,6 +62,10 @@ export default defineEventHandler(async (event) => {
 	if (!setId)
 		throw createError({ statusCode: 400, statusMessage: 'Missing setId' });
 
+	// Query params
+	const query = getQuery(event);
+	const nocache = query.nocache === '1' || query.nocache === 'true';
+
 	const { flickrApiKey, flickrName } = useRuntimeConfig();
 	if (!flickrApiKey)
 		throw createError({ statusCode: 500, statusMessage: 'Missing runtimeConfig.flickrApiKey' });
@@ -71,33 +75,40 @@ export default defineEventHandler(async (event) => {
 
 	// Cache
 	const cached = cache.get(setId);
-	if (cached && (Date.now() - cached.ts) < CACHE_TTL_MS)
+	if (!nocache && cached && (Date.now() - cached.ts) < CACHE_TTL_MS)
 		return cached.data;
 
 	const base = 'https://api.flickr.com/services/rest/';
 	const common = `&api_key=${encodeURIComponent(flickrApiKey)}&format=json&nojsoncallback=1`;
 
-	const extras = 'url_q,url_n,url_c,url_l,title';
+	const extras = 'url_q,url_n,url_m,url_z,url_c,url_l,url_o,title';
 	const photosUrl =
 		`${base}?method=flickr.photosets.getPhotos` +
 		`${common}` +
 		`&photoset_id=${encodeURIComponent(setId)}` +
-		`&user_id=${encodeURIComponent(flickrName)}` +
 		`&per_page=500` +
 		`&extras=${encodeURIComponent(extras)}`;
 
 	const photosRes = await flickrCall(photosUrl);
 
 	const photos = (photosRes?.photoset?.photo || [])
-		.map((p) => ({
-			id: p.id,
-			title: p.title,
-			thumb: p.url_n || p.url_q, // Use 320px if available, fallback to 150px
-			src: p.url_c || p.url_l,
-			large: p.url_l || p.url_c,
-			width: p.width_c || p.width_l || null,
-			height: p.height_c || p.height_l || null
-		}))
+		.map((p) => {
+			// Find best available source and thumb
+			// Source: Prefer c (800), then l (1024), then z (640), then m (500), then o (original)
+			const src = p.url_c || p.url_l || p.url_z || p.url_m || p.url_o || p.url_n || p.url_q;
+			// Thumb: Prefer n (320), then q (150 sq), then m (500)
+			const thumb = p.url_n || p.url_q || p.url_m || p.url_z || src;
+			
+			return {
+				id: p.id,
+				title: p.title,
+				thumb,
+				src,
+				large: p.url_l || p.url_o || p.url_c || src,
+				width: p.width_c || p.width_l || p.width_z || p.width_m || p.width_o || null,
+				height: p.height_c || p.height_l || p.height_z || p.height_m || p.height_o || null
+			};
+		})
 		.filter((p) => p.thumb && p.src);
 
 	const payload = {

@@ -290,6 +290,7 @@ onBeforeUnmount(() => {
 
 		<div v-if="pending" class="status">Loading images…</div>
 		<div v-else-if="error" class="status error">Couldn’t load images.</div>
+		<div v-else-if="!photos.length" class="status">No images found in this gallery.</div>
 
 		<div v-else class="grid">
 			<button
