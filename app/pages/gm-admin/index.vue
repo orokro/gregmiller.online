@@ -7,7 +7,7 @@
 <script setup>
 
 // vue
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 
 // components
 import AdminSidebar from '../../components/Admin/AdminSidebar.vue';
@@ -119,9 +119,29 @@ onMounted(async () => {
 
 	// Auto-select post by slug if provided in query
 	const slug = route.query.slug;
-	if (slug && posts.value.length) {
-		const found = posts.value.find(p => p.slug === slug);
+	if (slug) {
+		let found = posts.value.find(p => p.slug === slug);
+		
+		// If not found in the initial list, search for it specifically
+		if (!found) {
+			try {
+				const searchRes = await $fetch('/api/admin/posts', {
+					params: { q: slug, limit: 1 },
+					credentials: 'include',
+				});
+				if (searchRes && searchRes.length) {
+					// Add it to the list so it appears in the sidebar
+					posts.value.unshift(searchRes[0]);
+					found = searchRes[0];
+				}
+			} catch (e) {
+				console.error('Failed to search for slug', e);
+			}
+		}
+
 		if (found && adminSidebarRef.value) {
+			// Give the DOM/Sidebar a moment to react to the new posts.value
+			await nextTick();
 			adminSidebarRef.value.selectPost(found._id);
 		}
 	}

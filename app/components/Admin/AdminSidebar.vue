@@ -131,6 +131,12 @@ function createDraft() {
 }
 
 
+// expose functions to parent (for auto-select by slug)
+defineExpose({
+	selectPost,
+});
+
+
 </script>
 <template>
 
