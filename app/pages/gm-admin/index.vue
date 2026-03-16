@@ -126,7 +126,7 @@ onMounted(async () => {
 		if (!found) {
 			try {
 				const searchRes = await $fetch('/api/admin/posts', {
-					params: { q: slug, limit: 1 },
+					params: { slug: slug, limit: 1 },
 					credentials: 'include',
 				});
 				if (searchRes && searchRes.length) {

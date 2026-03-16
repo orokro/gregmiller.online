@@ -25,11 +25,15 @@ export default defineEventHandler(async (event) => {
 	await connectDb();
 
 	const q = String(getQuery(event).q || '').trim();
+	const slug = String(getQuery(event).slug || '').trim();
 	const limit = Math.min(parseInt(getQuery(event).limit || '200', 10) || 200, 500);
 	const skip = Math.max(parseInt(getQuery(event).skip || '0', 10) || 0, 0);
 
 	const filter = {};
-	if (q) {
+
+	if (slug) {
+		filter.slug = slug;
+	} else if (q) {
 		// regex search for better partial matches in admin
 		const regex = { $regex: q, $options: 'i' };
 		filter.$or = [
