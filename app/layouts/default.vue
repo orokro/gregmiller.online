@@ -362,6 +362,7 @@ body {
 
     .white-box {
 
+
 		// box settings
         background: var(--content-box-bg-color);
         border-radius: 3px;
@@ -401,5 +402,9 @@ body {
 	}// .grid
 
 }/* .static-page */
+
+.no-3d .white-box {
+	padding: 2rem 0.5rem;
+}
 
 </style>

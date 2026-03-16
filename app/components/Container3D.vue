@@ -41,7 +41,7 @@ async function register() {
 
 	// 1. Wait for ThreeManager to boot
 	const mgr = await getThree();
-	
+
 	// Guard: Component was unmounted while waiting, or manager changed
 	if (!isMounted || !el.value || mgr !== threeManager.value) {
 		return;
@@ -124,7 +124,7 @@ onUnmounted(() => {
 	isMounted = false;
 
 	// Clean up 3D resources
-	// We use the LOCAL instance we registered with, not the global singleton 
+	// We use the LOCAL instance we registered with, not the global singleton
 	// because the singleton might have been cleared by the layout already.
 	if (registeredId.value && threeManagerInstance) {
 		threeManagerInstance.unregister(registeredId.value);
