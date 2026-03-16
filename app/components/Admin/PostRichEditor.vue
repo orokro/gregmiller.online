@@ -492,8 +492,8 @@ onMounted(async () => {
 						text = event.dataTransfer.getData('text/plain');
 					}
 
-					// Check if it looks like our file path (wp-content/...)
-					if (text && text.startsWith('wp-content/')) {
+					// Check if it looks like our file path (storage/...)
+					if (text && text.startsWith('storage/')) {
 						const { schema } = view.state;
 						const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
 

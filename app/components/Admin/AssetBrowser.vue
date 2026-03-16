@@ -132,7 +132,7 @@ function handleDragStart(e) {
 	if (path) {
 		if (path.startsWith('local://')) {
 			const relPath = path.replace(/^local:\/\//, '');
-			const finalUrl = 'wp-content/' + relPath;
+			const finalUrl = 'storage/' + relPath;
 
 			e.dataTransfer.setData('text/plain', finalUrl);
 			e.dataTransfer.setData('application/x-gm-asset', finalUrl);
