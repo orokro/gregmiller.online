@@ -54,6 +54,17 @@ function nextSlide() {
 
 
 /**
+ * Go to the previous slide
+ */
+function prevSlide() {
+	if (slides.value.length <= 1) return;
+
+	currentIndex.value = (currentIndex.value - 1 + slides.value.length) % slides.value.length;
+	startTimer();
+}
+
+
+/**
  * Start/Reset the auto-play timer based on current slide duration
  */
 function startTimer() {
@@ -111,6 +122,16 @@ onBeforeUnmount(() => {
 				</div>
 			</TransitionGroup>
 
+			<!-- Navigation Arrows -->
+			<template v-if="slides.length > 1">
+				<button class="nav-btn prev" @click="prevSlide" aria-label="Previous Slide">
+					<span>‹</span>
+				</button>
+				<button class="nav-btn next" @click="nextSlide" aria-label="Next Slide">
+					<span>›</span>
+				</button>
+			</template>
+
 			<!-- Indicators -->
 			<div class="indicators" v-if="slides.length > 1">
 				<button 
@@ -143,6 +164,58 @@ onBeforeUnmount(() => {
 	.carousel-inner {
 		position: absolute;
 		inset: 0;
+
+		&:hover {
+			.nav-btn {
+				opacity: 1;
+			}
+		}
+	}
+
+	.nav-btn {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 15%; // Large clickable area
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		z-index: 20;
+		opacity: 0;
+		transition: opacity 0.3s;
+
+		span {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 50px;
+			height: 50px;
+			background: rgba(0, 0, 0, 0.3);
+			backdrop-filter: blur(4px);
+			color: white;
+			font-size: 32px;
+			border-radius: 50%;
+			transition: background 0.2s, transform 0.2s;
+		}
+
+		&:hover span {
+			background: rgba(0, 0, 0, 0.6);
+			transform: scale(1.1);
+		}
+
+		&.prev {
+			left: 0;
+			span { padding-right: 4px; }
+		}
+
+		&.next {
+			right: 0;
+			span { padding-left: 4px; }
+		}
 	}
 
 	.slide {
