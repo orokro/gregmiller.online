@@ -15,10 +15,17 @@ import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import CategorySampler from '../components/CategorySampler.vue';
 import Carousel from '../components/Carousel.vue';
+import AboutMeContent from '../components/AboutMeContent.vue';
 
 // composables
 import { useDeviceContext } from '../composables/useDeviceContext';
 const { classObject } = useDeviceContext();
+
+// Check if we are on the "about" subdomain
+const isAboutSubdomain = computed(() => {
+	const host = process.server ? useRequestHeader('host') : window.location.host;
+	return host === 'about.gregmiller.online';
+});
 
 // Fetch the homepage content, which is a set of posts grouped by category. We send a list of categories we want to show, and the backend returns an object where each key is a category and the value is an array of posts in that category.
 const { data: homeContent } = await useFetch('/api/posts/homepage', {
@@ -73,47 +80,55 @@ const categoryLinks = {
 </script>
 <template>
 
-	<div align="center">
-		<div class="header-3d-wrapper">
-			<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
-		</div>
-	</div>
-	<br/><br/>
+	<template v-if="isAboutSubdomain">
+		<AboutMeContent />
+	</template>
 
-	<div class="static-page home-size" :class="classObject">
+	<template v-else>
 
-		<Container3D>
-			<div class="carousel-spacer">
-				<Carousel :height-percentage="45" />
+		<div align="center">
+			<div class="header-3d-wrapper">
+				<DynamicText3D text="gmiller" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
 			</div>
-		</Container3D>
+		</div>
+		<br/><br/>
 
-		<Spacer3D/>
+		<div class="static-page home-size" :class="classObject">
 
-		<div
-			v-for="cat in orderedCategories"
-			:key="cat"
-			class="container"
-		>
 			<Container3D>
-
-				<h1><span>Latest {{ cat }}</span></h1>
-				<div class="white-box">
-					<CategorySampler
-						:category="cat"
-						:category-link="categoryLinks[cat]"
-						:posts="homeContent[cat]"
-						:disable-see-all="cat === 'Posts'"
-					/>
+				<div class="carousel-spacer">
+					<Carousel :height-percentage="45" />
 				</div>
-
 			</Container3D>
 
 			<Spacer3D/>
 
+			<div
+				v-for="cat in orderedCategories"
+				:key="cat"
+				class="container"
+			>
+				<Container3D>
+
+					<h1><span>Latest {{ cat }}</span></h1>
+					<div class="white-box">
+						<CategorySampler
+							:category="cat"
+							:category-link="categoryLinks[cat]"
+							:posts="homeContent[cat]"
+							:disable-see-all="cat === 'Posts'"
+						/>
+					</div>
+
+				</Container3D>
+
+				<Spacer3D/>
+
+			</div>
+
 		</div>
 
-	</div>
+	</template>
 
 </template>
 <style lang="scss" scoped>
