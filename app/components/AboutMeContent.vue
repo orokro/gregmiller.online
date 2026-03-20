@@ -18,7 +18,7 @@ import DynamicText3D from '~/components/Custom3D/DynamicText3D.vue';
 
 	<div align="center">
 		<div class="header-3d-wrapper">
-			<DynamicText3D text="about me" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
+			<DynamicText3D text="about me" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_ABOUT.png"/>
 		</div>
 	</div>
 	<br/><br/>
@@ -27,7 +27,7 @@ import DynamicText3D from '~/components/Custom3D/DynamicText3D.vue';
 
 		<Container3D>
 			<h1><span>The Intersection of Code & Creativity</span></h1>
-			
+
 			<div class="white-box text">
 				<p>
 					I am a multi-disciplinary <strong>Software Engineer and Digital Artist</strong> with over 26 years of experience blending the worlds of code and creativity. My career has been defined by a passion for building immersive experiences, whether they live on a screen, in virtual reality, or in the physical world.
