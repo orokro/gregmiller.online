@@ -18,7 +18,7 @@ import DynamicText3D from '~/components/Custom3D/DynamicText3D.vue';
 
 	<div align="center">
 		<div class="header-3d-wrapper">
-			<DynamicText3D text="about me" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_CONTACT.png"/>
+			<DynamicText3D text="about me" :scale="0.7" :x-offset="20" fallback-image="img/2D_headers/H_GMILLER.png"/>
 		</div>
 	</div>
 	<br/><br/>

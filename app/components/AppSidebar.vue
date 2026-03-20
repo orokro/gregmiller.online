@@ -98,7 +98,7 @@ const sideBarWidth = computed(() => {
 
 			<!-- top default links -->
 			<LinkBarRow title="Home" @close="close" url="/" :icon="IcoHome" />
-			<LinkBarRow title="About Me" @close="close" url="/about-me" :icon="IcoContact" />
+			<!-- <LinkBarRow title="About Me" @close="close" url="/about-me" :icon="IcoContact" /> -->
 			<LinkBarRow title="Resume" @close="close" url="/resume" :icon="IcoResume" />
 			<LinkBarRow title="Contact" @close="close" url="/contact" :icon="IcoContact" />
 
