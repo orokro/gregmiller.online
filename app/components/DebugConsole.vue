@@ -174,6 +174,10 @@ const commands = computed(() => {
 			log(`3D override set to ${v}, but effective mode did not change.`);
 		} else {
 			log(`3D effective mode changed: ${before ? 'on' : 'off'} -> ${after ? 'on' : 'off'}.`);
+			log(`Forcing reload to ensure 3D system re-initializes...`);
+			setTimeout(() => {
+				window.location.reload();
+			}, 1000);
 		}
 
 		log(describe3DStatus());

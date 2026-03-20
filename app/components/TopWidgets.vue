@@ -27,7 +27,7 @@ import IcoYouTube from './Social_Icons/IcoYouTube.vue';
 // composables
 const { isOpen } = useHamburger();
 const { currentTheme, themes, setTheme } = useTheming();
-const { has3DCapability } = useDeviceContext();
+const { has3DCapability, set3DOverride } = useDeviceContext();
 
 const currentThemeName = computed({
 	get() {
@@ -37,6 +37,13 @@ const currentThemeName = computed({
 		setTheme(value);
 	}
 });
+
+const toggle3D = () => {
+	const newState = !has3DCapability.value;
+	set3DOverride(newState, true);
+	// Force reload to ensure Three.js system re-initializes cleanly
+	window.location.reload();
+};
 </script>
 <template>
 
@@ -84,6 +91,22 @@ const currentThemeName = computed({
 			<!-- curve style elements -->
 			<div class="curve-style-tl"></div>
 			<div class="curve-style-br"></div>
+
+			<!-- 3D Toggle -->
+			<div class="toggle-3d-container">
+				<div
+					class="toggle-3d"
+					@click="toggle3D"
+					:class="{ 'is-3d': has3DCapability }"
+					title="Toggle 3D/2D Mode"
+				>
+					<div class="toggle-track">
+						<div class="toggle-label label-3d">3D</div>
+						<div class="toggle-label label-2d">2D</div>
+						<div class="toggle-handle"></div>
+					</div>
+				</div>
+			</div>
 
 			<!-- box with icons -->
 			<div class="icon-list">
@@ -278,11 +301,100 @@ const currentThemeName = computed({
 				bottom: -28px;
 				right: 2px;
 
-				// smaller size looks better
+							// smaller size looks better
 				width: 30px;
 				height: 30px;
 
 			}// .curve-style-br
+
+			// 3D Toggle Container
+			.toggle-3d-container {
+				display: flex;
+				justify-content: center;
+				padding: 4px 0 8px 0;
+				pointer-events: auto;
+			}
+
+			// Vertical Toggle Box
+			.toggle-3d {
+				width: 30px;
+				height: 62px;
+				background: var(--color-bg-accent-2);
+				border-radius: 15px;
+				cursor: pointer;
+				position: relative;
+				box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+				border: 1px solid rgba(0,0,0,0.1);
+				overflow: hidden;
+
+				.toggle-track {
+					position: relative;
+					width: 100%;
+					height: 100%;
+					display: flex;
+					flex-direction: column;
+					justify-content: space-between;
+					align-items: center;
+					padding: 6px 0;
+					box-sizing: border-box;
+				}
+
+				.toggle-label {
+					font-family: "Quicksand", sans-serif;
+					font-size: 10px;
+					font-weight: 800;
+					color: var(--color-secondary);
+					z-index: 2;
+					transition: color 0.3s ease;
+					user-select: none;
+					line-height: 1;
+					height: 18px;
+					// border: 1px solid red;
+
+					&.label-3d {
+						padding-top: 3px;
+					}
+					&.label-2d {
+						padding-top: 6px;
+					}
+				}
+
+				.toggle-handle {
+					position: absolute;
+					width: 24px;
+					height: 24px;
+					background: var(--color-primary);
+					border-radius: 50%;
+					left: 2px;
+					top: 2px;
+					z-index: 1;
+					transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+					box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+				}
+
+				&.is-3d {
+					.toggle-handle {
+						transform: translateY(0);
+					}
+					.label-3d {
+						color: white;
+					}
+				}
+
+				&:not(.is-3d) {
+					.toggle-handle {
+						transform: translateY(32px);
+					}
+					.label-2d {
+						color: white;
+					}
+				}
+
+				// Hover effect
+				&:hover .toggle-handle {
+					filter: brightness(1.1);
+				}
+			}
 
 			// container of social icons
 			.icon-list {

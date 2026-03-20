@@ -114,14 +114,14 @@ export const useDeviceContext = () => {
 				override = check(hashParams.get('3d'));
 			}
 
-			// 2. Persist to SessionStorage if found
+			// 2. Persist to LocalStorage if found
 			if (override !== null) {
-				sessionStorage.setItem('gm_forcedHas3D', String(override));
+				localStorage.setItem('gm_forcedHas3D', String(override));
 			}
 
-			// 3. Read from SessionStorage if override is still null
+			// 3. Read from LocalStorage if override is still null
 			if (override === null) {
-				const stored = sessionStorage.getItem('gm_forcedHas3D');
+				const stored = localStorage.getItem('gm_forcedHas3D');
 				if (stored !== null) {
 					override = check(stored);
 				}
@@ -180,9 +180,16 @@ export const useDeviceContext = () => {
 		}
 	};
 
-	const set3DOverride = (v) => {
+	const set3DOverride = (v, persist = false) => {
 		if (v === true || v === false || v === null) {
 			forcedHas3D.value = v;
+			if (process.client && persist) {
+				if (v === null) {
+					localStorage.removeItem('gm_forcedHas3D');
+				} else {
+					localStorage.setItem('gm_forcedHas3D', String(v));
+				}
+			}
 		}
 	};
 
