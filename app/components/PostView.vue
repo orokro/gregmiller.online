@@ -69,7 +69,7 @@ const processedContent = computed(() => {
 
 		<h1><span>{{ post.title }}</span></h1>
 
-		<div class="white-box text">
+		<div class="white-box text main">
 
 			<!-- row to contain categories and tags -->
 			<div class="category-tags-row"  v-if="post.tags?.length">
@@ -102,6 +102,12 @@ const processedContent = computed(() => {
 				class="post-thumbnail-float"
 				:alt="post.title"
 			/>
+
+			<div class="date-row">
+				<div class="date-text">
+					Originally posted on: {{ post.date }}
+				</div>
+			</div>
 
 			<PostBody :post="post" />
 
@@ -139,7 +145,6 @@ const processedContent = computed(() => {
 				color: #666;
 			}
 
-			margin-bottom: 10px;
 			border-bottom: 2px solid var(--tag-box-color);
 			.tags {
 				text-align: center;
@@ -210,6 +215,30 @@ const processedContent = computed(() => {
 			}
 		}
 
+		.date-row {
+
+			margin-bottom: 10px;
+
+			.date-text {
+
+				display: inline-block;
+				margin: 0px;
+				padding: 2px 15px 2px 10px;
+
+				background: var(--tag-box-color);
+				border-bottom-right-radius: 15px;
+
+				font-style: italic;
+				font-size: 0.9rem;
+				color: var(--tag-text-color);
+
+			}// .date-text
+
+		}// .date-row
+
+		&.main {
+			padding-top: 5px;
+		}
 	}// .white-box
 
 </style>
