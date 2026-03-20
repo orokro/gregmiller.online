@@ -7,13 +7,15 @@
 <script setup>
 
 // vue
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick, computed } from 'vue';
 
 // components
 import AdminSidebar from '../../components/Admin/AdminSidebar.vue';
 import AssetBrowser from '../../components/Admin/AssetBrowser.vue';
 import PostEditor from '../../components/Admin/PostEditor.vue';
 import PanelTitleBar from '../../components/Admin/PanelTitleBar.vue';
+import CarouselEditor from '../../components/Admin/CarouselEditor.vue';
+import { useAdminTab } from '~/composables/useAdmin';
 
 
 // Page metadata
@@ -22,6 +24,9 @@ definePageMeta({
 	middleware: [ 'admin' ],
 });
 
+
+// active tab state
+const activeTab = useAdminTab();
 
 // our total list of posts from the server
 const posts = ref([]);
@@ -150,9 +155,9 @@ onMounted(async () => {
 </script>
 <template>
 
-	<div class="admin">
+	<div class="admin" :class="{ 'carousel-mode': activeTab === 'carousel' }">
 
-		<div class="left-column">
+		<div v-if="activeTab === 'posts'" class="left-column">
 
 			<AdminSidebar
 				ref="adminSidebarRef"
@@ -168,27 +173,33 @@ onMounted(async () => {
 
 		<section class="main-area">
 
-			<PostEditor
-				v-if="post"
-				ref="postEditorRef"
-				:key="post._id"
-				:post="post"
-				@refresh="refreshPosts"
-				@update="(p) => post = p"
-			/>
+			<template v-if="activeTab === 'posts'">
+				<PostEditor
+					v-if="post"
+					ref="postEditorRef"
+					:key="post._id"
+					:post="post"
+					@refresh="refreshPosts"
+					@update="(p) => post = p"
+				/>
 
-			<div
-				v-else
-				class="card else-card"
-			>
-				<PanelTitleBar>
-					Post Editor
-				</PanelTitleBar>
+				<div
+					v-else
+					class="card else-card"
+				>
+					<PanelTitleBar>
+						Post Editor
+					</PanelTitleBar>
 
-				<div class="msg">
-					<p>Select a post to edit from the left sidebar, or create a new post.</p>
+					<div class="msg">
+						<p>Select a post to edit from the left sidebar, or create a new post.</p>
+					</div>
 				</div>
-			</div>
+			</template>
+
+			<template v-else-if="activeTab === 'carousel'">
+				<CarouselEditor />
+			</template>
 
 		</section>
 
@@ -217,6 +228,15 @@ $assetTrayHeight: 350px;
 	color: $text;
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
+	&.carousel-mode {
+		.main-area {
+			left: 16px !important;
+		}
+		.asset-tray {
+			left: 16px !important;
+		}
+	}
+
 	// left column fixed sidebar
 	.left-column {
 
@@ -239,6 +259,7 @@ $assetTrayHeight: 350px;
 
 		// box settings
 		border-bottom: 3px solid white;
+		transition: left 0.3s ease;
 
 		.else-card {
 			padding-left: 3px;
@@ -258,6 +279,7 @@ $assetTrayHeight: 350px;
 
 		// box settings
 		height: $assetTrayHeight;
+		transition: left 0.3s ease;
 
 	}// .asset-tray
 

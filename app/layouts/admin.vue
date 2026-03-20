@@ -10,6 +10,9 @@
 -->
 <script setup>
 
+// imports
+import { useAdminTab } from '~/composables/useAdmin';
+
 const route = useRoute();
 
 const err = ref('');
@@ -17,12 +20,21 @@ const err = ref('');
 import 'vuefinder/dist/style.css';
 
 
+const activeTab = useAdminTab();
+
 /**
  * Whether to show the logout button
  */
 const showLogout = computed(() => {
 	return route.path !== '/gm-admin/login';
 });
+
+/**
+ * Switch tab
+ */
+function setTab(tab) {
+	activeTab.value = tab;
+}
 
 
 /**
@@ -49,6 +61,23 @@ async function logout() {
 			<div class="brand">
 				<NuxtLink to="/gm-admin" class="brand-link">GM Admin</NuxtLink>
 			</div>
+
+			<nav v-if="showLogout" class="admin-tabs">
+				<button 
+					class="tab-btn" 
+					:class="{ active: activeTab === 'posts' }"
+					@click="setTab('posts')"
+				>
+					Post Editor
+				</button>
+				<button 
+					class="tab-btn" 
+					:class="{ active: activeTab === 'carousel' }"
+					@click="setTab('carousel')"
+				>
+					Carousel Editor
+				</button>
+			</nav>
 
 			<div class="actions">
 				<button v-if="showLogout" type="button" class="btn" @click="logout">
@@ -124,6 +153,41 @@ $shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
 			color: $primary;
 
 		}// .brand-link
+
+		.admin-tabs {
+			display: flex;
+			gap: 8px;
+			align-self: flex-end;
+			height: 40px;
+
+			.tab-btn {
+				padding: 0 20px;
+				border: 1px solid $border;
+				border-bottom: none;
+				border-radius: 12px 12px 0 0;
+				background: #f0f0f0;
+				color: rgba($text, 0.6);
+				font-size: 13px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.2s;
+
+				&:hover {
+					background: #e8e8e8;
+					color: $text;
+				}
+
+				&.active {
+					background: #fff;
+					color: $primary;
+					border-color: white;
+					border-top: 2px solid $primary;
+					box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+					height: 42px;
+					margin-top: -2px;
+				}
+			}
+		}
 
 		// just a container for action buttons
 		.actions{

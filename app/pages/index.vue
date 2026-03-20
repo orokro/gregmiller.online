@@ -14,6 +14,7 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import CategorySampler from '../components/CategorySampler.vue';
+import Carousel from '../components/Carousel.vue';
 
 // Fetch the homepage content, which is a set of posts grouped by category. We send a list of categories we want to show, and the backend returns an object where each key is a category and the value is an array of posts in that category.
 const { data: homeContent } = await useFetch('/api/posts/homepage', {
@@ -76,6 +77,12 @@ const categoryLinks = {
 	<br/><br/>
 
 	<div class="static-page home-size">
+
+		<Container3D>
+			<Carousel :height-percentage="45" />
+		</Container3D>
+
+		<Spacer3D/>
 
 		<div
 			v-for="cat in orderedCategories"
