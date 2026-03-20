@@ -107,7 +107,12 @@ const processedContent = computed(() => {
 				<div class="date-text">
 					Originally posted on: {{ post.date }}
 				</div>
+
+				<p class="date-warning">
+					⚠️ Note: This post was originally published on {{ post.date }}. It may contain outdated information on my skills, or reflect my views at that time, which could differ from my current perspectives.
+				</p>
 			</div>
+
 
 			<PostBody :post="post" />
 
@@ -234,6 +239,16 @@ const processedContent = computed(() => {
 
 			}// .date-text
 
+			.date-warning {
+				max-width: 78%;
+				background: rgb(255, 221, 28);
+				border-radius: 15px;
+				margin-top: 10px;
+				padding: 10px;
+
+				// nice drop shadow
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+			}
 		}// .date-row
 
 		&.main {
