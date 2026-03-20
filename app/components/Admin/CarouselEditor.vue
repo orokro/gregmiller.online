@@ -167,7 +167,13 @@ onMounted(() => {
 					<div class="drag-handle" title="Drag to reorder">⠿</div>
 					
 					<div class="slide-thumb">
-						<img :src="'/' + slide.imageUrl" alt="Thumbnail" />
+						<video 
+							v-if="slide.imageUrl.toLowerCase().endsWith('.mp4')"
+							:src="'/' + slide.imageUrl" 
+							muted
+							class="slide-img"
+						></video>
+						<img v-else :src="'/' + slide.imageUrl" alt="Thumbnail" />
 					</div>
 
 					<div class="slide-fields">

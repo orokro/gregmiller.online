@@ -90,10 +90,24 @@ onBeforeUnmount(() => {
 					v-show="index === currentIndex"
 					class="slide"
 				>
-					<NuxtLink v-if="slide.link" :to="slide.link" class="slide-link">
-						<img :src="'/' + slide.imageUrl" alt="Hero Slide" class="slide-img" />
+					<NuxtLink :is="slide.link ? 'NuxtLink' : 'div'" :to="slide.link" class="slide-link">
+						<video 
+							v-if="slide.imageUrl.toLowerCase().endsWith('.mp4')"
+							:src="'/' + slide.imageUrl" 
+							autoplay 
+							loop 
+							muted 
+							playsinline 
+							class="slide-img"
+							style="pointer-events: none;"
+						></video>
+						<img 
+							v-else
+							:src="'/' + slide.imageUrl" 
+							alt="Hero Slide" 
+							class="slide-img" 
+						/>
 					</NuxtLink>
-					<img v-else :src="'/' + slide.imageUrl" alt="Hero Slide" class="slide-img" />
 				</div>
 			</TransitionGroup>
 
