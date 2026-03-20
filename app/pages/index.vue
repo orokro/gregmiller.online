@@ -16,6 +16,10 @@ import Spacer3D from '../components/Spacer3D.vue';
 import CategorySampler from '../components/CategorySampler.vue';
 import Carousel from '../components/Carousel.vue';
 
+// composables
+import { useDeviceContext } from '../composables/useDeviceContext';
+const { classObject } = useDeviceContext();
+
 // Fetch the homepage content, which is a set of posts grouped by category. We send a list of categories we want to show, and the backend returns an object where each key is a category and the value is an array of posts in that category.
 const { data: homeContent } = await useFetch('/api/posts/homepage', {
     method: 'POST',
@@ -76,10 +80,12 @@ const categoryLinks = {
 	</div>
 	<br/><br/>
 
-	<div class="static-page home-size">
+	<div class="static-page home-size" :class="classObject">
 
 		<Container3D>
-			<Carousel :height-percentage="45" />
+			<div class="carousel-spacer">
+				<Carousel :height-percentage="45" />
+			</div>
 		</Container3D>
 
 		<Spacer3D/>
@@ -114,6 +120,12 @@ const categoryLinks = {
 
 .home-size {
 	max-width: clamp(22rem, 92vw, 73rem);
+}
+
+:global(.no-3d) {
+	.carousel-spacer {
+		padding-top: 10px;
+	}
 }
 
 </style>
