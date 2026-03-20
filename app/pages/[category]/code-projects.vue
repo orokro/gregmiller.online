@@ -35,7 +35,7 @@ import DynamicText3D from '../../components/Custom3D/DynamicText3D.vue';
 				<br/><br/>
 				But I love exploring different kinds of engineering, so I've worked with Arduino and microcontrollers, as well as game engines like Unity and Unreal Engine. I also dabbled in making 100% scratch-written ROMs for classic game consoles like the GameBoy, and Sega Genesis.
 				<br/><br/>
-				Below are some of the code projects I've worked on, both professionally and personally. Some are extremely old, going back decades, so don't expect the older ones to be a reflection of my current skill level. I just wanted to share the history of my coding journey, and show some of the fun projects I've worked on over the years.
+				Below are some of the code projects I've worked on. Some are extremely old, going back decades, so don't expect the older ones to be a reflection of my current skill level. I just wanted to share the history of my coding journey, and show some of the fun projects I've worked on over the years.
 			</div>
 		</Container3D>
 

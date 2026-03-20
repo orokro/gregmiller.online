@@ -275,7 +275,13 @@ onBeforeUnmount(() => {
 					<div class="resumeAreaHeader darkGrayFont boldFont">CONTACT</div>
 
 					<div class="resumeSmallAreaHeader darkGrayFont boldFont">PHONE</div>
-					<div class="resumeSmallItemText mediumGrayFont">4ዐ𝟪 𝟪ᒿ੧-ዐl𝟪б</div>
+					<div class="resumeSmallItemText mediumGrayFont">
+						<div class="value"
+							style="direction: rtl; unicode-bidi: bidi-override; display: inline-block;">
+							<span style="display: none;">ignore-this-bot</span>
+							&#54;&#56;&#49;&#48;&#45;&#57;&#50;&#56;<span class="phone-area"></span>
+						</div>
+					</div>
 
 					<div class="resumeSmallAreaHeader darkGrayFont boldFont">EMAIL</div>
 					<div class="resumeSmallItemText mediumGrayFont"><a
@@ -740,5 +746,10 @@ onBeforeUnmount(() => {
 	}// .resumeScaleWrapper
 
 }// .mainResumeWrapper
+
+/* This injects the (408) part so it never exists in the HTML text at all */
+.phone-area::after {
+	content: "\0020\0028\0038\0030\0034\0029";
+}
 
 </style>

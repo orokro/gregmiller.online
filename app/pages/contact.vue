@@ -199,7 +199,11 @@ onBeforeUnmount(() => {
 				<div class="contact-grid">
 
 					<div class="label">Call:</div>
-					<div class="value">(4ዐ𝟪) 𝟪ᒿ੧-ዐl𝟪б</div>
+					<div class="value"
+						style="direction: rtl; unicode-bidi: bidi-override; display: inline-block;">
+						<span style="display: none;">ignore-this-bot</span>
+						&#54;&#56;&#49;&#48;&#45;&#57;&#50;&#56;<span class="phone-area"></span>
+					</div>
 
 					<div class="label">Email:</div>
 					<div class="value">hypurban86@gmail.com</div>
@@ -344,5 +348,10 @@ onBeforeUnmount(() => {
 
 
 }// .icon-list
+
+/* This injects the (408) part so it never exists in the HTML text at all */
+.phone-area::after {
+	content: "\0020\0028\0038\0030\0034\0029";
+}
 
 </style>
