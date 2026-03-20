@@ -34,9 +34,29 @@ if (error.value) {
 	throw createError({ statusCode: 404, statusMessage: 'Post not found' });
 }
 
+// --- Date Logic ---
+const formatDate = (dateStr) => {
+	if (!dateStr) return '';
+	const date = new Date(dateStr);
+	return date.toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
+};
+
+const isOldPost = computed(() => {
+	if (!post.value || !post.value.date) return false;
+	const postDate = new Date(post.value.date);
+	const tenYearsAgo = new Date();
+	tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+	return postDate < tenYearsAgo;
+});
+
 
 // --- NEW CODE: Formatter Function ---
 const processedContent = computed(() => {
+// ... (rest of processedContent logic)
 
     // 1. Safety check: return empty string if content hasn't loaded
     if (!post.value || !post.value.content) return '';
@@ -95,21 +115,23 @@ const processedContent = computed(() => {
 
 			</div>
 
-			<!-- Post Thumbnail (Floating Top Right, below tags) -->
-			<img
-				v-if="post.featuredImage"
-				:src="post.featuredImage"
-				class="post-thumbnail-float"
-				:alt="post.title"
-			/>
-
+			<!-- Row for Date and Thumbnail -->
 			<div class="date-row">
+
+				<!-- Post Thumbnail (Floating Top Right, below tags) -->
+				<img
+					v-if="post.featuredImage"
+					:src="post.featuredImage"
+					class="post-thumbnail-float"
+					:alt="post.title"
+				/>
+
 				<div class="date-text">
-					Originally posted on: {{ post.date }}
+					Originally posted on: {{ formatDate(post.date) }}
 				</div>
 
-				<p class="date-warning">
-					⚠️ Note: This post was originally published on {{ post.date }}. It may contain outdated information on my skills, or reflect my views at that time, which could differ from my current perspectives.
+				<p class="date-warning" v-if="isOldPost">
+					⚠️ Note: This post is over 10 years old. It was originally published on {{ formatDate(post.date) }}. It may contain outdated information on my skills, or reflect my views at that time, which could differ from my current perspectives.
 				</p>
 			</div>
 
@@ -191,38 +213,33 @@ const processedContent = computed(() => {
 
 		padding: 0.5rem 1rem 2rem 1rem;
 
-		// Floating thumbnail in top right
-		.post-thumbnail-float {
-			float: right;
-			width: 200px;
-			height: 200px;
-			object-fit: cover;
-			border: 3px solid white;
-			border-radius: 3px;
-			margin-left: 20px;
-			margin-bottom: 15px;
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-
-			@media (max-width: 600px) {
-				// optional: on very small screens, center it instead of floating?
-				// for now, just make it a bit smaller or keep float
-				width: 150px;
-				height: 150px;
-			}
-
-			@media (max-width: 400px) {
-				float: none;
-				display: block;
-				margin: 0 auto 20px auto;
-				width: 100%;
-				height: auto;
-				max-width: 250px;
-			}
-		}
-
+		// The row containing the date and potentially the floating image
 		.date-row {
 
 			margin-bottom: 10px;
+
+			// Floating thumbnail in top right
+			.post-thumbnail-float {
+				float: right;
+				width: 250px;
+				height: 250px;
+				object-fit: cover;
+				border: 3px solid white;
+				border-radius: 3px;
+				margin-left: 20px;
+				margin-bottom: 15px;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+				// mobile: center and make it bigger
+				@media (max-width: 600px) {
+					float: none;
+					display: block;
+					margin: 10px auto 20px auto;
+					width: 100%;
+					height: auto;
+					max-width: 450px;
+				}
+			}
 
 			.date-text {
 
@@ -237,17 +254,36 @@ const processedContent = computed(() => {
 				font-size: 0.9rem;
 				color: var(--tag-text-color);
 
+				// mobile: round all corners and take full width
+				@media (max-width: 600px) {
+					display: block;
+					border-radius: 15px;
+					text-align: center;
+					width: 100%;
+					padding: 6px 15px;
+				}
+
 			}// .date-text
 
 			.date-warning {
-				max-width: 78%;
+
+				// BFC trick to stay to the left of the float and not go under it
+				overflow: hidden;
+
+				max-width: 80%;
 				background: rgb(255, 221, 28);
 				border-radius: 15px;
 				margin-top: 10px;
 				padding: 10px;
+				color: #333; // dark text for readability on yellow
 
 				// nice drop shadow
 				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+				@media (max-width: 600px) {
+					max-width: 100%;
+					overflow: visible; // No need for BFC if no float
+				}
 			}
 		}// .date-row
 
