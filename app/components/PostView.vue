@@ -270,7 +270,6 @@ const processedContent = computed(() => {
 				// BFC trick to stay to the left of the float and not go under it
 				overflow: hidden;
 
-				max-width: 80%;
 				background: rgb(255, 221, 28);
 				border-radius: 15px;
 				margin-top: 10px;
@@ -281,6 +280,7 @@ const processedContent = computed(() => {
 				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
 				@media (max-width: 600px) {
+					width: 100%;
 					max-width: 100%;
 					overflow: visible; // No need for BFC if no float
 				}
