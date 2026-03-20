@@ -128,7 +128,8 @@ const seeAllLink = computed(() => {
 
             @media (min-width: 600px) {
                 gap: 20px;
-                justify-content: flex-start;
+                // Center the grid of stamps on desktop too
+                justify-content: center;
             }
 
             &.as-cards {
