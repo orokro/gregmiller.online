@@ -60,8 +60,50 @@ const categories = ref([]);
 // current post tags
 const tagsText = ref('');
 
-// current category text
-const categoryText = ref('');
+// current category list
+const categoryList = ref([]);
+
+// computed for formatting draft.date for datetime-local input
+const formattedDate = computed({
+	get() {
+		if (!draft.value?.date) return '';
+		const d = new Date(draft.value.date);
+		if (isNaN(d.getTime())) return '';
+
+		// Format as YYYY-MM-DDTHH:mm for datetime-local
+		const year = d.getFullYear();
+		const month = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		const hours = String(d.getHours()).padStart(2, '0');
+		const minutes = String(d.getMinutes()).padStart(2, '0');
+
+		return `${year}-${month}-${day}T${hours}:${minutes}`;
+	},
+	set(val) {
+		if (!draft.value) return;
+		if (!val) {
+			draft.value.date = null;
+		} else {
+			draft.value.date = new Date(val).toISOString();
+		}
+	}
+});
+
+/**
+ * Add a new category input
+ */
+function addCategory() {
+	categoryList.value.push('');
+}
+
+/**
+ * Remove a category input
+ *
+ * @param {number} index - index to remove
+ */
+function removeCategory(index) {
+	categoryList.value.splice(index, 1);
+}
 
 // ref to our featured image file input
 const featuredInputEl = ref(null);
@@ -184,6 +226,7 @@ function computeDraftPayload() {
 		flickrSetId: draft.value.flickrSetId ? String(draft.value.flickrSetId) : null,
 		featuredImage: String(draft.value.featuredImage || ''),
 		status: String(draft.value.status || 'published'),
+		date: draft.value.date || null,
 	};
 
 	// If using rich editor, postData is canonical and server will generate HTML content.
@@ -202,8 +245,9 @@ function computeDraftPayload() {
 
 	payload.tags = tags;
 
-	const cat = categoryText.value.trim();
-	payload.categories = cat ? [ cat ] : [];
+	payload.categories = categoryList.value
+		.map(c => c.trim())
+		.filter(Boolean);
 
 	return payload;
 }
@@ -233,7 +277,7 @@ async function saveDraft() {
 		draft.value = structuredClone(toRaw(updated));
 
 		tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
-		categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
+		categoryList.value = Array.isArray(draft.value.categories) ? [...draft.value.categories] : [];
 
 		dirty.value = false;
 		ok.value = 'Saved';
@@ -267,7 +311,7 @@ async function publish() {
 		draft.value = structuredClone(toRaw(updated));
 
 		tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
-		categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
+		categoryList.value = Array.isArray(draft.value.categories) ? [...draft.value.categories] : [];
 
 		ok.value = 'Published';
 		emit('refresh');
@@ -297,7 +341,7 @@ async function unpublish() {
 		draft.value = structuredClone(toRaw(updated));
 
 		tagsText.value = (Array.isArray(draft.value.tags) ? draft.value.tags : []).join(', ');
-		categoryText.value = (Array.isArray(draft.value.categories) ? draft.value.categories : [])[0] || '';
+		categoryList.value = Array.isArray(draft.value.categories) ? [...draft.value.categories] : [];
 
 		ok.value = 'Unpublished';
 		emit('refresh');
@@ -401,13 +445,13 @@ watch(() => props.post, (newPost) => {
 	if (newPost) {
 		draft.value = structuredClone(toRaw(newPost));
 		tagsText.value = Array.isArray(newPost.tags) ? newPost.tags.join(', ') : '';
-		categoryText.value = (Array.isArray(newPost.categories) ? newPost.categories : [])[0] || '';
+		categoryList.value = Array.isArray(newPost.categories) ? [...newPost.categories] : [];
 		loadingPost.value = false;
 
 	} else {
 		draft.value = null;
 		tagsText.value = '';
-		categoryText.value = '';
+		categoryList.value = [];
 		loadingPost.value = true;
 	}
 
@@ -421,7 +465,7 @@ watch(() => props.post, (newPost) => {
 /*
 	Automatically mark draft as dirty when relevant fields change
 */
-watch([draft, tagsText, categoryText], () => {
+watch([draft, tagsText, categoryList], () => {
 
 	if (!draft.value || ignoreChanges.value)
 		return;
@@ -646,6 +690,24 @@ onBeforeUnmount(() => {
 						<input class="input" type="text" :value="draft.status || 'published'" disabled />
 					</div>
 
+					<!-- 4b. DATE -->
+					<div class="setting-row">
+						<label class="label">Original Date Published</label>
+						<input
+							v-if="(draft.status || 'published') === 'published'"
+							v-model="formattedDate"
+							class="input"
+							type="datetime-local"
+						/>
+						<input
+							v-else
+							class="input"
+							type="text"
+							value="Unpublished"
+							disabled
+						/>
+					</div>
+
 					<!-- 5. TAGS -->
 					<div class="setting-row">
 						<label class="label">Tags (comma separated)</label>
@@ -656,16 +718,27 @@ onBeforeUnmount(() => {
 						></textarea>
 					</div>
 
-					<!-- 6. CATEGORY -->
+					<!-- 6. CATEGORIES -->
 					<div class="setting-row">
-						<label class="label">Category</label>
-						<input
-							v-model="categoryText"
-							class="input"
-							type="text"
-							list="categoryOptions"
-							placeholder="Type or pick…"
-						/>
+						<label class="label">Categories</label>
+
+						<div v-for="(cat, index) in categoryList" :key="index" class="category-item">
+							<input
+								v-model="categoryList[index]"
+								class="input"
+								type="text"
+								list="categoryOptions"
+								placeholder="Category name…"
+							/>
+							<button class="btn-icon danger" type="button" @click="removeCategory(index)" title="Remove Category">
+								✕
+							</button>
+						</div>
+
+						<button class="btn mini" type="button" @click="addCategory">
+							+ Add Category
+						</button>
+
 						<datalist id="categoryOptions">
 							<option v-for="c in categories" :key="c" :value="c" />
 						</datalist>
@@ -887,6 +960,14 @@ $post-settings-width: 280px;
 				overflow-x: hidden;
 				padding: 14px;
 
+				// item in the category list
+				.category-item {
+					display: flex;
+					gap: 6px;
+					margin-bottom: 6px;
+					align-items: center;
+				}
+
 				// row in the list of settings
 				.setting-row {
 					margin-bottom: 16px;
@@ -1039,6 +1120,40 @@ $post-settings-width: 280px;
 		border-color: #e54848;
 		color: #e54848;
 	}
+
+	&.mini {
+		padding: 4px 8px;
+		font-size: 11px;
+		border-radius: 8px;
+		margin-top: 4px;
+	}
 }// .btn
+
+.btn-icon {
+	background: transparent;
+	border: none;
+	padding: 4px;
+	cursor: pointer;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 14px;
+	line-height: 1;
+	opacity: 0.6;
+	transition: opacity 0.2s, background-color 0.2s;
+
+	&:hover {
+		opacity: 1;
+		background: rgba(0, 0, 0, 0.05);
+	}
+
+	&.danger {
+		color: #e54848;
+		&:hover {
+			background: rgba(#e54848, 0.1);
+		}
+	}
+}
 
 </style>

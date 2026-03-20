@@ -25,11 +25,28 @@ export default defineEventHandler(async (event) => {
 	const id = getRouterParam(event, 'id');
 	const now = new Date();
 
-	const post = await Post.findByIdAndUpdate(
-		id,
-		{ status: 'published', publishedAt: now, updatedAt: now },
-		{ new: true }
-	);
+	// First, find the post to see its current date and publishedAt
+	const existingPost = await Post.findById(id);
+	if (!existingPost) {
+		throw createError({ statusCode: 404, statusMessage: 'Post not found' });
+	}
+
+	const update = {
+		status: 'published',
+		updatedAt: now,
+	};
+
+	// Only set date if it's missing (latch logic)
+	if (!existingPost.date) {
+		update.date = now;
+	}
+
+	// Only set publishedAt if it's missing
+	if (!existingPost.publishedAt) {
+		update.publishedAt = now;
+	}
+
+	const post = await Post.findByIdAndUpdate(id, update, { new: true });
 
 	if (!post) {
 		throw createError({ statusCode: 404, statusMessage: 'Post not found' });

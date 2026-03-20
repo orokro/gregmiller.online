@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
 		slug,
 		content,
 		postData: normalized || null,
-		date: body?.date ? new Date(body.date) : now,
+		date: body?.date ? new Date(body.date) : null,
 		tags: Array.isArray(body?.tags) ? body.tags : [],
 		categories: Array.isArray(body?.categories) ? body.categories : [],
 		flickrSetId: body?.flickrSetId ? String(body.flickrSetId) : null,
