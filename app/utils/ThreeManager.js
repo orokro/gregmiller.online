@@ -10,6 +10,7 @@
 // imports
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 
 // Themes
@@ -60,6 +61,10 @@ export class ThreeManager {
 		// Asset Management
 		this.assets = new Map();
 		this.loadingPromises = new Map();
+
+		// Setup DRACO loader
+		this.dracoLoader = new DRACOLoader();
+		this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
 
 		// DOM elements synced to 3D
 		this.registeredElements = new Map();
@@ -121,6 +126,11 @@ export class ThreeManager {
 
 		// Cleanup Mouse Light
 		this.enableMouseLight(false);
+
+		// Cleanup Draco
+		if (this.dracoLoader) {
+			this.dracoLoader.dispose();
+		}
 
 		// Dispose renderer
 		if (this.renderer) {
@@ -727,7 +737,10 @@ export class ThreeManager {
 				const ext = url.split('.').pop().toLowerCase();
 				if (ext === 'glb' || ext === 'gltf') {
 
-					new GLTFLoader().load(url, (gltf) => {
+					const loader = new GLTFLoader();
+					loader.setDRACOLoader(this.dracoLoader);
+
+					loader.load(url, (gltf) => {
 						// Store full GLTF object to keep animations
 						this.assets.set(url, gltf);
 						this.loadingPromises.delete(url);
