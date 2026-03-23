@@ -22,7 +22,8 @@ export default defineNuxtConfig({
 	},
 
 	nitro: {
-		bodySizeLimit: '100mb'
+		bodySizeLimit: '100mb',
+		compressPublicAssets: true
 	},
 
 	runtimeConfig: {
