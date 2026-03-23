@@ -21,7 +21,7 @@ let glassMaterial = null;
 
 const el = ref(null);
 
-async function loadModel(manager) {
+async function loadModel(manager, autoGroup=false) {
 
 	const modelPath = '/models/decor/knife.glb';
 	const [gltfScene] = await manager.assetsReady([modelPath]);
@@ -29,6 +29,23 @@ async function loadModel(manager) {
 	if (!gltfScene) {
 		console.error(`Failed to load model: ${modelPath}`);
 		return null;
+	}
+
+	if(autoGroup) {
+
+		// if auto group is on, check if the top level of the GLB has more than one direct child.
+		// if it has multiple top-level children, we'll create a new empty group and put them all in there, so we can treat the whole model as a single unit.
+		if(gltfScene.children.length > 1) {
+			const group = new THREE.Group();
+			gltfScene.children.forEach(child => {
+				group.add(child);
+			});
+			return group;
+
+		} else {
+			// if there's only one child, just return that
+			return gltfScene.children[0];
+		}
 	}
 
 	return gltfScene;
@@ -43,7 +60,9 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 		return;
 	}
 
-	model = await loadModel(threeManager);
+	model = await loadModel(threeManager, true);
+
+	console.log(model);
 
 	// If the component was unmounted during loading, stop here
 	if (!model || !customRoot.group.parent) {
