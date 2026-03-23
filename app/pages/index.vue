@@ -15,6 +15,9 @@ import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import CategorySampler from '../components/CategorySampler.vue';
 import Carousel from '../components/Carousel.vue';
+import ContainerCustom3D from '../components/ContainerCustom3D.vue';
+
+import Knife from '../components/Custom3D/Knife.vue';
 
 // composables
 import { useDeviceContext } from '../composables/useDeviceContext';
@@ -82,6 +85,12 @@ const categoryLinks = {
 
 	<div class="static-page home-size" :class="classObject">
 
+		<div class="side-item-placer">
+			<div class="side-item-right">
+				<Knife/>
+			</div>
+		</div>
+
 		<Container3D>
 			<div class="carousel-spacer">
 				<Carousel :height-percentage="45" />
@@ -89,6 +98,12 @@ const categoryLinks = {
 		</Container3D>
 
 		<Spacer3D/>
+
+		<div class="side-item-placer">
+			<div class="side-item-right">
+
+			</div>
+		</div>
 
 		<div
 			v-for="cat in orderedCategories"
@@ -128,4 +143,21 @@ const categoryLinks = {
 	}
 }
 
+.side-item-placer {
+	border: 1px solid red;
+
+	position: relative;
+
+	.side-item-right {
+
+		transform: translate(30px, 0px);
+		border: 1px solid green;
+		position: absolute;
+		left: 100%;
+		width: 250px;
+		height: 500px;
+
+
+	}
+}
 </style>
