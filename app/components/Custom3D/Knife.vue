@@ -69,11 +69,11 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 		return;
 	}
 
-	model = model.children[0]; // Assume the GLB has a single root mesh
-	model.position.set(0, 30, 0);
+	// model = model.children[0]; // Assume the GLB has a single root mesh
+	model.position.set(0, 700, 0);
 	model.scale.set(200, 200, 200);
 	model.rotation.x = 90 * (Math.PI / 180);
-
+	model.rotation.y = -75 * (Math.PI / 180);
 	model.castShadow = true;
 	model.receiveShadow = true;
 
@@ -99,7 +99,7 @@ function update(defaultUpdate, customRoot, threeManager) {
 	const scale = 200 * (width / 800);
 	if (model) {
 		model.scale.set(scale, scale, scale);
-		model.position.set(0, 30, (1 - scale/200) * -90);
+		model.position.set(100, -110, (1 - scale/200) * -150);
 	}
 
 }
