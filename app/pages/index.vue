@@ -154,12 +154,13 @@ const sideModels = [
 
 	// Urbex
 	{
-		left: {
-			model: 'Flashlight',
-			scale: 30,
-			position: { x: 0, y: 0, z: -22 },
-			rotation: { x: 0, y: 0, z: 45 }
-		},
+		// left: {
+		// 	model: 'Flashlight',
+		// 	scale: 30,
+		// 	position: { x: 0, y: 0, z: -22 },
+		// 	rotation: { x: 0, y: 0, z: 45 }
+		// },
+		left: null,
 		right: {
 			model: 'GirafaKeychain',
 			scale: 1,

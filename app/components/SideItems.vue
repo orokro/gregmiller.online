@@ -26,7 +26,10 @@ const { showSideItems } = useTheming();
 	position: relative;
 	width: 100%;
 
+	// border: 1px solid red;
+
 	.side-item-left {
+		// border: 1px solid red;
 		position: absolute;
 		right: 100%;
 		top: 0;
@@ -37,6 +40,7 @@ const { showSideItems } = useTheming();
 	}
 
 	.side-item-right {
+		// border: 1px solid red;
 		position: absolute;
 		left: 100%;
 		top: 0;

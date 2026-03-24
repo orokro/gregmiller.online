@@ -21,6 +21,8 @@ import IcoLinkedIn from '../components/Social_Icons/IcoLinkedIn.vue';
 import IcoX from '../components/Social_Icons/IcoX.vue';
 import IcoYouTube from '../components/Social_Icons/IcoYouTube.vue';
 import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
+import SideItems from '../components/SideItems.vue';
+import Model from '../components/Custom3D/Model.vue';
 
 // our tawk.to script
 const src = 'https://embed.tawk.to/696897a9726a11197a5f8a3a/1jf090s2n'
@@ -191,6 +193,12 @@ onBeforeUnmount(() => {
 
 	<div class="static-page smaller">
 
+		<SideItems>
+			<template #left>
+				<Model model="Pencil" :scale="30" :position="{ x: -70, y: -110, z: -100 }" :rotation="{ x: 90, y: -70, z: 0 }" />
+			</template>
+		</SideItems>
+
 		<Container3D>
 			<h1><span>Contact</span></h1>
 			<div class="white-box">
@@ -243,6 +251,12 @@ onBeforeUnmount(() => {
 		</Container3D>
 
 		<Spacer3D/>
+
+		<SideItems>
+			<template #right>
+				<Model model="Sharpie" :scale="30" :position="{ x: 100, y: 110, z: -103 }" :rotation="{ x: 90, y: 75, z: 0 }" />
+			</template>
+		</SideItems>
 
 		<Container3D>
 
