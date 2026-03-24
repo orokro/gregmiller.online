@@ -73,6 +73,153 @@ const categoryLinks = {
 	"Technology Reviews": "category/technology-reviews",
 };
 
+const sideModels = [
+
+	// {
+	// 	left: {
+	// 		model: "keys_greg",
+	// 		scale: 20,
+	// 		position: { x: -70, y: -110, z: -103 },
+	// 		rotation: { x: 90, y: 30, z: 0 }
+	// 	},
+	// 		right: {
+	// 		model: "knife",
+	// 		scale: 62.5,
+	// 		position: { x: 100, y: -110, z: -103 },
+	// 		rotation: { x: 90, y: -75, z: 0	}
+	// 	}
+	// },
+
+	// latest post row
+	{
+		left: null,
+		right: null,
+	},
+
+	// Code row
+	{
+		left: {
+			model: 'coffee',
+			scale: 12,
+			position: { x: -80, y: 120, z: -70 },
+			rotation: { x: 90, y: 45, z: 0 }
+
+		},
+		right: {
+			model: 'keys_crtl_alt_del',
+			scale: 20,
+			position: { x: 100, y: -50, z: -103 },
+			rotation: { x: 90, y: -45, z: 0 }
+		}
+	},
+
+	// 3D Modeling row
+	{
+		left: {
+			model: 'Primitives',
+			scale: 10,
+			position: { x: -50, y: 0, z: -100 },
+			rotation: { x: 90, y: 45, z: 0 }
+		},
+		right: {
+			model: 'BlenderLogo',
+			scale: 30,
+			position: { x: 140, y: 50, z: -100 },
+			rotation: { x: 90, y: 0, z: 0 }
+		}
+	},
+
+	// Art row
+	{
+		left: {
+			model: 'PaintTube',
+			scale: 25,
+			position: { x: -50, y: 0, z: -100 },
+			rotation: { x: 90, y: 30, z: 0 }
+		},
+		right: {
+			model: 'PaintBrushes',
+			scale: 30,
+			position: { x: 60, y: -60, z: -100 },
+			rotation: { x: 90, y: -15, z: 0 }
+		}
+	},
+
+	// Other projects
+	{
+		left: null,
+		right: null,
+	},
+
+	// Urbex
+	{
+		left: {
+			model: 'Flashlight',
+			scale: 30,
+			position: { x: 0, y: 0, z: -22 },
+			rotation: { x: 0, y: 0, z: 45 }
+		},
+		right: {
+			model: 'GirafaKeychain',
+			scale: 1,
+			position: { x: 0, y: 0, z: 0 },
+			rotation: { x: 90, y: 0, z: 0 }
+		}
+	},
+
+	// graffiti
+	{
+		left: null,
+		right: {
+			model: 'Propeller',
+			scale: 20,
+			position: { x: 100, y: 0, z: -90 },
+			rotation: { x: 90, y: -60, z: 0 }
+		},
+	},
+
+	// Music
+	{
+		left: {
+			model: 'iPod',
+			scale: 30,
+			position: { x: -90, y: 70, z: -130 },
+			rotation: { x: 90, y: 10, z: 0 }
+		},
+		right: null,
+	},
+
+	// My Music
+	// Other projects
+	{
+		left: null,
+		right: {
+			model: 'CasetteTape',
+			scale: 20,
+			position: { x: 120, y: 0, z: -100 },
+			rotation: { x: 90, y: 45, z: 0 }
+		}
+	},
+
+	// Tech reviews
+	{
+		left: {
+			model: 'LTTDriver',
+			scale: 25,
+			position: { x: 0, y: 70, z: -103 },
+			rotation: { x: 90, y: -175, z: 0 }
+		},
+		right: {
+			model: 'RamSticks',
+			scale: 20,
+			position: { x: 300, y: -100, z: -97 },
+			rotation: { x: 90, y: 80, z: 0 }
+		}
+	},
+
+
+];
+
 </script>
 <template>
 
@@ -89,6 +236,10 @@ const categoryLinks = {
 			<div class="side-item-right">
 				<Model model="knife" :scale="62.5" :position="{ x: 100, y: -110, z: -103 }" :rotation="{ x: 90, y: -75, z: 0 }" />
 			</div>
+			<div class="side-item-left">
+				<!-- You can add something on the left side if you want -->
+				<Model model="keys_greg" :scale="20" :position="{ x: -70, y: -110, z: -103 }" :rotation="{ x: 90, y: 30, z: 0 }" />
+			</div>
 		</div>
 
 		<Container3D>
@@ -99,17 +250,35 @@ const categoryLinks = {
 
 		<Spacer3D/>
 
-		<div class="side-item-placer">
-			<div class="side-item-right">
 
-			</div>
-		</div>
 
 		<div
-			v-for="cat in orderedCategories"
+			v-for="cat, i in orderedCategories"
 			:key="cat"
 			class="container"
 		>
+			<div class="side-item-placer">
+				<div class="side-item-right">
+					<Model
+						v-if="sideModels[i] && sideModels[i].right"
+						:model="sideModels[i].right.model"
+						:scale="sideModels[i].right.scale"
+						:position="sideModels[i].right.position"
+						:rotation="sideModels[i].right.rotation"
+					/>
+				</div>
+				<div class="side-item-left">
+					<Model
+						v-if="sideModels[i] && sideModels[i].left"
+						:model="sideModels[i].left.model"
+						:scale="sideModels[i].left.scale"
+						:position="sideModels[i].left.position"
+						:rotation="sideModels[i].left.rotation"
+					/>
+					<!-- You can add something on the left side if you want -->
+				</div>
+			</div>
+
 			<Container3D>
 
 				<h1><span>Latest {{ cat }}</span></h1>
@@ -144,20 +313,28 @@ const categoryLinks = {
 }
 
 .side-item-placer {
-	border: 1px solid red;
+	// border: 1px solid red;
 
 	position: relative;
 
 	.side-item-right {
 
 		transform: translate(30px, 0px);
-		border: 1px solid green;
+		// border: 1px solid green;
 		position: absolute;
 		left: 100%;
 		width: 250px;
 		height: 500px;
+	}
 
+	.side-item-left {
 
+		transform: translate(-30px, 0px);
+		// border: 1px solid blue;
+		position: absolute;
+		right: 100%;
+		width: 250px;
+		height: 500px;
 	}
 }
 </style>
