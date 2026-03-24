@@ -1025,13 +1025,13 @@ export class ThreeManager {
 			this.resizeObserver.observe(element);
 		}
 
-		// make sure the new element is positioned correctly in the first place
-		this.updateElementPosition(id);
+		// make sure the new element is positioned correctly in the first place (Hard Measure)
+		this.updateElementPosition(id, true);
 		
 		const signalReady = (isReady = true) => {
 			data.ready = isReady;
-			// Measure again once built to ensure any model-specific logic in update() runs immediately
-			this.updateElementPosition(id);
+			// Measure again once built to ensure any model-specific logic in update() runs immediately (Hard Measure)
+			this.updateElementPosition(id, true);
 		};
 		this.buildRegisteredElement(data, true, signalReady);
 
@@ -1507,7 +1507,8 @@ export class ThreeManager {
 			this.currentTheme.onResize();
 		}
 
-		this.registeredElements.forEach((_, id) => this.updateElementPosition(id));
+		// FORCE HARD MEASURE on all elements during resize
+		this.registeredElements.forEach((_, id) => this.updateElementPosition(id, true));
 		this.requestRender();
 	}
 
@@ -1594,89 +1595,61 @@ export class ThreeManager {
 
 	/**
 	 * update the 3D position of a specific registered element to match its DOM position.
+	 * 
+	 * @param {string} id - the id of the registered object
+	 * @param {boolean} forceHardMeasure - if true, forces a getBoundingClientRect call
 	 */
-	updateElementPosition(id) {
+	updateElementPosition(id, forceHardMeasure = false) {
 
-		// get the data for the element of this id & gtfo if no data
 		const data = this.registeredElements.get(id);
-		if (!data)
-			return;
+		if (!data) return;
 
-		// ... (keep background image logic)
-		if (data.type === 'backgroundImage3D') {
-			const rect = data.element.getBoundingClientRect();
-			const cx = rect.left + rect.width * 0.5;
-			const cy = rect.top + rect.height * 0.5;
-
-			if (!Number.isFinite(cx) || !Number.isFinite(cy))
-				return;
-
-			// Skip if way off screen
-			if (cy < -this.height || cy > this.height * 2) return;
-
-			const ndcX = (cx / this.width) * 2 - 1;
-			const ndcY = -((cy / this.height) * 2 - 1);
-			const targetZ = this.bgPlane.position.z;
-			const dist = Math.abs(targetZ);
-			const fovRad = this.camera.fov * Math.PI / 180;
-			const planeH = 2 * Math.tan(fovRad * 0.5) * dist;
-			const planeW = planeH * this.camera.aspect;
-			const foo = 0.571;
-			let x = ndcX * (planeW * foo);
-			let y = ndcY * (planeH * foo);
-			const map = this.bgPlane.material && this.bgPlane.material.map ? this.bgPlane.material.map : null;
-			if (map && map.offset) {
-				const UNITS_PER_UV = 256;
-				x += map.offset.x * UNITS_PER_UV;
-				y += map.offset.y * UNITS_PER_UV;
-			}
-			data.group.position.set(x, -y*0.653, targetZ);
-			if (data._bgImage3D && data._bgImage3D.mesh) {
-				const pxW = Number.isFinite(+data.options.width) ? +data.options.width : rect.width;
-				const pxH = Number.isFinite(+data.options.height) ? +data.options.height : rect.height;
-				if (!Number.isFinite(pxW) || !Number.isFinite(pxH) || pxW <= 0 || pxH <= 0) return;
-				const wWorld = (pxW / this.width) * planeW;
-				const hWorld = (pxH / this.height) * planeH;
-				data._bgImage3D.mesh.scale.set(wWorld, hWorld, 1);
-			}
-			return;
-		}
-
-		// Cache corner lookups
-		if (!data.corners) {
+		// 1. HARD MEASURE: Only run on init, resize, or explicit request
+		if (forceHardMeasure || !data.docPos) {
 			const el = data.element;
-			data.corners = {
-				tl: el.querySelector('.top-left'),
-				br: el.querySelector('.bottom-right')
+			
+			// Cache corner lookups if not already done
+			if (!data.corners) {
+				data.corners = {
+					tl: el.querySelector('.top-left'),
+					br: el.querySelector('.bottom-right')
+				};
+			}
+
+			const { tl, br } = data.corners;
+			if (!tl || !br) return;
+
+			const rectTL = tl.getBoundingClientRect();
+			const rectBR = br.getBoundingClientRect();
+
+			// Calculate Document-Relative Position
+			// (Screen Pos + Current Scroll)
+			data.docPos = {
+				top: rectTL.top + this.scrollY,
+				left: rectTL.left + this.scrollX,
+				width: rectBR.left - rectTL.left,
+				height: rectBR.top - rectTL.top
 			};
 		}
 
-		const { tl, br } = data.corners;
-		if (!tl || !br) return;
+		// 2. PASSIVE UPDATE: Calculate Screen position from Document position + Scroll
+		const top = data.docPos.top - this.scrollY;
+		const left = data.docPos.left - this.scrollX;
+		const { width, height } = data.docPos;
 
-		const rectTL = tl.getBoundingClientRect();
-
-		// VIEWPORT CULLING:
-		// Regular Container3D ('box') should NEVER cull as they often define the page structure.
-		// CustomBox (decorations) can cull if they are far off screen and not named.
+		// VIEWPORT CULLING
+		// Use a large buffer to prevent pop-in
 		const isPersistent = !!data.options?.name || data.type === 'box';
 		const buffer = 1500;
 
-		if (!isPersistent && (rectTL.bottom < -buffer || rectTL.top > this.height + buffer)) {
+		if (!isPersistent && (top + height < -buffer || top > this.height + buffer)) {
 			data.group.visible = false;
 			return;
 		}
 		data.group.visible = true;
 
-		const rectBR = br.getBoundingClientRect();
-
-		const top = rectTL.top;
-		const left = rectTL.left;
-		const width = rectBR.left - rectTL.left;
-		const height = rectBR.top - rectTL.top;
-
-        const halfW = width / 2;
-        const halfH = height / 2;
+		const halfW = width / 2;
+		const halfH = height / 2;
 
 		const group = data.group;
 
@@ -1685,11 +1658,13 @@ export class ThreeManager {
 		group.position.y = (this.height / 2) - top - halfH;
 
 		const { empties } = data;
-		empties.center.position.set(0, 0, 0);
-		empties.tl.position.set(-halfW, halfH, 0);
-		empties.tr.position.set(halfW, halfH, 0);
-		empties.bl.position.set(-halfW, -halfH, 0);
-		empties.br.position.set(halfW, -halfH, 0);
+		if (empties) {
+			empties.center.position.set(0, 0, 0);
+			empties.tl.position.set(-halfW, halfH, 0);
+			empties.tr.position.set(halfW, halfH, 0);
+			empties.bl.position.set(-halfW, -halfH, 0);
+			empties.br.position.set(halfW, -halfH, 0);
+		}
 
 		const rect = { width, height, top, left };
 		this.updateRegisteredElement(data, rect);
