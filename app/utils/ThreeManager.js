@@ -1030,6 +1030,8 @@ export class ThreeManager {
 		
 		const signalReady = (isReady = true) => {
 			data.ready = isReady;
+			// Measure again once built to ensure any model-specific logic in update() runs immediately
+			this.updateElementPosition(id);
 		};
 		this.buildRegisteredElement(data, true, signalReady);
 
@@ -1578,6 +1580,12 @@ export class ThreeManager {
 
 		this._remeasureTimer = setTimeout(() => {
 			this.onResize();
+			
+			// Pre-warm the GPU by compiling shaders for all objects currently in the scene
+			if (this.renderer && this.scene && this.camera) {
+				this.renderer.compile(this.scene, this.camera);
+			}
+
 			this.requestRender();
 			this._remeasureTimer = null;
 		}, 16); // ~1 frame delay
@@ -1585,7 +1593,7 @@ export class ThreeManager {
 
 
 	/**
-	 * Update the 3D position of a specific registered element to match its DOM position.
+	 * update the 3D position of a specific registered element to match its DOM position.
 	 */
 	updateElementPosition(id) {
 
@@ -1594,13 +1602,8 @@ export class ThreeManager {
 		if (!data)
 			return;
 
-		// BackgroundImage3D doesn't have corners or theme-based positioning, so we handle it separately here.
+		// ... (keep background image logic)
 		if (data.type === 'backgroundImage3D') {
-
-			if (!this.useDefaultBgPlane || !this.bgPlane)
-				return;
-
-			// 1) DOM anchor (center)
 			const rect = data.element.getBoundingClientRect();
 			const cx = rect.left + rect.width * 0.5;
 			const cy = rect.top + rect.height * 0.5;
@@ -1608,80 +1611,64 @@ export class ThreeManager {
 			if (!Number.isFinite(cx) || !Number.isFinite(cy))
 				return;
 
-			// 2) Screen -> NDC
+			// Skip if way off screen
+			if (cy < -this.height || cy > this.height * 2) return;
+
 			const ndcX = (cx / this.width) * 2 - 1;
 			const ndcY = -((cy / this.height) * 2 - 1);
-
-			// 3) Project to a plane at the desired depth (camera-local)
-			const targetZ = this.bgPlane.position.z;// + 0.25; // slightly closer than bg
+			const targetZ = this.bgPlane.position.z;
 			const dist = Math.abs(targetZ);
-
 			const fovRad = this.camera.fov * Math.PI / 180;
 			const planeH = 2 * Math.tan(fovRad * 0.5) * dist;
 			const planeW = planeH * this.camera.aspect;
-
 			const foo = 0.571;
 			let x = ndcX * (planeW * foo);
 			let y = ndcY * (planeH * foo);
-
-			// 4) Background "reference frame" correction
-			// Your bg grid "moves" via texture offset. If we don't apply the same offset
-			// in world space, decals will appear to slide over the grid.
 			const map = this.bgPlane.material && this.bgPlane.material.map ? this.bgPlane.material.map : null;
-
 			if (map && map.offset) {
-
-				// In your bg setup you typically set repeat = vW/256, vH/256
-				// which means: 1.0 UV offset == 256 world units on the bg plane.
-				// Use that same constant here (keep in sync with your bg repeat logic).
 				const UNITS_PER_UV = 256;
-
-				// NOTE: Signs depend on how you perceive the offset direction.
-				// This pairing is the one that usually makes decals "stick" to the texture.
 				x += map.offset.x * UNITS_PER_UV;
 				y += map.offset.y * UNITS_PER_UV;
 			}
-
 			data.group.position.set(x, -y*0.653, targetZ);
-
-			// 5) Scale from DOM px -> world units at this depth
 			if (data._bgImage3D && data._bgImage3D.mesh) {
-
-				const pxW = Number.isFinite(+data.options.width)
-					? +data.options.width
-					: rect.width;
-
-				const pxH = Number.isFinite(+data.options.height)
-					? +data.options.height
-					: rect.height;
-
-				if (!Number.isFinite(pxW) || !Number.isFinite(pxH) || pxW <= 0 || pxH <= 0)
-					return;
-
+				const pxW = Number.isFinite(+data.options.width) ? +data.options.width : rect.width;
+				const pxH = Number.isFinite(+data.options.height) ? +data.options.height : rect.height;
+				if (!Number.isFinite(pxW) || !Number.isFinite(pxH) || pxW <= 0 || pxH <= 0) return;
 				const wWorld = (pxW / this.width) * planeW;
 				const hWorld = (pxH / this.height) * planeH;
-
 				data._bgImage3D.mesh.scale.set(wWorld, hWorld, 1);
 			}
-
 			return;
 		}
 
+		// Cache corner lookups
+		if (!data.corners) {
+			const el = data.element;
+			data.corners = {
+				tl: el.querySelector('.top-left'),
+				br: el.querySelector('.bottom-right')
+			};
+		}
 
-		// get the corners to measure
-		const el = data.element;
-		const cTL = el.querySelector('.top-left');
-		const cBR = el.querySelector('.bottom-right');
+		const { tl, br } = data.corners;
+		if (!tl || !br) return;
 
-		// get the corner positions relative to the viewport
-		if (!cTL || !cBR) return;
-		const rectTL = cTL.getBoundingClientRect();
-		const rectBR = cBR.getBoundingClientRect();
+		const rectTL = tl.getBoundingClientRect();
 
-		// FIX: Direct Screen Mapping
-		// We ignore scroll offsets and visual offsets.
-		// We just ask: "Where is this element on the screen right now?"
-		// Since the Canvas is strictly locked to the Screen, these coordinates map 1:1.
+		// VIEWPORT CULLING:
+		// Regular Container3D ('box') should NEVER cull as they often define the page structure.
+		// CustomBox (decorations) can cull if they are far off screen and not named.
+		const isPersistent = !!data.options?.name || data.type === 'box';
+		const buffer = 1500;
+
+		if (!isPersistent && (rectTL.bottom < -buffer || rectTL.top > this.height + buffer)) {
+			data.group.visible = false;
+			return;
+		}
+		data.group.visible = true;
+
+		const rectBR = br.getBoundingClientRect();
 
 		const top = rectTL.top;
 		const left = rectTL.left;

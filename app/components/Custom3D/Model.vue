@@ -30,6 +30,11 @@ const props = defineProps({
 	rotation: {
 		type: Object,
 		default: () => ({ x: 0, y: 0, z: 0 })
+	},
+	// Whether to wait until the model is near the viewport to load
+	lazy: {
+		type: Boolean,
+		default: false
 	}
 });
 
@@ -107,22 +112,18 @@ async function build(defaultBuild, customRoot, manager, rebuildCustom, signalRea
 		return;
 	}
 
-	// 1. Initially hide the model. It will be shown in update() after the first measurement.
-	modelObj.visible = false;
-	hasMeasured = false;
-
-	// 2. Setup shadows
+	// 1. Setup shadows
 	manager.setShadows(modelObj, true);
 
-	// 3. Add to the center empty
+	// 2. Add to the center empty
 	customRoot.empties.center.add(modelObj);
 
-	// 4. Set initial transform
+	// 3. Set initial transform
 	applyTransform();
 
 	if (signalReady) signalReady(true);
 	
-	// 5. Request a global remeasure to ensure update() is called immediately
+	// 4. Request a global remeasure to ensure update() is called immediately
 	manager.requestRemeasure();
 }
 
@@ -133,14 +134,14 @@ async function build(defaultBuild, customRoot, manager, rebuildCustom, signalRea
 function update(defaultUpdate, customRoot, manager) {
 	if (!modelObj) return;
 
-	// Once update is called at least once, we know we've been measured.
+	// Measure check
 	if (!hasMeasured) {
-		modelObj.visible = true;
 		hasMeasured = true;
+		applyTransform();
 	}
 
-	// Re-apply transforms in case props changed or dynamic scaling is needed
-	applyTransform();
+	// We removed applyTransform() from here to save CPU during scroll.
+	// ThreeManager handles moving the container, so static models don't need updates.
 }
 
 /**
