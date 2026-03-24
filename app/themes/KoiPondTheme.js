@@ -18,6 +18,9 @@ import { KoiSystem } from './includes/KoiSystem';
 // main money
 export class KoiPondTheme {
 
+	// whether to show side items (decorations on the left/right of the content)
+	static showSideItems = false;
+
 	// static theme colors for UI elements, etc. (not used by theme code directly)
 	static themeColors = {
 		primaryColor: '#4da83bff',

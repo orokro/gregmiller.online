@@ -10,7 +10,7 @@ import { useTheming } from '~/composables/useTheming';
 
 const { isMobile, has3DCapability, detectedIsMobile, detectedHas3D, forcedIsMobile, forcedHas3D, setMobileOverride, set3DOverride, refresh } = useDeviceContext();
 const { getThree } = useThree();
-const { themes, setTheme } = useTheming();
+const { themes, setTheme, showSideItems } = useTheming();
 const { debugVars, logEntries, log, clearLog, setDebugVar } = useDebugging();
 
 const isOpen = ref(false);
@@ -479,9 +479,27 @@ const commands = computed(() => {
 		refresh();
 		log(describeMobileStatus());
 		log(describe3DStatus());
+		log(`Side items: ${showSideItems.value ? 'ON' : 'OFF'}`);
 
 		const keys = Object.keys(debugVars.value || {});
 		log(`Debug vars: ${keys.length ? keys.join(', ') : '(none)'}`);
+	},
+
+	sideitems: (...args) => {
+		if (args.length < 1) {
+			showSideItems.value = !showSideItems.value;
+			log(`Side items toggled ${showSideItems.value ? 'ON' : 'OFF'}.`);
+			return;
+		}
+
+		const v = args[0];
+		if (v !== true && v !== false) {
+			log(`sideitems expects true/false. Example: sideitems true`);
+			return;
+		}
+
+		showSideItems.value = v;
+		log(`Side items set to ${v ? 'ON' : 'OFF'}.`);
 	},
 
 	commands: () => {

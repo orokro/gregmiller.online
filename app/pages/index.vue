@@ -16,6 +16,7 @@ import Spacer3D from '../components/Spacer3D.vue';
 import CategorySampler from '../components/CategorySampler.vue';
 import Carousel from '../components/Carousel.vue';
 import ContainerCustom3D from '../components/ContainerCustom3D.vue';
+import SideItems from '../components/SideItems.vue';
 
 import Model from '../components/Custom3D/Model.vue';
 
@@ -232,15 +233,14 @@ const sideModels = [
 
 	<div class="static-page home-size" :class="classObject">
 
-		<div class="side-item-placer">
-			<div class="side-item-right">
+		<SideItems>
+			<template #right>
 				<Model model="knife" :scale="62.5" :position="{ x: 100, y: -110, z: -103 }" :rotation="{ x: 90, y: -75, z: 0 }" />
-			</div>
-			<div class="side-item-left">
-				<!-- You can add something on the left side if you want -->
+			</template>
+			<template #left>
 				<Model model="keys_greg" :scale="20" :position="{ x: -70, y: -110, z: -103 }" :rotation="{ x: 90, y: 30, z: 0 }" />
-			</div>
-		</div>
+			</template>
+		</SideItems>
 
 		<Container3D>
 			<div class="carousel-spacer">
@@ -257,8 +257,8 @@ const sideModels = [
 			:key="cat"
 			class="container"
 		>
-			<div class="side-item-placer">
-				<div class="side-item-right">
+			<SideItems>
+				<template #right>
 					<Model
 						v-if="sideModels[i] && sideModels[i].right"
 						:model="sideModels[i].right.model"
@@ -266,8 +266,8 @@ const sideModels = [
 						:position="sideModels[i].right.position"
 						:rotation="sideModels[i].right.rotation"
 					/>
-				</div>
-				<div class="side-item-left">
+				</template>
+				<template #left>
 					<Model
 						v-if="sideModels[i] && sideModels[i].left"
 						:model="sideModels[i].left.model"
@@ -275,9 +275,8 @@ const sideModels = [
 						:position="sideModels[i].left.position"
 						:rotation="sideModels[i].left.rotation"
 					/>
-					<!-- You can add something on the left side if you want -->
-				</div>
-			</div>
+				</template>
+			</SideItems>
 
 			<Container3D>
 
@@ -309,32 +308,6 @@ const sideModels = [
 :global(.no-3d) {
 	.carousel-spacer {
 		padding-top: 10px;
-	}
-}
-
-.side-item-placer {
-	// border: 1px solid red;
-
-	position: relative;
-
-	.side-item-right {
-
-		transform: translate(30px, 0px);
-		// border: 1px solid green;
-		position: absolute;
-		left: 100%;
-		width: 250px;
-		height: 500px;
-	}
-
-	.side-item-left {
-
-		transform: translate(-30px, 0px);
-		// border: 1px solid blue;
-		position: absolute;
-		right: 100%;
-		width: 250px;
-		height: 500px;
 	}
 }
 </style>

@@ -10,6 +10,9 @@ import { GardenSystem } from './includes/Garden/GardenSystem';
 
 export class GardenTheme {
 
+	// whether to show side items (decorations on the left/right of the content)
+	static showSideItems = false;
+
 	// static theme colors for UI elements
 	static themeColors = {
 		primaryColor: '#4da83bff',

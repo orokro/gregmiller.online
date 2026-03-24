@@ -11,6 +11,9 @@ import { Object3D } from 'three';
 
 export class GlassTheme {
 
+	// whether to show side items (decorations on the left/right of the content)
+	static showSideItems = true;
+
 	// static theme colors for UI elements, etc. (not used by theme code directly)
 	static themeColors = {
 		primaryColor: '#00ABAE',

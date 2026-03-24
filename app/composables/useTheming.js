@@ -21,6 +21,9 @@ import { GardenTheme } from '../themes/GardenTheme';
 // our current theme
 const currentTheme = shallowRef(null);
 
+// whether to show side items (decorations on the left/right of the content)
+const showSideItems = ref(true);
+
 // get object with default theme colors
 function getThemeColorsDefaults() {
 	return {
@@ -126,6 +129,9 @@ const setTheme = (theme) => {
 	// save current theme
 	currentTheme.value = themeEntry;
 
+	// set side items visibility based on theme default (defaults to false if not specified)
+	showSideItems.value = !!themeEntry.themeClass.showSideItems;
+
 	// make sure CSS vars are updated
 	const themeColors = { ...getThemeColorsDefaults(), ...currentTheme.value.themeClass.themeColors };
 	setThemeColors(themeColors);
@@ -193,6 +199,7 @@ export function useTheming() {
 		themes,
 		themeColors,
 		themeCSSVars,
+		showSideItems,
 
 		// theme utilities
 		addTheme,

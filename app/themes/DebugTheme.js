@@ -10,6 +10,9 @@ import * as THREE from 'three';
 
 export class DebugTheme {
 
+	// whether to show side items (decorations on the left/right of the content)
+	static showSideItems = false;
+
 	// define this themes colors (will be applied to CSS when loaded)
 	static themeColors = {
 		primaryColor: '#000000',
