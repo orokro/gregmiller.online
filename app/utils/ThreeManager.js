@@ -124,8 +124,8 @@ export class ThreeManager {
 			window.visualViewport.removeEventListener('resize', this.onVisualResize);
 		}
 
-		// Cleanup Mouse Light
-		this.enableMouseLight(false);
+		// Cleanup Mouse Light (Stop listeners but DO NOT save to localStorage)
+		window.removeEventListener('mousemove', this.onMouseMove);
 
 		// Cleanup Draco
 		if (this.dracoLoader) {
@@ -207,8 +207,17 @@ export class ThreeManager {
 		// we're good to go!
 		this.isOk = true;
 
-		// 7. Load Default Theme
-		// (handled by useTheming default)
+		// 7. Initialize Mouse Light (always in scene to prevent shader stutter)
+		this.mouseLight = new THREE.PointLight(0xffffff, 0, 500);
+		this.mouseLight.castShadow = true;
+		this.mouseLight.shadow.bias = -0.0001;
+		this.scene.add(this.mouseLight);
+
+		// Load state from localStorage
+		const savedLightState = localStorage.getItem('gm-mouselight-enabled');
+		if (savedLightState === 'true') {
+			this.enableMouseLight(true);
+		}
 
 		// 8. Force initial layout update
 		this.onScroll();
@@ -1825,31 +1834,34 @@ export class ThreeManager {
 	 * When enabled, a light follows the mouse cursor.
 	 *
 	 * @param {boolean} enabled - whether to turn the feature on or off
+	 * @param {boolean} isManual - if true, the setting will be persisted to localStorage and act as a global override
 	 */
-	enableMouseLight(enabled = true) {
+	enableMouseLight(enabled = true, isManual = false) {
 
-		if (enabled === this.mouseLightEnabled)
-			return;
+		// If this is NOT a manual call (e.g. from a theme), check if there is a manual override in localStorage
+		if (!isManual) {
+			const saved = localStorage.getItem('gm-mouselight-enabled');
+			if (saved !== null) {
+				// If an override exists, we use that instead of the theme's requested state
+				enabled = (saved === 'true');
+			}
+		} else {
+			// If this IS a manual call, save the preference to localStorage
+			localStorage.setItem('gm-mouselight-enabled', enabled);
+		}
 
 		this.mouseLightEnabled = enabled;
 
+		if (this.mouseLight) {
+			this.mouseLight.intensity = enabled ? 500000 : 0;
+			this.mouseLight.castShadow = enabled;
+		}
+
 		if (enabled) {
-
-			// Create light if it doesn't exist
-			if (!this.mouseLight) {
-				this.mouseLight = new THREE.PointLight(0xffffff, 500000, 500);
-				this.mouseLight.castShadow = true;
-				this.mouseLight.shadow.bias = -0.0001;
-			}
-
-			this.scene.add(this.mouseLight);
+			// Ensure we don't add the listener multiple times
+			window.removeEventListener('mousemove', this.onMouseMove);
 			window.addEventListener('mousemove', this.onMouseMove);
-
 		} else {
-
-			if (this.mouseLight) {
-				this.scene.remove(this.mouseLight);
-			}
 			window.removeEventListener('mousemove', this.onMouseMove);
 		}
 

@@ -193,7 +193,7 @@ const commands = computed(() => {
 		// If no args, toggle
 		if (args.length < 1) {
 			const newState = !manager.mouseLightEnabled;
-			manager.enableMouseLight(newState);
+			manager.enableMouseLight(newState, true); // true = isManual
 			log(`Mouse light toggled ${newState ? 'ON' : 'OFF'}.`);
 			return;
 		}
@@ -205,7 +205,7 @@ const commands = computed(() => {
 			return;
 		}
 
-		manager.enableMouseLight(v);
+		manager.enableMouseLight(v, true); // true = isManual
 		log(`Mouse light set to ${v ? 'ON' : 'OFF'}.`);
 	},
 
