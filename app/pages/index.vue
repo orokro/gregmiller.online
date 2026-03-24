@@ -17,7 +17,7 @@ import CategorySampler from '../components/CategorySampler.vue';
 import Carousel from '../components/Carousel.vue';
 import ContainerCustom3D from '../components/ContainerCustom3D.vue';
 
-import Knife from '../components/Custom3D/Knife.vue';
+import Model from '../components/Custom3D/Model.vue';
 
 // composables
 import { useDeviceContext } from '../composables/useDeviceContext';
@@ -87,7 +87,7 @@ const categoryLinks = {
 
 		<div class="side-item-placer">
 			<div class="side-item-right">
-				<Knife/>
+				<Model model="knife" :scale="62.5" :position="{ x: 100, y: -110, z: -103 }" :rotation="{ x: 90, y: -75, z: 0 }" />
 			</div>
 		</div>
 

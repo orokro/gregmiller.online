@@ -1570,6 +1570,21 @@ export class ThreeManager {
 
 
 	/**
+	 * Requests a global remeasure of all registered elements.
+	 * This is buffered to prevent multiple back-to-back updates when many components mount at once.
+	 */
+	requestRemeasure() {
+		if (this._remeasureTimer) return;
+
+		this._remeasureTimer = setTimeout(() => {
+			this.onResize();
+			this.requestRender();
+			this._remeasureTimer = null;
+		}, 16); // ~1 frame delay
+	}
+
+
+	/**
 	 * Update the 3D position of a specific registered element to match its DOM position.
 	 */
 	updateElementPosition(id) {
