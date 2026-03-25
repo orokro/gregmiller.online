@@ -213,9 +213,14 @@ export class ThreeManager {
 		this.mouseLight.shadow.bias = -0.0001;
 		this.scene.add(this.mouseLight);
 
-		// Load state from localStorage
+		// Load state from localStorage or URL override
 		const savedLightState = localStorage.getItem('gm-mouselight-enabled');
-		if (savedLightState === 'true') {
+		const params = new URLSearchParams(window.location.search);
+		const hash = window.location.hash;
+		const forceMouseLight = params.get('mouselight') === 'true' || params.get('mouselight') === '1' || hash.includes('mouselight') || 
+							    params.get('sideitems') === 'true' || params.get('sideitems') === '1' || hash.includes('sideitems');
+
+		if (savedLightState === 'true' || forceMouseLight) {
 			this.enableMouseLight(true);
 		}
 

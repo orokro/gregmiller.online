@@ -130,6 +130,14 @@ export const useDeviceContext = () => {
 			if (override !== null) {
 				forcedHas3D.value = override;
 			}
+
+			// check for additional forcing parameters (?sideitems=true or #sideitems)
+			const force3D = params.get('sideitems') === 'true' || params.get('sideitems') === '1' || hash.includes('sideitems') ||
+						    params.get('mouselight') === 'true' || params.get('mouselight') === '1' || hash.includes('mouselight');
+			
+			if (force3D) {
+				forcedHas3D.value = true;
+			}
 		}
 	};
 
@@ -154,7 +162,15 @@ export const useDeviceContext = () => {
 
 	const has3DCapability = computed(() => {
 		// 1. Check manual overrides (URL or Debug Console)
-		if (forcedHas3D.value === true) return true;
+		if (forcedHas3D.value === true) {
+			// If we know for a fact that WebGL is not supported, we can't force it.
+			// detectedHas3D starts as false, but probeWebGL runs in refresh().
+			// We only deny if we've actually checked and it returned false.
+			if (process.client && detectedHas3D.value === false && cachedHas3D === false) {
+				return false;
+			}
+			return true;
+		}
 		if (forcedHas3D.value === false) return false;
 		
 		// 2. Apply Mobile Default Policy

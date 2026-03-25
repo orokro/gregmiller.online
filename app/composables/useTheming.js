@@ -22,7 +22,7 @@ import { GardenTheme } from '../themes/GardenTheme';
 const currentTheme = shallowRef(null);
 
 // whether to show side items (decorations on the left/right of the content)
-const showSideItems = ref(true);
+const showSideItems = ref(false);
 
 // get object with default theme colors
 function getThemeColorsDefaults() {
@@ -131,6 +131,15 @@ const setTheme = (theme) => {
 
 	// set side items visibility based on theme default (defaults to false if not specified)
 	showSideItems.value = !!themeEntry.themeClass.showSideItems;
+
+	// check for URL override (?sideitems=true or #sideitems)
+	if (process.client) {
+		const params = new URLSearchParams(window.location.search);
+		const hash = window.location.hash;
+		if (params.get('sideitems') === 'true' || params.get('sideitems') === '1' || hash.includes('sideitems')) {
+			showSideItems.value = true;
+		}
+	}
 
 	// make sure CSS vars are updated
 	const themeColors = { ...getThemeColorsDefaults(), ...currentTheme.value.themeClass.themeColors };
