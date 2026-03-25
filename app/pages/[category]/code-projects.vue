@@ -30,18 +30,25 @@ import Model from '../../components/Custom3D/Model.vue';
 
 		<SideItems>
 			<template #left>
-				<Model model="coffee" :scale="30" :position="{ x: -130, y: 0, z: -100 }" :rotation="{ x: 90, y: 30, z: 0 }" />
+				<Model model="coffee" :scale="20" :position="{ x: -130, y: -80, z: -60 }" :rotation="{ x: 90, y: 30, z: 0 }" />
 				<br/>
-				<Model model="PaintBrushes" :scale="40" :position="{ x: -170, y: -500, z: -100 }" :rotation="{ x: 90, y: -10, z: 0 }" />
+				<Model model="keys_f5" :scale="20" :position="{ x: -170, y: -500, z: -103 }" :rotation="{ x: 90, y: -10, z: 0 }" />
+				<br/>
+				<br/>
+				<br/>
+				<br/>
+				<br/>
+				<br/>
+				<Model model="Arduino" :scale="25" :position="{ x: -170, y: -500, z: -103 }" :rotation="{ x: 90, y: -10, z: 0 }" />
 			</template>
 			<template #right>
-				<Model model="Pencil" :scale="30" :position="{ x: 70, y: -110, z: -100 }" :rotation="{ x: 90, y: -100, z: 0 }" />
+				<Model model="keys_crtl_alt_del" :scale="20" :position="{ x: 170, y: -110, z: -103 }" :rotation="{ x: 90, y: 15, z: 0 }" />
 				<br/>
-				<Model model="POSCA" :scale="30" :position="{ x: 130, y: -110, z: -100 }" :rotation="{ x: 0, y: 0, z: -20 }" />
+				<Model model="DotsCart" :scale="25" :position="{ x: 130, y: -170, z: -95 }" :rotation="{ x: 90, y: 15, z: 0 }" />
 				<br/>
 				<br/>
 				<br/>
-				<Model model="PaintBottles" :scale="30" :position="{ x: 180, y: -700, z: -100 }" :rotation="{ x: 90, y: 0, z: 0 }" />
+				<!-- <Model model="PaintBottles" :scale="30" :position="{ x: 180, y: -700, z: -100 }" :rotation="{ x: 90, y: 0, z: 0 }" /> -->
 			</template>
 
 		</SideItems>
