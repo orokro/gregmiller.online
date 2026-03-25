@@ -14,6 +14,8 @@ import Container3D from '../../components/Container3D.vue';
 import Spacer3D from '../../components/Spacer3D.vue';
 import CategoryGrid from '../../app/components/CategoryGrid.vue';
 import DynamicText3D from '../../components/Custom3D/DynamicText3D.vue';
+import SideItems from '../../components/SideItems.vue';
+import Model from '../../components/Custom3D/Model.vue';
 
 </script>
 <template>
@@ -25,6 +27,16 @@ import DynamicText3D from '../../components/Custom3D/DynamicText3D.vue';
 	</div>
 
 	<div class="static-page">
+
+		<SideItems>
+			<template #left>
+				<Model model="LTTDriver" :scale="25" :position="{ x: -100, y: -170, z: -70 }" :rotation="{ x: 90, y: -175, z: 0 }" />
+			</template>
+			<template #right>
+				<Model model="RamSticks" :scale="25" :position="{ x: 400, y: -700, z: -90 }" :rotation="{ x: 90, y: 80, z: 0 }" />
+			</template>
+
+		</SideItems>
 
 		<Container3D>
 			<h1><span>Technology Reviews</span></h1>

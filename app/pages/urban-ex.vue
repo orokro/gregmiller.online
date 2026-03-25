@@ -14,6 +14,8 @@ import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import CategoryGrid from '../components/CategoryGrid.vue';
 import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
+import SideItems from '../components/SideItems.vue';
+import Model from '../components/Custom3D/Model.vue';
 
 </script>
 <template>
@@ -25,6 +27,23 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 	</div>
 
 	<div class="static-page">
+
+		<SideItems>
+			<template #left>
+				<Model model="Flashlight" :scale="30" :position="{ x: -70, y: -500, z: -22 }" :rotation="{ x: 0, y: 0, z: 15 }" />
+				<br/>
+			</template>
+			<template #right>
+				<!-- <Model model="Pencil" :scale="30" :position="{ x: 70, y: -110, z: -100 }" :rotation="{ x: 90, y: -100, z: 0 }" /> -->
+				<br/>
+				<Model model="Propeller" :scale="30" :position="{ x: 100, y: -80, z: -103 }" :rotation="{ x: 90, y: 75, z: 0 }" />
+				<br/>
+				<br/>
+				<br/>
+				<Model model="GirafaKeychain" :scale="40" :position="{ x: 50, y: -90, z: -100 }" :rotation="{ x: 0, y: 0, z: 0 }" />
+
+			</template>
+		</SideItems>
 
 		<Container3D>
 			<h1><span>Urban Ex</span></h1>

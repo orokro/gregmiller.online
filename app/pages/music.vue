@@ -14,6 +14,8 @@ import Container3D from '../components/Container3D.vue';
 import Spacer3D from '../components/Spacer3D.vue';
 import CategoryGrid from '../components/CategoryGrid.vue';
 import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
+import SideItems from '../components/SideItems.vue';
+import Model from '../components/Custom3D/Model.vue';
 
 </script>
 <template>
@@ -25,6 +27,17 @@ import DynamicText3D from '../components/Custom3D/DynamicText3D.vue';
 	</div>
 
 	<div class="static-page">
+
+		<SideItems>
+			<template #left>
+				<Model model="iPod" :scale="35" :position="{ x: -150, y: 70, z: -130 }" :rotation="{ x: 90, y: 10, z: 0 }" />
+				<br/>
+			</template>
+			<template #right>
+				<br/><br/><br/><br/><br/><br/><br/>
+				<Model model="CasetteTape" :scale="25" :position="{ x: 220, y: -500, z: -100 }" :rotation="{ x: 90, y: 45, z: 0 }" />
+			</template>
+		</SideItems>
 
 		<Container3D>
 			<h1><span>Music</span></h1>

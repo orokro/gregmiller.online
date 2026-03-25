@@ -109,7 +109,7 @@ const sideModels = [
 		right: {
 			model: 'keys_crtl_alt_del',
 			scale: 20,
-			position: { x: 100, y: -50, z: -103 },
+			position: { x: 100, y: -50, z: -90 },
 			rotation: { x: 90, y: -45, z: 0 }
 		}
 	},
@@ -141,7 +141,7 @@ const sideModels = [
 		right: {
 			model: 'PaintBrushes',
 			scale: 30,
-			position: { x: 60, y: -60, z: -100 },
+			position: { x: 60, y: -60, z: -90 },
 			rotation: { x: 90, y: -15, z: 0 }
 		}
 	},
@@ -185,7 +185,7 @@ const sideModels = [
 		left: {
 			model: 'iPod',
 			scale: 30,
-			position: { x: -90, y: 70, z: -130 },
+			position: { x: -90, y: 70, z: -110 },
 			rotation: { x: 90, y: 10, z: 0 }
 		},
 		right: null,
@@ -198,7 +198,7 @@ const sideModels = [
 		right: {
 			model: 'CasetteTape',
 			scale: 20,
-			position: { x: 120, y: 0, z: -100 },
+			position: { x: 120, y: 0, z: -90 },
 			rotation: { x: 90, y: 45, z: 0 }
 		}
 	},
@@ -208,7 +208,7 @@ const sideModels = [
 		left: {
 			model: 'LTTDriver',
 			scale: 25,
-			position: { x: 0, y: 70, z: -103 },
+			position: { x: -100, y: 70, z: -70 },
 			rotation: { x: 90, y: -175, z: 0 }
 		},
 		right: {
@@ -239,7 +239,7 @@ const sideModels = [
 				<Model model="knife" :scale="62.5" :position="{ x: 100, y: -110, z: -103 }" :rotation="{ x: 90, y: -75, z: 0 }" />
 			</template>
 			<template #left>
-				<Model model="keys_greg" :scale="20" :position="{ x: -70, y: -110, z: -103 }" :rotation="{ x: 90, y: 30, z: 0 }" />
+				<Model model="keys_greg" :scale="20" :position="{ x: -70, y: -110, z: -90 }" :rotation="{ x: 90, y: 30, z: 0 }" />
 			</template>
 		</SideItems>
 
