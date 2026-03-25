@@ -36,7 +36,7 @@ import Model from '../components/Custom3D/Model.vue';
 			<template #right>
 				<!-- <Model model="Pencil" :scale="30" :position="{ x: 70, y: -110, z: -100 }" :rotation="{ x: 90, y: -100, z: 0 }" /> -->
 				<br/>
-				<Model model="Propeller" :scale="30" :position="{ x: 100, y: -80, z: -103 }" :rotation="{ x: 90, y: 75, z: 0 }" />
+				<Model model="Propeller" :scale="30" :position="{ x: 100, y: -80, z: -90 }" :rotation="{ x: 90, y: 75, z: 0 }" />
 				<br/>
 				<br/>
 				<br/>

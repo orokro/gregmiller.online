@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
 
 		<SideItems>
 			<template #left>
-				<Model model="Pencil" :scale="30" :position="{ x: -70, y: -110, z: -100 }" :rotation="{ x: 90, y: -70, z: 0 }" />
+				<Model model="Pencil" :scale="30" :position="{ x: -70, y: -110, z: -85 }" :rotation="{ x: 90, y: -70, z: 0 }" />
 			</template>
 		</SideItems>
 
@@ -254,7 +254,7 @@ onBeforeUnmount(() => {
 
 		<SideItems>
 			<template #right>
-				<Model model="Sharpie" :scale="30" :position="{ x: 100, y: 110, z: -103 }" :rotation="{ x: 90, y: 75, z: 0 }" />
+				<Model model="Sharpie" :scale="30" :position="{ x: 100, y: 110, z: -85 }" :rotation="{ x: 90, y: 75, z: 0 }" />
 			</template>
 		</SideItems>
 

@@ -30,12 +30,12 @@ import Model from '../components/Custom3D/Model.vue';
 
 		<SideItems>
 			<template #left>
-				<Model model="iPod" :scale="35" :position="{ x: -150, y: 70, z: -130 }" :rotation="{ x: 90, y: 10, z: 0 }" />
+				<Model model="iPod" :scale="35" :position="{ x: -120, y: 70, z: -90 }" :rotation="{ x: 90, y: 10, z: 0 }" />
 				<br/>
 			</template>
 			<template #right>
 				<br/><br/><br/><br/><br/><br/><br/>
-				<Model model="CasetteTape" :scale="25" :position="{ x: 220, y: -500, z: -100 }" :rotation="{ x: 90, y: 45, z: 0 }" />
+				<Model model="CasetteTape" :scale="25" :position="{ x: 220, y: -500, z: -90 }" :rotation="{ x: 90, y: 45, z: 0 }" />
 			</template>
 		</SideItems>
 

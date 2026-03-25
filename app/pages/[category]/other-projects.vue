@@ -22,7 +22,7 @@ import Model from '../../components/Custom3D/Model.vue';
 
 	<SideItems>
 			<template #left>
-				<Model model="Propeller" :scale="30" :position="{ x: -100, y: -80, z: -103 }" :rotation="{ x: 90, y: 75, z: 0 }" />
+				<Model model="Propeller" :scale="30" :position="{ x: -100, y: -80, z: -90 }" :rotation="{ x: 90, y: 75, z: 0 }" />
 				<br/>
 				<!-- <Model model="keys_f5" :scale="20" :position="{ x: -170, y: -500, z: -103 }" :rotation="{ x: 90, y: -10, z: 0 }" /> -->
 				<br/>
@@ -31,10 +31,10 @@ import Model from '../../components/Custom3D/Model.vue';
 				<br/>
 				<br/>
 				<br/>
-				<Model model="Arduino" :scale="25" :position="{ x: -70, y: -500, z: -103 }" :rotation="{ x: 90, y: -10, z: 0 }" />
+				<Model model="Arduino" :scale="25" :position="{ x: -70, y: -500, z: -90 }" :rotation="{ x: 90, y: -10, z: 0 }" />
 			</template>
 			<template #right>
-				<Model model="3DKey" :scale="25" :position="{ x: 170, y: -110, z: -103 }" :rotation="{ x: 90, y: 15, z: 0 }" />
+				<Model model="3DKey" :scale="25" :position="{ x: 170, y: -110, z: -97 }" :rotation="{ x: 90, y: 15, z: 0 }" />
 				<br/>
 				<Model model="Breadboard" :scale="25" :position="{ x: 100, y: -270, z: -103 }" :rotation="{ x: 90, y: -85, z: 0 }" />
 				<br/>

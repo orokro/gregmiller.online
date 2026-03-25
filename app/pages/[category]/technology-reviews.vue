@@ -33,7 +33,7 @@ import Model from '../../components/Custom3D/Model.vue';
 				<Model model="LTTDriver" :scale="25" :position="{ x: -100, y: -170, z: -70 }" :rotation="{ x: 90, y: -175, z: 0 }" />
 			</template>
 			<template #right>
-				<Model model="RamSticks" :scale="25" :position="{ x: 400, y: -700, z: -90 }" :rotation="{ x: 90, y: 80, z: 0 }" />
+				<Model model="RamSticks" :scale="25" :position="{ x: 400, y: -700, z: -85 }" :rotation="{ x: 90, y: 80, z: 0 }" />
 			</template>
 
 		</SideItems>

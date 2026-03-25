@@ -30,18 +30,18 @@ import Model from '../../components/Custom3D/Model.vue';
 
 		<SideItems>
 			<template #left>
-				<Model model="PaintTube" :scale="30" :position="{ x: -130, y: 0, z: -100 }" :rotation="{ x: 90, y: 30, z: 0 }" />
+				<Model model="PaintTube" :scale="30" :position="{ x: -130, y: 0, z: -90 }" :rotation="{ x: 90, y: 30, z: 0 }" />
 				<br/>
-				<Model model="PaintBrushes" :scale="40" :position="{ x: -170, y: -500, z: -100 }" :rotation="{ x: 90, y: -10, z: 0 }" />
+				<Model model="PaintBrushes" :scale="40" :position="{ x: -170, y: -500, z: -85 }" :rotation="{ x: 90, y: -10, z: 0 }" />
 				<br/>
 				<br/>
 				<br/>
-				<Model model="PaintBottles" :scale="30" :position="{ x: -110, y: -900, z: -100 }" :rotation="{ x: 90, y: 0, z: 0 }" />
+				<Model model="PaintBottles" :scale="30" :position="{ x: -110, y: -900, z: -90 }" :rotation="{ x: 90, y: 0, z: 0 }" />
 			</template>
 			<template #right>
-				<Model model="Pencil" :scale="30" :position="{ x: 70, y: -110, z: -100 }" :rotation="{ x: 90, y: -100, z: 0 }" />
+				<Model model="Pencil" :scale="30" :position="{ x: 70, y: -110, z: -90 }" :rotation="{ x: 90, y: -100, z: 0 }" />
 				<br/>
-				<Model model="POSCA" :scale="30" :position="{ x: 130, y: 110, z: -100 }" :rotation="{ x: 0, y: 0, z: -20 }" />
+				<Model model="POSCA" :scale="30" :position="{ x: 130, y: 110, z: -85 }" :rotation="{ x: 0, y: 0, z: -20 }" />
 				<br/>
 				<br/>
 				<br/>

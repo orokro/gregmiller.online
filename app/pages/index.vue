@@ -185,7 +185,7 @@ const sideModels = [
 		left: {
 			model: 'iPod',
 			scale: 30,
-			position: { x: -90, y: 70, z: -110 },
+			position: { x: -90, y: 70, z: -90 },
 			rotation: { x: 90, y: 10, z: 0 }
 		},
 		right: null,
