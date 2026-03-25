@@ -94,6 +94,7 @@ export class ThreeManager {
 
 		// NEW: Mouse Light Feature
 		this.mouseLightEnabled = false;
+		this.mouseLightForced = false;
 		this.mouseLight = null;
 		this.onMouseMove = this._handleMouseLightMove.bind(this);
 
@@ -217,10 +218,10 @@ export class ThreeManager {
 		const savedLightState = localStorage.getItem('gm-mouselight-enabled');
 		const params = new URLSearchParams(window.location.search);
 		const hash = window.location.hash;
-		const forceMouseLight = params.get('mouselight') === 'true' || params.get('mouselight') === '1' || hash.includes('mouselight') || 
+		this.mouseLightForced = params.get('mouselight') === 'true' || params.get('mouselight') === '1' || hash.includes('mouselight') || 
 							    params.get('sideitems') === 'true' || params.get('sideitems') === '1' || hash.includes('sideitems');
 
-		if (savedLightState === 'true' || forceMouseLight) {
+		if (savedLightState === 'true' || this.mouseLightForced) {
 			this.enableMouseLight(true);
 		}
 
@@ -1843,13 +1844,20 @@ export class ThreeManager {
 	 */
 	enableMouseLight(enabled = true, isManual = false) {
 
-		// If this is NOT a manual call (e.g. from a theme), check if there is a manual override in localStorage
+		// If this is NOT a manual call (e.g. from a theme), check for overrides
 		if (!isManual) {
-			const saved = localStorage.getItem('gm-mouselight-enabled');
-			if (saved !== null) {
-				// If an override exists, we use that instead of the theme's requested state
-				enabled = (saved === 'true');
+
+			// 1. URL Override is highest priority
+			if (this.mouseLightForced) {
+				enabled = true;
+			} else {
+				// 2. LocalStorage override is second priority
+				const saved = localStorage.getItem('gm-mouselight-enabled');
+				if (saved !== null) {
+					enabled = (saved === 'true');
+				}
 			}
+
 		} else {
 			// If this IS a manual call, save the preference to localStorage
 			localStorage.setItem('gm-mouselight-enabled', enabled);
