@@ -14,6 +14,8 @@ import Container3D from '../../components/Container3D.vue';
 import Spacer3D from '../../components/Spacer3D.vue';
 import CategoryGrid from '../../app/components/CategoryGrid.vue';
 import DynamicText3D from '../../components/Custom3D/DynamicText3D.vue';
+import SideItems from '../../components/SideItems.vue';
+import Model from '../../components/Custom3D/Model.vue';
 
 </script>
 <template>
@@ -25,6 +27,18 @@ import DynamicText3D from '../../components/Custom3D/DynamicText3D.vue';
 	</div>
 
 	<div class="static-page">
+
+		<SideItems>
+			<template #left>
+				<Model model="BlenderLogo" :scale="40" :position="{ x: -40, y: 50, z: -100 }" :rotation="{ x: 90, y: 0, z: 0 }" />
+				<Model model="GirafaKeychain" :scale="40" :position="{ x: -150, y: -500, z: -100 }" :rotation="{ x: 0, y: 0, z: 0 }" />
+			</template>
+			<template #right>
+				<Model model="Primitives" :scale="10" :position="{ x: 40, y: -500, z: -95 }" :rotation="{ x: 90, y: -40, z: 0 }" />
+				<Model model="knife" :scale="62.5" :position="{ x: 100, y: -810, z: -103 }" :rotation="{ x: 90, y: -75, z: 0 }" />
+			</template>
+
+		</SideItems>
 
 		<Container3D>
 			<h1><span>3D Modeling</span></h1>
