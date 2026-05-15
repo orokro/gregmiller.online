@@ -77,7 +77,10 @@ const probeWebGL = () => {
 export const useDeviceContext = () => {
 
 	// SETTINGS
-	const no3DOnMobile = true; // Set to true to disable 3D on mobile by default
+	// Mobile always defaults to 2D when this is true. Desktop also defaults to 2D
+	// via the fallback in has3DCapability below; flip that fallback if you want
+	// desktop visitors auto-promoted to 3D when their hardware supports it.
+	const no3DOnMobile = true;
 
 	// "Real" detection
 	const detectedIsMobile = useState('devicectx_detectedIsMobile', () => false);
@@ -160,8 +163,22 @@ export const useDeviceContext = () => {
 		return detectedIsMobile.value;
 	});
 
+	/**
+	 * Resolves whether 3D should be active for the current visitor.
+	 *
+	 * Resolution order:
+	 *   1. Manual override (URL param, debug console, or persisted in localStorage
+	 *      via the 3D/2D toggle) — wins outright. A WebGL safeguard still prevents
+	 *      force-enabling 3D on machines that genuinely lack support.
+	 *   2. Mobile policy — mobile visitors always get 2D when no3DOnMobile is on.
+	 *   3. Default — 2D for everyone else. 3D performs poorly on older machines
+	 *      and a smooth first impression matters more than showing off; visitors
+	 *      can opt in via the 3D/2D toggle, which routes through step 1.
+	 *
+	 * @returns {boolean} true if 3D mode should be active
+	 */
 	const has3DCapability = computed(() => {
-		// 1. Check manual overrides (URL or Debug Console)
+		// 1. Check manual overrides (URL, Debug Console, or persisted toggle)
 		if (forcedHas3D.value === true) {
 			// If we know for a fact that WebGL is not supported, we can't force it.
 			// detectedHas3D starts as false, but probeWebGL runs in refresh().
@@ -172,14 +189,14 @@ export const useDeviceContext = () => {
 			return true;
 		}
 		if (forcedHas3D.value === false) return false;
-		
+
 		// 2. Apply Mobile Default Policy
 		if (no3DOnMobile && isMobile.value) {
 			return false;
 		}
 
-		// 3. Fallback to hardware detection
-		return detectedHas3D.value;
+		// 3. Default to 2D; visitors can opt into 3D via the toggle (step 1)
+		return false;
 	});
 
 	const classObject = computed(() => ({
