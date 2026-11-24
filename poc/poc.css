@@ -1,0 +1,113 @@
+/*
+	poc/poc.css
+	-----------
+
+	Overrides layered on top of the snapshotted site css for the POC.
+*/
+
+/* the old fixed canvas + 2D fallback background are replaced by the tile layer */
+.webgl-canvas,
+.static-bg-layer {
+	display: none !important;
+}
+
+/* the 3D layer lives IN the document, so the browser scrolls it with the content */
+#poc-gl-layer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: -1;
+	overflow: hidden;
+	pointer-events: none;
+	contain: strict;
+}
+
+#poc-gl-layer canvas {
+	position: absolute;
+	left: 0;
+	display: block;
+}
+
+/* low-res whole-page underlay, only seen if a flick outruns the sharp tiles */
+#poc-gl-layer .poc-underlay {
+	top: 0;
+	z-index: 0;
+	filter: blur(2px);
+}
+
+#poc-gl-layer .poc-tile {
+	z-index: 1;
+}
+
+/* debug: outline tiles */
+#poc-gl-layer.show-borders .poc-tile {
+	outline: 2px dashed rgba(255, 0, 128, 0.8);
+	outline-offset: -2px;
+}
+
+/* once the 3D header text is built, hide its 2D fallback image */
+html.poc-text-ready .dynamic-text-container .fallback-image-layer {
+	display: none;
+}
+
+
+/* ---------- debug HUD ---------- */
+
+#poc-hud {
+	position: fixed;
+	left: 8px;
+	bottom: 8px;
+	z-index: 100000;
+	font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	color: #e8f6f6;
+	background: rgba(10, 20, 24, 0.82);
+	border: 1px solid rgba(0, 171, 174, 0.7);
+	border-radius: 8px;
+	padding: 6px 8px;
+	max-width: min(320px, calc(100vw - 16px));
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+#poc-hud.collapsed .poc-hud-body {
+	display: none;
+}
+
+#poc-hud .poc-hud-head {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	font-weight: bold;
+	color: #00ABAE;
+}
+
+#poc-hud .poc-hud-summary {
+	font-weight: normal;
+	color: #e8f6f6;
+}
+
+#poc-hud .poc-hud-stats {
+	margin: 4px 0 6px;
+	white-space: pre;
+}
+
+#poc-hud label {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	margin: 2px 8px 2px 0;
+	cursor: pointer;
+}
+
+#poc-hud select,
+#poc-hud button {
+	font: inherit;
+	color: #e8f6f6;
+	background: #12343a;
+	border: 1px solid #00ABAE;
+	border-radius: 4px;
+	padding: 1px 4px;
+	margin: 2px 4px 2px 0;
+}
