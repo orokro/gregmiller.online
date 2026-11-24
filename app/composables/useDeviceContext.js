@@ -1,5 +1,6 @@
 // app/composables/useDeviceContext.js
 import { computed, onMounted, onUnmounted } from 'vue';
+import { staticCheck, loadCachedTier } from '~/utils/RenderCapability';
 
 const detectMobile = () => {
 	if (!process.client)
@@ -77,7 +78,9 @@ const probeWebGL = () => {
 export const useDeviceContext = () => {
 
 	// SETTINGS
-	const no3DOnMobile = true; // Set to true to disable 3D on mobile by default
+	// Mobile used to be 2D-only because the old renderer couldn't keep up. The device tier
+	// system (utils/RenderCapability.js) now decides per device instead.
+	const no3DOnMobile = false;
 
 	// "Real" detection
 	const detectedIsMobile = useState('devicectx_detectedIsMobile', () => false);
@@ -88,9 +91,39 @@ export const useDeviceContext = () => {
 	const forcedHas3D = useState('devicectx_forcedHas3D', () => null);
 	const windowWidth = useState('devicectx_windowWidth', () => process.client ? window.innerWidth : 1200);
 
+	// Render tier: null (not decided yet) | 'parallax' | 'flat' | '2d'
+	// Decided by: ?tier= override, cached result, benchmark, or the scroll watchdog.
+	const renderTier = useState('devicectx_renderTier', () => null);
+	const renderTierReason = useState('devicectx_renderTierReason', () => '');
+	const renderTierForced = useState('devicectx_renderTierForced', () => false);
+	const hardwareInfo = useState('devicectx_hardwareInfo', () => ({ ok: false, reason: '', gpu: '' }));
+
 	const refresh = () => {
 		detectedIsMobile.value = detectMobile();
-		detectedHas3D.value = probeWebGL();
+
+		// instant hardware check (WebGL, GPU limits, known-weak GPUs, ...) - cached per page load
+		const hw = staticCheck();
+		hardwareInfo.value = { ok: hw.ok, reason: hw.reason, gpu: hw.gpu };
+		detectedHas3D.value = probeWebGL() && hw.ok;
+
+		// render tier: url override first, then the cached result for this device
+		if (process.client && renderTier.value === null) {
+
+			const urlTier = new URLSearchParams(window.location.search).get('tier');
+			const cached = loadCachedTier();
+
+			if (['parallax', 'flat', '2d'].includes(urlTier)) {
+				renderTier.value = urlTier;
+				renderTierReason.value = `forced by ?tier=${urlTier}`;
+				renderTierForced.value = true;
+			} else if (!hw.ok) {
+				renderTier.value = '2d';
+				renderTierReason.value = `hardware check: ${hw.reason}`;
+			} else if (cached) {
+				renderTier.value = cached.tier;
+				renderTierReason.value = `cached ${cached.source} result (${Number(cached.ms).toFixed(1)} ms)`;
+			}
+		}
         if (process.client) {
             windowWidth.value = window.innerWidth;
         }
@@ -178,7 +211,12 @@ export const useDeviceContext = () => {
 			return false;
 		}
 
-		// 3. Fallback to hardware detection
+		// 3. Device tier says this device should get the 2D theme
+		if (renderTier.value === '2d') {
+			return false;
+		}
+
+		// 4. Fallback to hardware detection
 		return detectedHas3D.value;
 	});
 
@@ -209,11 +247,31 @@ export const useDeviceContext = () => {
 		}
 	};
 
+	/**
+	 * Sets the render tier (benchmark / watchdog / debug console).
+	 *
+	 * @param {null|'parallax'|'flat'|'2d'} tier - tier, or null to un-decide
+	 * @param {string} reason - why (shown in the debug console)
+	 * @param {boolean} forced - true if this is a manual override
+	 */
+	const setRenderTier = (tier, reason = '', forced = false) => {
+		renderTier.value = tier;
+		renderTierReason.value = reason;
+		renderTierForced.value = forced;
+	};
+
 	return {
 		// effective
 		isMobile,
 		has3DCapability,
 		windowWidth,
+
+		// render tier
+		renderTier,
+		renderTierReason,
+		renderTierForced,
+		hardwareInfo,
+		setRenderTier,
 
 		// raw
 		detectedIsMobile,

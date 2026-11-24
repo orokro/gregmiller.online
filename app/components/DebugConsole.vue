@@ -7,8 +7,10 @@ import { useDeviceContext } from '~/composables/useDeviceContext';
 import { useDebugging } from '~/composables/useDebugging';
 import { useThree } from '~/composables/useThree';
 import { useTheming } from '~/composables/useTheming';
+import { clearCachedTier, TIER_THRESHOLDS } from '~/utils/RenderCapability';
 
-const { isMobile, has3DCapability, detectedIsMobile, detectedHas3D, forcedIsMobile, forcedHas3D, setMobileOverride, set3DOverride, refresh } = useDeviceContext();
+const { isMobile, has3DCapability, detectedIsMobile, detectedHas3D, forcedIsMobile, forcedHas3D, setMobileOverride, set3DOverride, refresh,
+	renderTier, renderTierReason, renderTierForced, hardwareInfo, setRenderTier } = useDeviceContext();
 const { getThree } = useThree();
 const { themes, setTheme, showSideItems } = useTheming();
 const { debugVars, logEntries, log, clearLog, setDebugVar } = useDebugging();
@@ -83,7 +85,7 @@ const describe3DStatus = () => {
 	const real = detectedHas3D.value ? '3D capable' : '3D NOT capable';
 	const forced = forcedHas3D.value === null ? 'no override' : `forced=${forcedHas3D.value}`;
 	const effective = has3DCapability.value ? '3D enabled' : '3D disabled';
-	return `3D: ${effective} (${real}, ${forced}).`;
+	return `3D: ${effective} (${real}, ${forced}). Tier: ${renderTier.value || 'undecided'}${renderTierReason.value ? ` (${renderTierReason.value})` : ''}.`;
 };
 
 const findKeyInsensitive = (obj, wantedKey) => {
@@ -465,6 +467,72 @@ const commands = computed(() => {
 		// By name
 		setTheme(arg);
 		log(`Attempting to switch to theme: ${arg}`);
+	},
+
+	tier: async (...args) => {
+
+		const arg = args.length ? String(args[0]).toLowerCase() : null;
+
+		// show
+		if (!arg) {
+			log(`Render tier: ${renderTier.value || 'undecided'}${renderTierForced.value ? ' (forced)' : ''}`);
+			log(`Reason: ${renderTierReason.value || '-'}`);
+			log(`GPU: ${hardwareInfo.value.gpu || 'unknown'}  hardware check: ${hardwareInfo.value.ok ? 'ok' : hardwareInfo.value.reason}`);
+			log(`Thresholds: parallax <= ${TIER_THRESHOLDS.parallaxMaxMs} ms, flat <= ${TIER_THRESHOLDS.flatMaxMs} ms, else 2d`);
+			log('Usage: tier parallax | flat | 2d   (force for this session)');
+			log('       tier rebench                (forget this device\'s result and reload)');
+			return;
+		}
+
+		// forget the cached result and test again
+		if (arg === 'rebench' || arg === 'auto') {
+			clearCachedTier();
+			log('Cleared the cached tier. Reloading to re-test...');
+			setTimeout(() => {
+				const url = new URL(window.location.href);
+				url.searchParams.delete('tier');
+				window.location.href = url.toString();
+			}, 600);
+			return;
+		}
+
+		if (!['parallax', 'flat', '2d'].includes(arg)) {
+			log('tier expects parallax, flat, 2d, or rebench.');
+			return;
+		}
+
+		setRenderTier(arg, 'forced from the debug console', true);
+		const manager = await getThree();
+		if (manager && arg !== '2d')
+			manager.setParallax(arg === 'parallax');
+
+		log(`Render tier forced to ${arg} for this session.`);
+		if (arg !== '2d' && !manager)
+			log('3D is currently off; use 3don true (or reload with ?tier=' + arg + ') to bring it back.');
+	},
+
+	render: async (...args) => {
+
+		const manager = await getThree();
+		if (!manager) {
+			log('ThreeManager not available (2D theme).');
+			return;
+		}
+
+		if (args.length && (args[0] === true || args[0] === false)) {
+			manager.setParallax(args[0]);
+			log(`Parallax ${args[0] ? 'ON' : 'OFF'} (flat mode when off).`);
+			return;
+		}
+
+		const s = manager.stats;
+		const fps = manager._liveTimes.filter((t) => performance.now() - t < 1000).length;
+		log(`Mode: ${manager.opts.parallax ? 'parallax' : 'flat'}  dpr ${manager.dpr}  page ${manager.docW}x${manager.docH}`);
+		log(`Live: ${s.liveRenders} renders, ${fps} in the last second, cpu avg ${s.avgLiveMs.toFixed(1)} ms (max ${s.maxLiveMs.toFixed(1)})`);
+		log(`Tiles: ${s.tileRenders} renders, avg ${s.avgTileMs.toFixed(1)} ms (max ${s.maxTileMs.toFixed(1)})`);
+		log(`Underlay ${s.underlayMs.toFixed(1)} ms, outrun frames ${s.outrunFrames}, reflows ${s.reflows}`);
+		log(`Benchmark: ${manager.benchmarkMs === null ? 'not run this load' : manager.benchmarkMs.toFixed(1) + ' ms'}  watchdog median ${manager.watchdogMedianMs.toFixed(1)} ms`);
+		log('Usage: render true|false  (parallax on/off)');
 	},
 
 	cls: () => {

@@ -12,11 +12,11 @@ import { computed, nextTick, ref, shallowRef } from 'vue';
 import { useThree } from './useThree';
 
 // theme imports
-import { DebugTheme } from '../themes/DebugTheme';
-import { GlassThemeOld } from '../themes/GlassThemeOld';
 import { GlassTheme } from '../themes/GlassTheme';
-import { KoiPondTheme } from '../themes/KoiPondTheme';
-import { GardenTheme } from '../themes/GardenTheme';
+// not yet ported to the new engine (see addTheme calls below):
+// import { DebugTheme } from '../themes/DebugTheme';
+// import { KoiPondTheme } from '../themes/KoiPondTheme';
+// import { GardenTheme } from '../themes/GardenTheme';
 
 // our current theme
 const currentTheme = shallowRef(null);
@@ -182,15 +182,18 @@ const setThemeStyles = (newStyles) => {
 
 
 // add our initial themes
-addTheme('Debug Theme', DebugTheme);
+// Only themes ported to the document-anchored ThreeManager are listed. The others are kept
+// in the repo but hidden until they're ported (they assume a screen-space camera, and
+// Koi Pond / Garden animate every frame).
 addTheme('Glass Theme', GlassTheme);
-addTheme('Koi Pond Theme', KoiPondTheme);
-addTheme('Garden Theme', GardenTheme);
-addTheme('Glass Theme Old', GlassThemeOld);
+// TODO: port to the new engine, then re-enable:
+// addTheme('Debug Theme', DebugTheme);
+// addTheme('Koi Pond Theme', KoiPondTheme);
+// addTheme('Garden Theme', GardenTheme);
 
 
 // save our initial theme
-const defaultTheme = themes.value.find(t => t.name === 'Glass Theme') || themes.value[1];
+const defaultTheme = themes.value.find(t => t.name === 'Glass Theme') || themes.value[0];
 if (defaultTheme) {
 	setTheme(defaultTheme.name);
 }

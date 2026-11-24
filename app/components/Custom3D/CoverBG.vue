@@ -74,29 +74,59 @@ let localMaterial = null; // Track the locally created material to dispose safel
 let textures = {}; // Store refs to dispose later
 let buildId = 0; // Track build versions to prevent race conditions
 
+// current plane size in page px (element size + padding), set by update()
+const PAD = 120;
+let planeW = 0;
+let planeH = 0;
+let currentDepth = 30;
 
-// --- Helper: Perspective Correction ---
 
-function applyPerspectiveTransform(rect, group, camera, cameraZ, depthVal) {
+/**
+ * Called by the ThreeManager before every render.
+ *
+ * The paper sits `depth` px behind the page. In parallax renders the eye moves with the
+ * viewport, so (like the old applyPerspectiveTransform) we scale the plane by
+ * (cameraZ + depth) / cameraZ and slide it so its projection lands exactly on the element:
+ * the paper stays locked to the page while things above it get parallax.
+ * In flat renders the plane just sits behind the element (padding covers the oblique shift).
+ *
+ * @param {Object} customRoot - { group, empties }
+ * @param {ThreeManager} threeManager - manager
+ * @param {Object} view - { perspective, eye, cameraZ }
+ */
+function viewUpdate(customRoot, threeManager, view) {
 
-	if (!mesh) return;
+	if (!mesh || !planeW)
+		return;
 
-	// 1. Calculate Perspective Scale Factor (S)
-	// S = (CameraZ + Depth) / CameraZ
-	const scaleFactor = (cameraZ + depthVal) / cameraZ;
+	if (!view.perspective) {
+		mesh.scale.set(planeW, planeH, 1);
+		mesh.position.set(0, 0, -currentDepth);
+		return;
+	}
 
-	mesh.scale.set(rect.width * scaleFactor, rect.height * scaleFactor, 1);
+	const D = view.cameraZ;
+	const s = (D + currentDepth) / D;
+	const g = customRoot.group.position;
 
-	// 2. Calculate Parallax Alignment Offset
-	const offsetX = (group.position.x - camera.position.x) * (scaleFactor - 1);
-	const offsetY = (group.position.y - camera.position.y) * (scaleFactor - 1);
-
-	mesh.position.set(offsetX, offsetY, -depthVal);
+	mesh.scale.set(planeW * s, planeH * s, 1);
+	mesh.position.set(
+		(g.x - view.eye.x) * (s - 1),
+		(g.y - view.eye.y) * (s - 1),
+		-currentDepth
+	);
 }
 
-// --- Helper: UV Reprojection ---
 
-function updateUVs(width, height, scaleOverride = null) {
+/**
+ * Sets texture repeat so the pattern is 1000px per tile (reprojectUvs) and anchored to the
+ * element's top-left, so it doesn't slide when the page height changes.
+ *
+ * @param {number} elW - element width
+ * @param {number} elH - element height
+ * @param {number|null} scaleOverride - uv scale override
+ */
+function updateUVs(elW, elH, scaleOverride = null) {
 
 	if (!material || !material.map) return;
 
@@ -104,28 +134,26 @@ function updateUVs(width, height, scaleOverride = null) {
 	const s = (scaleOverride !== null) ? scaleOverride : uvScale.value;
 
 	if (reprojectUvs.value) {
-		// "Stable" mapping:
-		// We normalize by a reference size (1000px) so s=1 means "1 tile per 1000px"
-		// If we didn't divide, s=1 would mean "1 tile per pixel", causing the solid color bug.
-		const REFERENCE_UNIT = 1000;
-
-		map.repeat.set(
-			(width / REFERENCE_UNIT) * s,
-			(height / REFERENCE_UNIT) * s
+		const REFERENCE_UNIT = 1000 / s;
+		map.repeat.set(planeW / REFERENCE_UNIT, planeH / REFERENCE_UNIT);
+		map.offset.set(
+			-(PAD / REFERENCE_UNIT) % 1,
+			-((PAD + elH) / REFERENCE_UNIT) % 1
 		);
 	} else {
-		// "Stretch" mapping: constant repeat
 		map.repeat.set(s, s);
+		map.offset.set(0, 0);
 	}
 
-	// Apply same transform to other maps if they exist
-	if (material.normalMap) material.normalMap.repeat.copy(map.repeat);
-	if (material.roughnessMap) material.roughnessMap.repeat.copy(map.repeat);
-	if (material.metalnessMap) material.metalnessMap.repeat.copy(map.repeat);
+	for (const key of ['normalMap', 'roughnessMap', 'metalnessMap']) {
+		if (material[key]) {
+			material[key].repeat.copy(map.repeat);
+			material[key].offset.copy(map.offset);
+		}
+	}
 }
 
 
-// --- Lifecycle Methods ---
 
 async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 
@@ -188,28 +216,13 @@ async function build(defaultBuild, customRoot, threeManager, rebuildCustom) {
 		threeManager.setShadowReceiving(mesh, true);
 	}
 
-	// 7. Initial Transform & UVs
-	if (el.value?.$el) {
-		const rect = el.value.$el.getBoundingClientRect();
-
-		applyPerspectiveTransform(
-			rect,
-			customRoot.group,
-			threeManager.camera,
-			threeManager.config.cameraZ,
-			depth.value
-		);
-
-		updateUVs(rect.width, rect.height);
-	}
-
-	// 8. Add to Scene
+	// 7. Add to Scene
 	customRoot.empties.center.add(mesh);
 
-	// 9. Sync with current manager state (in case theme changed while we were loading)
+	// 8. Size, UVs, and sync with current manager state (in case theme changed while we were loading)
 	update(null, customRoot, threeManager);
 
-	threeManager.requestRender();
+	threeManager.requestRender(true);
 }
 
 
@@ -219,7 +232,7 @@ function update(defaultUpdate, customRoot, threeManager) {
 		return;
 
 	// Check for dynamic config from ThreeManager (via setBackground)
-	let currentDepth = depth.value;
+	currentDepth = depth.value;
 	let currentScale = uvScale.value;
 	let currentShadows = catchShadows.value;
 
@@ -238,17 +251,14 @@ function update(defaultUpdate, customRoot, threeManager) {
 		}
 	}
 
-	// 1. Get current dimensions
+	// 1. Get current dimensions (padded so edges never show)
 	const rect = el.value.$el.getBoundingClientRect();
+	planeW = rect.width + PAD * 2;
+	planeH = rect.height + PAD * 2;
 
-	// 2. Apply Transform (Size + Parallax Position)
-	applyPerspectiveTransform(
-		rect,
-		customRoot.group,
-		threeManager.camera,
-		threeManager.config.cameraZ,
-		currentDepth
-	);
+	// 2. Base transform (parallax renders adjust it per frame in viewUpdate)
+	mesh.scale.set(planeW, planeH, 1);
+	mesh.position.set(0, 0, -currentDepth);
 
 	// 3. Update UVs
 	updateUVs(rect.width, rect.height, currentScale);
@@ -284,8 +294,10 @@ function destroy(customRoot, threeManager) {
 	mesh = null;
 	material = null;
 	localMaterial = null;
+	planeW = 0;
+	planeH = 0;
 
-	threeManager.requestRender();
+	threeManager.requestRender(true);
 }
 
 
@@ -307,6 +319,7 @@ watch(depth, () => {
 		:buildFn="build"
 		:updateFn="update"
 		:clean="destroy"
+		:viewFn="viewUpdate"
 		:name="name"
 	>
 		<slot />

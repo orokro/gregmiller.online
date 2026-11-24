@@ -49,6 +49,13 @@ const props = defineProps({
 		default: null
 	},
 
+	// Optional function called right before every render, with the current view
+	// (eye position, perspective/flat) - for view-dependent tweaks like CoverBG's paper lock.
+	viewFn: {
+		type: Function,
+		default: null
+	},
+
 	// Optional, name
 	name: {
 		type: String,
@@ -105,6 +112,7 @@ async function register() {
 			buildFn: props.buildFn,
 			updateFn: props.updateFn,
 			cleanFn: props.clean,
+			viewFn: props.viewFn,
 			tickFn: (root, tm, time) => {
 				// Poll the ready state from the manager data
 				if (registeredId.value) {
@@ -193,6 +201,14 @@ watch(() => props.clean, (fn) => {
 	const data = threeManagerInstance.registeredElements.get(registeredId.value);
 	if (!data) return;
 	data.options.cleanFn = fn;
+});
+
+watch(() => props.viewFn, (fn) => {
+	if (!registeredId.value || !threeManagerInstance) return;
+	const data = threeManagerInstance.registeredElements.get(registeredId.value);
+	if (!data) return;
+	data.options.viewFn = fn;
+	threeManagerInstance.requestRender();
 });
 
 watch(() => props.tickFn, (fn) => {

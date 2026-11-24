@@ -18,34 +18,38 @@ const isInitialized = ref(false);
 export const useThree = () => {
 
 	/**
-	 * Initialize the manager (Call once from Layout).
-	 * 
-	 * @param {HTMLCanvasElement} canvas - The canvas to render on.
+	 * Initialize or tear down the manager (called from the default layout).
+	 *
+	 * The manager now creates its own in-document layer + canvas, so instead of a canvas
+	 * this takes the render options (or null to shut 3D down).
+	 *
+	 * @param {Object|null} options - ThreeManager options (parallax, dprCap, ...) or null for no 3D
+	 * @returns {ThreeManager|null}
 	 */
-	const initThree = (canvas) => {
-		
-		// 1. If we already have a manager, check if it's the same canvas
-		if (threeManager.value) {
-			
-			// If it's the same canvas, we're already good
-			if (threeManager.value.canvas === canvas) {
-				isInitialized.value = true;
-				return threeManager.value;
-			}
-			
-			// If it's a different canvas (or null), we MUST destroy the old manager
-			// because WebGL contexts cannot be transferred between canvases.
-			console.log('useThree: Canvas changed, destroying old ThreeManager');
-			threeManager.value.destroy();
-			threeManager.value = null;
-		}
+	const initThree = (options) => {
 
-		// 2. Create the new manager if a canvas is provided
-		if (canvas) {
-			console.log('useThree: Initializing ThreeManager with canvas');
-			threeManager.value = new ThreeManager(canvas);
-		} else {
-			console.warn('useThree: initThree called with null canvas');
+		// 1. Shut down: destroy any existing manager
+		if (!options) {
+
+			if (threeManager.value) {
+				console.log('useThree: 3D disabled, destroying ThreeManager');
+				threeManager.value.destroy();
+				threeManager.value = null;
+			}
+
+		// 2. Start up (once): reuse the running manager if there is one
+		} else if (!threeManager.value) {
+
+			console.log('useThree: Initializing ThreeManager', options);
+			const mgr = new ThreeManager(options);
+
+			// WebGL failed to start: behave like "no 3D"
+			if (!mgr.isOk) {
+				mgr.destroy();
+				threeManager.value = null;
+			} else {
+				threeManager.value = mgr;
+			}
 		}
 
 		// Mark as initialized so getThree() can resolve

@@ -130,41 +130,41 @@ export class GlassTheme {
 		manager.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		manager.renderer.toneMappingExposure = 1.0;
 
-		// Add a directional light as main shadow caster
+		// Add a directional light as main shadow caster.
+		// Its position is set per render region in prepareRegion() (the page is now rendered
+		// in document space, so "relative to the screen" means "relative to the region").
 		this.camLight = new THREE.DirectionalLight(0xffffff, 3.0);
-		this.camLight.position.set(-300, 500, 500);
 		this.camLight.castShadow = true;
 		manager.scene.add(this.camLight);
 		manager.scene.add(this.camLight.target);
-		this.camLight.target.position.set(-500, 400, 0);
+
+		// light offsets, relative to the center of the region being rendered
+		// (key light was at (-300,500,500) aiming at (-500,400,0) relative to the screen)
+		this.keyLightOffset = new THREE.Vector3(200, 100, 500);
+		this.rimOffsetL = new THREE.Vector3(-180, 10, 0);
+		this.rimOffsetR = new THREE.Vector3(280, 50, 0);
 
 		// Add some rim lights to make the glass pop more
 		this.rimLightL = new THREE.PointLight(0xffffff, 5000, 4000);
-		this.rimLightL.position.set(-180, 10, 0);
 		manager.scene.add(this.rimLightL);
 
 		this.rimLightR = new THREE.PointLight(0xffffff, 5000, 4000);
-		this.rimLightR.position.set(280, 50, 0);
 		manager.scene.add(this.rimLightR);
 
 		// --- SHADOW CONFIGURATION ---
-		const d = 2500;
-		this.camLight.shadow.camera.left = -d;
-		this.camLight.shadow.camera.right = d;
-		this.camLight.shadow.camera.top = d;
-		this.camLight.shadow.camera.bottom = -d;
-
+		// The frustum is fitted to each render region in prepareRegion(), so 2048 gives about
+		// the same texel density the old 4096 map had over a fixed ±2500 box.
 		this.camLight.shadow.camera.near = 1;
-		this.camLight.shadow.camera.far = 5000;
-
-		this.camLight.shadow.bias = 0; // Reset bias
-		this.camLight.shadow.mapSize.width = 2048 * 2;
-		this.camLight.shadow.mapSize.height = 2048 * 2;
+		this.camLight.shadow.camera.far = 3000;
+		this.camLight.shadow.bias = 0;
+		this.camLight.shadow.mapSize.width = 2048;
+		this.camLight.shadow.mapSize.height = 2048;
 
 		// Reduce shadow acne without needing a bias
 		this.camLight.shadow.normalBias = 0.05;
 		this.camLight.shadow.radius = 4;
 		this.camLight.shadow.needsUpdate = true;
+		this._shadowKey = null;
 
 		// Ensure renderer settings are correct
 		manager.renderer.shadowMap.enabled = true;
@@ -228,6 +228,7 @@ export class GlassTheme {
 
 		// clear and reset references
 		this.isReady = false;
+		this._shadowKey = null;
 		this.sliceTemplates = {};
 		this.sliceSizes = {};
 		this._didCopyMaps = false;
@@ -711,6 +712,65 @@ export class GlassTheme {
 		}
 
 		manager.requestRender();
+	}
+
+
+	/**
+	 * Called by the ThreeManager right before it renders a page region. Moves the light rig
+	 * so the region is lit like the old "screen" was, and fits the shadow frustum to it.
+	 *
+	 * The key light is directional, so its shadows only depend on its direction, not on where
+	 * the rig sits. The rig is snapped to a coarse grid (with slack in the frustum), and a new
+	 * shadow pass is only requested when the region leaves the current cell. While scrolling
+	 * that skips the shadow pass on most frames.
+	 *
+	 * @param {ThreeManager} manager - ThreeManager instance
+	 * @param {{x:number,y:number,w:number,h:number}} region - page-space region (px)
+	 * @returns {boolean} true if the shadow map must be re-rendered
+	 */
+	prepareRegion(manager, region) {
+
+		if (!this.camLight)
+			return true;
+
+		const cx = region.x + region.w / 2;
+		const cy = -(region.y + region.h / 2);
+
+		// rim lights follow the region every time (cheap, no shadows)
+		this.rimLightL.position.set(cx, cy, 0).add(this.rimOffsetL);
+		this.rimLightR.position.set(cx, cy, 0).add(this.rimOffsetR);
+
+		// key light rig snapped to a grid
+		const step = 600;
+		const ax = Math.round(cx / step) * step;
+		const ay = Math.round(cy / step) * step;
+		const half = Math.ceil((Math.max(region.w, region.h) / 2 + 300 + step) / 100) * 100;
+
+		const key = `${ax},${ay},${half}`;
+		if (key === this._shadowKey)
+			return false;
+		this._shadowKey = key;
+
+		this.camLight.target.position.set(ax, ay, 0);
+		this.camLight.position.set(ax, ay, 0).add(this.keyLightOffset);
+		this.camLight.target.updateMatrixWorld();
+
+		const sc = this.camLight.shadow.camera;
+		sc.left = -half;
+		sc.right = half;
+		sc.top = half;
+		sc.bottom = -half;
+		sc.updateProjectionMatrix();
+
+		return true;
+	}
+
+
+	/**
+	 * Forces the next render to redo the shadow map (geometry or settings changed).
+	 */
+	invalidateShadows() {
+		this._shadowKey = null;
 	}
 
 

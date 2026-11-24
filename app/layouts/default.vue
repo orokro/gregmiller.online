@@ -7,69 +7,166 @@
 <script setup>
 
 // vue
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useHead } from '#app';
 
 // app imports
 import { useThree } from '~/composables/useThree';
 import { useTheming } from '~/composables/useTheming';
 import { useDeviceContext } from '../composables/useDeviceContext';
+import { tierFromBenchmark, saveCachedTier, showRenderToast } from '~/utils/RenderCapability';
 
 // components
 import UILayer from '../components/UILayer.vue';
 import DebugConsole from '../components/DebugConsole.vue';
 import CoverBG from '../components/Custom3D/CoverBG.vue';
-import ContainerCustom3D from '../components/ContainerCustom3D.vue';
 
 // composables
-const { initThree } = useThree();
-const { themeCSSVars } = useTheming();
-const { has3DCapability, classObject } = useDeviceContext();
+const { initThree, threeManager } = useThree();
+const { themeCSSVars, currentTheme } = useTheming();
+const {
+	has3DCapability,
+	classObject,
+	isMobile,
+	renderTier,
+	renderTierForced,
+	setRenderTier,
+} = useDeviceContext();
 
 
-// refs
-const canvasRef = ref(null);
+// theme CSS variables and device classes on <html>.
+// One reactive useHead entry (calling useHead again on every change stacked entries, so
+// <html> could end up with both "no-3d" and "is-3d").
+const htmlClass = computed(() => Object.entries(classObject.value)
+	.filter(([_, value]) => value)
+	.map(([key]) => key)
+	.join(' '));
 
-// update theme CSS variables and device classes in the document head whenever they change
-watch([themeCSSVars, classObject], ([vars, classes]) => {
-	useHead({
-		htmlAttrs: {
-			style: vars,
-			class: Object.entries(classes)
-				.filter(([_, value]) => value)
-				.map(([key]) => key)
-				.join(' '),
-		},
-	});
-}, { immediate: true });
+useHead({
+	htmlAttrs: {
+		style: themeCSSVars,
+		class: htmlClass,
+	},
+});
+
+// on the client, also toggle the device classes directly: unhead doesn't remove classes
+// that came from the server render, so a stale "no-3d" would stay next to "is-3d"
+if (process.client) {
+	watch(classObject, (classes) => {
+		const list = document.documentElement.classList;
+		Object.entries(classes).forEach(([key, on]) => list.toggle(key, !!on));
+	}, { immediate: true });
+}
 
 
-// Start up the 3D system when the component mounts
+/**
+ * Render options for this device. Phones get lighter defaults (they have huge screens
+ * and shared GPU bandwidth); prefers-reduced-motion gets the flat (no parallax) mode.
+ *
+ * @returns {Object} ThreeManager options
+ */
+function renderOptions() {
+
+	const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const mobile = isMobile.value;
+
+	return {
+		parallax: renderTier.value !== 'flat' && !reducedMotion,
+		dprCap: mobile ? 1.5 : 2,
+		liveFpsCap: mobile ? 60 : 0,
+		halfResRefraction: mobile,
+	};
+}
+
+
+/**
+ * Hooks up the device tier logic to a fresh manager:
+ *   - first visit (no cached/forced tier): benchmark once the scene is built
+ *   - always (unless forced): the scroll watchdog can step the tier down
+ *
+ * @param {ThreeManager} mgr - the new manager
+ */
+function setupTiers(mgr) {
+
+	if (renderTierForced.value)
+		return;
+
+	// step down if scrolling turns out choppy in practice
+	mgr.onDowngrade = (tier, medianMs) => {
+
+		if (mgr !== threeManager.value)
+			return;
+
+		saveCachedTier(tier, medianMs, 'watchdog');
+		setRenderTier(tier, `watchdog: ${medianMs.toFixed(0)} ms per scroll frame`);
+
+		if (tier === 'flat') {
+			mgr.setParallax(false);
+			showRenderToast('Simplified 3D for smoother scrolling');
+		} else {
+			// has3DCapability flips to false; the watcher below tears 3D down
+			showRenderToast('Switched to the 2D theme for smoother scrolling');
+		}
+	};
+
+	// first visit on this device: measure it
+	if (renderTier.value === null) {
+
+		mgr.whenSceneReady().then(() => {
+
+			if (mgr !== threeManager.value || renderTier.value !== null)
+				return;
+
+			const ms = mgr.benchmark();
+			const tier = tierFromBenchmark(ms);
+
+			saveCachedTier(tier, ms, 'benchmark');
+			setRenderTier(tier, `benchmark ${ms.toFixed(1)} ms`);
+			console.info(`[3D] benchmark ${ms.toFixed(1)} ms -> ${tier}`);
+
+			if (tier === 'flat')
+				mgr.setParallax(false);
+			else if (tier === '2d')
+				showRenderToast('Using the 2D theme on this device');
+		});
+	}
+}
+
+
+// Start up / tear down the 3D system as capability changes
 onMounted(() => {
 
-	// Initialize the 3D System
-	// We watch both the capability and the canvas ref to ensure we catch the moment
-	// when both are ready.
-	watch([has3DCapability, canvasRef], ([has3D, canvas]) => {
-		if (has3D && canvas) {
-			initThree(canvas);
-		} else if (!has3D) {
-			// If 3D is disabled, we still call initThree(null) to resolve the getThree() promise
+	watch(has3DCapability, (has3D) => {
+
+		if (!has3D) {
+			// still call initThree(null) so getThree() resolves for waiting components
 			initThree(null);
+			return;
+		}
+
+		const hadManager = !!threeManager.value;
+		const mgr = initThree(renderOptions());
+
+		if (mgr && !hadManager) {
+
+			// (re)apply the current theme to the new manager
+			if (currentTheme.value)
+				mgr.setTheme(currentTheme.value.themeClass);
+
+			setupTiers(mgr);
 		}
 	}, { immediate: true });
 });
 
+
 // Clean up when the layout is unmounted
 onUnmounted(() => {
-	const { threeManager } = useThree();
 	if (threeManager.value) {
 		console.log('Layout: Unmounting, destroying ThreeManager');
 		threeManager.value.destroy();
 		threeManager.value = null;
 	}
 });
-
 
 
 </script>
@@ -86,8 +183,7 @@ onUnmounted(() => {
 		<!-- static fallback background for when 3D is disabled -->
 		<div v-if="!has3DCapability" class="static-bg-layer"></div>
 
-		<!-- three graphics rendered below everything else -->
-		<canvas v-show="has3DCapability" ref="canvasRef" class="webgl-canvas"></canvas>
+		<!-- 3D is rendered by ThreeManager into its own layer at the top of <body> -->
 
 		<!-- main content area -->
 		<div class="app-shell">
