@@ -2,17 +2,18 @@
 	poc/src/main.js
 	---------------
 
-	Boots the sliding-window 3D proof of concept on a snapshotted page.
+	Boots the document-anchored 3D proof of concept on a snapshotted page.
 
 	URL params:
-		?hud=0           hide the debug panel
-		?borders=1       outline tiles on load
-		?dpr=1.5         device pixel ratio cap
-		?underlay=0      disable the low-res safety net
-		?mouselight=1    enable the desktop cursor light
-		?parallax=0      flat mode (no live re-rendering while scrolling)
-		?eye=1600        eye distance in px (bigger = subtler parallax, live site = 1000)
-		?copy=bitmap     flat mode + hand frames to tiles via OffscreenCanvas/ImageBitmap
+		?hud=0            hide the debug panel
+		?parallax=0       flat mode (nothing renders while scrolling)
+		?eye=1600         eye distance in px (bigger = subtler parallax, live site = 1000)
+		?fps=30           cap parallax renders per second (0 = every frame)
+		?dpr=1.5          device pixel ratio cap
+		?refraction=half  render the glass refraction buffer at half res (full/half)
+		?borders=1        outline the strip / tiles
+		?underlay=0       disable the low-res safety net
+		?mouselight=1     enable the desktop cursor light
 */
 
 // app
@@ -43,6 +44,22 @@ function detectMobile() {
 
 
 /**
+ * Reads a numeric URL param, falling back when missing/invalid.
+ *
+ * @param {URLSearchParams} params - url params
+ * @param {string} name - param name
+ * @param {number} fallback - default
+ * @returns {number}
+ */
+function numParam(params, name, fallback) {
+	const v = params.get(name);
+	if (v === null || v === '' || isNaN(Number(v)))
+		return fallback;
+	return Number(v);
+}
+
+
+/**
  * Entry point.
  */
 async function main() {
@@ -52,17 +69,18 @@ async function main() {
 
 	document.documentElement.classList.add(isMobile ? 'is-mobile' : 'is-desktop');
 
-	// phones have 3x screens; 2x is plenty for a soft background
-	const dprCap = Number(params.get('dpr')) || 2;
+	// mobile defaults are lighter: phones have huge screens and shared GPU bandwidth
+	const refraction = params.get('refraction') || (isMobile ? 'half' : 'full');
 
 	const engine = new TileEngine({
-		dprCap,
+		parallax: params.get('parallax') !== '0',
+		cameraZ: numParam(params, 'eye', 1000),
+		liveFpsCap: numParam(params, 'fps', isMobile ? 60 : 0),
+		dprCap: numParam(params, 'dpr', isMobile ? 1.5 : 2),
+		halfResRefraction: refraction === 'half',
 		underlay: params.get('underlay') !== '0',
 		showBorders: params.get('borders') === '1',
 		mouseLight: params.get('mouselight') === '1' && !isMobile,
-		copyMode: params.get('copy') === 'bitmap' ? 'bitmap' : 'draw',
-		parallax: params.get('parallax') !== '0' && params.get('copy') !== 'bitmap',
-		cameraZ: Number(params.get('eye')) || 1000,
 	});
 	engine.layer.classList.toggle('show-borders', engine.opts.showBorders);
 

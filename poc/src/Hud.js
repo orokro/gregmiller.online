@@ -2,7 +2,7 @@
 	poc/src/Hud.js
 	--------------
 
-	Small debug panel for testing the tiled engine on real devices.
+	Small debug panel for testing the engine on real devices.
 	Tap the header to collapse/expand. Hide entirely with ?hud=0.
 */
 
@@ -25,40 +25,46 @@ export class Hud {
 		this.el = document.createElement('div');
 		this.el.id = 'poc-hud';
 		this.el.innerHTML = `
-			<div class="poc-hud-head"><span>3D tiles</span><span class="poc-hud-summary"></span><span class="poc-hud-toggle">–</span></div>
+			<div class="poc-hud-head"><span>3D</span><span class="poc-hud-summary"></span><span class="poc-hud-toggle">–</span></div>
 			<div class="poc-hud-body">
 				<div class="poc-hud-stats"></div>
 				<div>
 					<label><input type="checkbox" data-opt="parallax"> parallax</label>
 					<label><input type="checkbox" data-opt="paperDepth"> paper depth</label>
+				</div>
+				<div>
 					eye <select data-opt="cameraZ">
 						<option value="600">600 (strong)</option>
 						<option value="1000">1000 (live site)</option>
 						<option value="1600">1600</option>
 						<option value="2500">2500 (subtle)</option>
 					</select>
+					fps cap <select data-opt="liveFpsCap">
+						<option value="0">none</option>
+						<option value="60">60</option>
+						<option value="30">30</option>
+						<option value="20">20</option>
+					</select>
 				</div>
 				<div>
-					<label><input type="checkbox" data-opt="showBorders"> tile borders</label>
-					<label><input type="checkbox" data-opt="underlay"> underlay</label>
-					<label><input type="checkbox" data-opt="hideTiles"> underlay only</label>
+					<label><input type="checkbox" data-opt="transmission"> glass refraction</label>
+					<label><input type="checkbox" data-opt="halfRes"> half-res refraction</label>
 				</div>
 				<div>
-					<label><input type="checkbox" data-opt="transmission"> glass transmission</label>
 					<label><input type="checkbox" data-opt="rim"> rim lights</label>
 					<label><input type="checkbox" data-opt="mouseLight"> mouse light</label>
 				</div>
 				<div>
-					DPR cap <select data-opt="dprCap">
+					<label><input type="checkbox" data-opt="showBorders"> borders</label>
+					<label><input type="checkbox" data-opt="underlay"> underlay</label>
+					<label><input type="checkbox" data-opt="hideSharp"> underlay only</label>
+				</div>
+				<div>
+					DPR <select data-opt="dprCap">
 						<option value="1">1</option>
 						<option value="1.5">1.5</option>
 						<option value="2">2</option>
 						<option value="3">3</option>
-					</select>
-					tile <select data-opt="tileVh">
-						<option value="0.5">0.5 vh</option>
-						<option value="1">1 vh</option>
-						<option value="1.5">1.5 vh</option>
 					</select>
 					<button data-act="reset">reset stats</button>
 				</div>
@@ -81,7 +87,9 @@ export class Hud {
 
 		this._bindControls();
 		engine.onStats = () => this.paint();
-		this.paint(true);
+
+		// keep the fps readout honest when nothing is happening
+		setInterval(() => this.paint(true), 500);
 	}
 
 
@@ -93,77 +101,49 @@ export class Hud {
 		const e = this.engine;
 		const t = this.theme;
 		const q = (sel) => this.el.querySelector(sel);
+		const on = (sel, fn) => q(sel).addEventListener('change', (ev) => fn(ev.target));
 
 		// initial states
-		q('[data-opt="showBorders"]').checked = e.opts.showBorders;
-		q('[data-opt="underlay"]').checked = e.opts.underlay;
-		q('[data-opt="transmission"]').checked = t.transmissionEnabled;
-		q('[data-opt="rim"]').checked = t.rimLightsEnabled;
-		q('[data-opt="mouseLight"]').checked = e.opts.mouseLight;
-		q('[data-opt="dprCap"]').value = String(e.opts.dprCap);
-		q('[data-opt="tileVh"]').value = String(e.opts.tileVh);
-
 		q('[data-opt="parallax"]').checked = e.opts.parallax;
-		q('[data-opt="parallax"]').disabled = e.copyMode === 'bitmap';
 		q('[data-opt="paperDepth"]').checked = t.paperDepth;
 		q('[data-opt="cameraZ"]').value = String(e.opts.cameraZ);
+		q('[data-opt="liveFpsCap"]').value = String(e.opts.liveFpsCap);
+		q('[data-opt="transmission"]').checked = t.transmissionEnabled;
+		q('[data-opt="halfRes"]').checked = e.opts.halfResRefraction;
+		q('[data-opt="rim"]').checked = t.rimLightsEnabled;
+		q('[data-opt="mouseLight"]').checked = e.opts.mouseLight;
+		q('[data-opt="showBorders"]').checked = e.opts.showBorders;
+		q('[data-opt="underlay"]').checked = e.opts.underlay;
+		q('[data-opt="dprCap"]').value = String(e.opts.dprCap);
 
-		q('[data-opt="parallax"]').addEventListener('change', (ev) => {
-			e.opts.parallax = ev.target.checked;
+		on('[data-opt="parallax"]', (el) => e.setParallax(el.checked));
+		on('[data-opt="paperDepth"]', (el) => { t.paperDepth = el.checked; e.invalidateAll(); });
+		on('[data-opt="cameraZ"]', (el) => { e.opts.cameraZ = Number(el.value); e.invalidateAll(); });
+		on('[data-opt="liveFpsCap"]', (el) => { e.opts.liveFpsCap = Number(el.value); });
+		on('[data-opt="transmission"]', (el) => { t.setTransmission(el.checked); e.invalidateAll(); });
+		on('[data-opt="halfRes"]', (el) => e.setHalfResRefraction(el.checked));
+		on('[data-opt="rim"]', (el) => { t.rimLightsEnabled = el.checked; e.invalidateAll(); });
+		on('[data-opt="mouseLight"]', (el) => {
+			e.opts.mouseLight = el.checked;
+			t.enableMouseLight(el.checked);
 			e.invalidateAll();
 		});
-
-		q('[data-opt="paperDepth"]').addEventListener('change', (ev) => {
-			t.paperDepth = ev.target.checked;
-			e.invalidateAll();
+		on('[data-opt="showBorders"]', (el) => {
+			e.opts.showBorders = el.checked;
+			e.layer.classList.toggle('show-borders', el.checked);
 		});
-
-		q('[data-opt="cameraZ"]').addEventListener('change', (ev) => {
-			e.opts.cameraZ = Number(ev.target.value);
-			e.invalidateAll();
-		});
-
-		q('[data-opt="showBorders"]').addEventListener('change', (ev) => {
-			e.opts.showBorders = ev.target.checked;
-			e.layer.classList.toggle('show-borders', ev.target.checked);
-		});
-
-		q('[data-opt="underlay"]').addEventListener('change', (ev) => {
-			e.opts.underlay = ev.target.checked;
+		on('[data-opt="underlay"]', (el) => {
+			e.opts.underlay = el.checked;
 			e.underlayDirty = true;
 			e.kick();
 		});
 
-		// shows what a flick that outruns the tiles would look like
-		q('[data-opt="hideTiles"]').addEventListener('change', (ev) => {
-			e.layer.querySelectorAll('.poc-tile').forEach((c) => { c.style.opacity = ev.target.checked ? '0' : ''; });
+		// shows what a flick that outruns the sharp render looks like
+		on('[data-opt="hideSharp"]', (el) => {
+			e.layer.querySelectorAll('.poc-tile, .poc-live').forEach((c) => { c.style.opacity = el.checked ? '0' : ''; });
 		});
 
-		q('[data-opt="transmission"]').addEventListener('change', (ev) => {
-			t.setTransmission(ev.target.checked);
-			e.invalidateAll();
-		});
-
-		q('[data-opt="rim"]').addEventListener('change', (ev) => {
-			t.rimLightsEnabled = ev.target.checked;
-			e.invalidateAll();
-		});
-
-		q('[data-opt="mouseLight"]').addEventListener('change', (ev) => {
-			e.opts.mouseLight = ev.target.checked;
-			t.enableMouseLight(ev.target.checked);
-			e.invalidateAll();
-		});
-
-		q('[data-opt="dprCap"]').addEventListener('change', (ev) => {
-			e.opts.dprCap = Number(ev.target.value);
-			e.rebuildTiles();
-		});
-
-		q('[data-opt="tileVh"]').addEventListener('change', (ev) => {
-			e.opts.tileVh = Number(ev.target.value);
-			e.rebuildTiles();
-		});
+		on('[data-opt="dprCap"]', (el) => { e.opts.dprCap = Number(el.value); e.rebuildTiles(); });
 
 		q('[data-act="reset"]').addEventListener('click', () => {
 			Object.assign(e.stats, {
@@ -190,20 +170,25 @@ export class Hud {
 
 		const e = this.engine;
 		const s = e.stats;
-		const ready = [...e.tiles.values()].filter((t) => t.hasContent).length;
+
+		// live fps decays to 0 when idle
+		const recent = e._liveTimes.filter((t) => now - t < 1000).length;
 
 		this.summaryEl.textContent = e.opts.parallax
-			? `${s.avgLiveMs.toFixed(0)}ms/frame · outrun ${s.outrunFrames}`
+			? `${recent} fps · ${s.avgLiveMs.toFixed(0)}ms · outrun ${s.outrunFrames}`
 			: `${s.avgTileMs.toFixed(0)}ms/tile · outrun ${s.outrunFrames}`;
+
+		const ready = [...e.tiles.values()].filter((t) => t.hasContent).length;
 
 		this.statsEl.textContent = [
 			`doc ${e.docW}×${e.docH}  dpr ${e.dpr}`,
-			`tile ${e.docW}×${e.tileH} css  (${Math.round(e.docW * e.dpr)}×${Math.round(e.tileH * e.dpr)} px)`,
-			`tiles ${ready}/${e.tiles.size}  renders ${s.tileRenders}  reflows ${s.reflows}`,
-			`tile ms  last ${s.lastTileMs.toFixed(1)}  avg ${s.avgTileMs.toFixed(1)}  max ${s.maxTileMs.toFixed(1)}`,
-			`live ms  last ${s.lastLiveMs.toFixed(1)}  avg ${s.avgLiveMs.toFixed(1)}  max ${s.maxLiveMs.toFixed(1)}  (${s.liveRenders})`,
-			`underlay ${s.underlayMs.toFixed(1)} ms   outrun frames ${s.outrunFrames}`,
-			`gpu max rb ${e.maxRenderbuffer}  copy ${e.copyMode}`,
+			e.opts.parallax
+				? `strip ${e.wpx}×${e.livePx} px   live renders ${s.liveRenders}`
+				: `tile ${e.wpx}×${e.tilePx} px   tiles ${ready}/${e.tiles.size}  renders ${s.tileRenders}`,
+			`live  ${recent} fps  cpu ms last ${s.lastLiveMs.toFixed(1)} avg ${s.avgLiveMs.toFixed(1)} max ${s.maxLiveMs.toFixed(1)}`,
+			`tile  cpu ms last ${s.lastTileMs.toFixed(1)} avg ${s.avgTileMs.toFixed(1)} max ${s.maxTileMs.toFixed(1)}`,
+			`underlay ${s.underlayMs.toFixed(1)} ms  outrun ${s.outrunFrames}  reflows ${s.reflows}`,
+			`(cpu ms excludes GPU time on Safari)`,
 		].join('\n');
 	}
 

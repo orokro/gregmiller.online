@@ -673,22 +673,43 @@ export class GlassTheme {
 
 	/**
 	 * Called by the engine right before rendering a region. Moves the light rig so the
-	 * region is lit exactly like the old "screen", and fits the shadow frustum to it.
+	 * region is lit like the old "screen", and fits the shadow frustum to it.
+	 *
+	 * The key light is a directional light, so its shadows only depend on its direction,
+	 * not where the rig sits. We therefore snap the rig to a coarse grid with some slack
+	 * and only ask for a new shadow pass when the region leaves the current cell. While
+	 * scrolling that skips the shadow pass on most frames.
 	 *
 	 * @param {{x:number,y:number,w:number,h:number}} region - doc-space region
+	 * @returns {boolean} true if the shadow map must be re-rendered
 	 */
 	prepareRegion(region) {
 
 		const cx = region.x + region.w / 2;
 		const cy = -(region.y + region.h / 2);
 
-		// key light: same direction everywhere, so shadows are seamless across tiles
-		this.camLight.target.position.set(cx, cy, 0);
-		this.camLight.position.set(cx, cy, 0).add(this.keyLightOffset);
+		// rim lights follow the region every time (cheap uniforms, no shadows)
+		const rim = this.rimLightsEnabled ? 5000 : 0;
+		this.rimLightL.intensity = rim;
+		this.rimLightR.intensity = rim;
+		this.rimLightL.position.set(cx, cy, 0).add(this.rimOffsetL);
+		this.rimLightR.position.set(cx, cy, 0).add(this.rimOffsetR);
+
+		// key light rig snapped to a grid
+		const step = 600;
+		const ax = Math.round(cx / step) * step;
+		const ay = Math.round(cy / step) * step;
+		const half = Math.ceil((Math.max(region.w, region.h) / 2 + 300 + step) / 100) * 100;
+
+		const key = `${ax},${ay},${half}`;
+		if (key === this._shadowKey)
+			return false;
+		this._shadowKey = key;
+
+		this.camLight.target.position.set(ax, ay, 0);
+		this.camLight.position.set(ax, ay, 0).add(this.keyLightOffset);
 		this.camLight.target.updateMatrixWorld();
 
-		// fit the shadow camera to this region (+ margin for casters just outside it)
-		const half = Math.max(region.w, region.h) / 2 + 300;
 		const sc = this.camLight.shadow.camera;
 		sc.left = -half;
 		sc.right = half;
@@ -696,12 +717,15 @@ export class GlassTheme {
 		sc.bottom = -half;
 		sc.updateProjectionMatrix();
 
-		// rim lights follow the region (subtle; toggle in HUD to check for seams)
-		const rim = this.rimLightsEnabled ? 5000 : 0;
-		this.rimLightL.intensity = rim;
-		this.rimLightR.intensity = rim;
-		this.rimLightL.position.set(cx, cy, 0).add(this.rimOffsetL);
-		this.rimLightR.position.set(cx, cy, 0).add(this.rimOffsetR);
+		return true;
+	}
+
+
+	/**
+	 * Forces the next render to redo the shadow map (geometry or settings changed).
+	 */
+	invalidateShadows() {
+		this._shadowKey = null;
 	}
 
 

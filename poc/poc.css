@@ -39,7 +39,19 @@
 	z-index: 1;
 }
 
-/* debug: outline tiles */
+/* parallax mode: the WebGL canvas itself is a strip in the page */
+#poc-gl-layer .poc-live {
+	z-index: 2;
+	top: 0;
+}
+
+#poc-gl-layer.mode-parallax .poc-tile,
+#poc-gl-layer.mode-flat .poc-live {
+	display: none;
+}
+
+/* debug: outline tiles / strip */
+#poc-gl-layer.show-borders .poc-live,
 #poc-gl-layer.show-borders .poc-tile {
 	outline: 2px dashed rgba(255, 0, 128, 0.8);
 	outline-offset: -2px;
