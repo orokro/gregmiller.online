@@ -8,19 +8,33 @@
 		- World space == document space (1 unit = 1 CSS px, y flipped so +y is up).
 		- Geometry is built ONCE at document positions and only rebuilt on reflow.
 		- One offscreen WebGLRenderer draws horizontal "tiles" of the document.
-		- Each tile is copied into a plain 2D <canvas> that sits INSIDE the document
+		- Each tile is a plain 2D <canvas> that sits INSIDE the document
 		  (position: absolute, top = tileIndex * tileHeight).
 		- Because the tiles are ordinary document content, the browser's compositor
 		  scrolls / flings / pinch-zooms them together with the DOM.
-		  JS never has to "catch up" with scrolling, so there is nothing to desync.
-		- JS only decides which tiles should exist (current view + some lookahead in
-		  the scroll direction) and renders missing ones.
+		  JS never has to "catch up" with scrolling for things to stay aligned.
+		- JS decides which tiles should exist (current view + lookahead in the scroll
+		  direction) and renders missing ones.
 		- A very low-res render of the whole page sits underneath as a safety net
 		  in case a hard flick outruns the sharp tiles.
 
-	The camera is orthographic with a small oblique shear, which mimics the original
-	"viewed from slightly to the right" perspective offset, but is identical for every
-	tile, so tiles join seamlessly and never need re-rendering just because you scrolled.
+	Two camera modes:
+
+		PARALLAX (default)
+			An off-axis perspective camera whose eye sits over the current viewport
+			(+100px to the right, like the old perspectiveX). Its "window" is always a
+			rectangle on the z = 0 document plane, so anything AT z = 0 lands on exactly
+			the same pixels no matter where the eye is: the base of every frame stays
+			locked to the DOM. Only things above/below the plane (glass bevels, letters,
+			shadows) shift with the eye, which is the parallax.
+
+			While scrolling, the visible part of the page is re-rendered once per frame
+			with the new eye and copied into the tiles under it. If that render is late,
+			only the depth effect lags by a frame; alignment can't drift.
+
+		FLAT (parallax off)
+			Orthographic camera with a small oblique shear. Tiles never need
+			re-rendering on scroll, so it's the cheapest mode.
 */
 
 // three
@@ -39,20 +53,28 @@ export class TileEngine {
 
 		// options (most are tweakable from the HUD)
 		this.opts = Object.assign({
+			parallax: true,          // live perspective that follows the viewport
 			dprCap: 2,               // max device pixel ratio for tiles
 			tileVh: 1.0,             // tile height as a fraction of the viewport height
 			aheadVh: 1.25,           // how far ahead (in viewports) to pre-render in the scroll direction
 			behindVh: 0.35,          // how far behind to keep rendered
 			minPool: 5,              // minimum number of tile canvases kept around
-			frameBudgetMs: 10,       // after the first tile, stop rendering lookahead tiles past this
+			frameBudgetMs: 10,       // after the first render, stop rendering lookahead tiles past this
 			underlay: true,          // low-res whole page safety net
 			underlayScale: 0.125,    // underlay resolution relative to CSS px
 			showBorders: false,      // outline tiles (debug)
 			mouseLight: false,       // desktop cursor light
-			cameraZ: 1000,           // camera distance (only matters for near/far + shear anchor)
-			obliqueX: -0.1,          // screen-x shift per unit of height (matches old perspectiveX -100 @ 1000)
-			obliqueY: 0.0,           // screen-y shift per unit of height
+			cameraZ: 1000,           // eye distance from the page (bigger = flatter)
+			eyeOffsetX: 100,         // eye offset from viewport center (old perspectiveX = -100)
+			eyeOffsetY: 0,           // eye offset from viewport center (old perspectiveY)
+			obliqueX: -0.1,          // flat mode: screen-x shift per unit of height
+			obliqueY: 0.0,           // flat mode: screen-y shift per unit of height
+			copyMode: 'draw',        // 'draw' or 'bitmap' (bitmap only works with parallax off)
 		}, opts);
+
+		// partial (live) updates need 2D tiles
+		if (this.opts.parallax)
+			this.opts.copyMode = 'draw';
 
 		// the theme (set via setTheme)
 		this.theme = null;
@@ -63,12 +85,18 @@ export class TileEngine {
 		// layout state
 		this.docW = 0;
 		this.docH = 0;
-		this.tileH = 0;
 		this.dpr = 1;
+		this.tileWpx = 0;      // tile width in device px
+		this.tilePx = 0;       // tile height in device px
+		this.tileH = 0;        // tile height in css px (tilePx / dpr, may be fractional)
 
 		// tiles: index -> { index, canvas, ctx, hasContent, fresh, lastUsed }
 		this.tiles = new Map();
-		this.spareCanvases = [];
+
+		// eye (world coords) for parallax mode
+		this.eye = new THREE.Vector3();
+		this._liveEyeY = null;
+		this._liveDirty = true;
 
 		// scroll tracking
 		this._lastTop = window.scrollY;
@@ -87,6 +115,10 @@ export class TileEngine {
 			lastTileMs: 0,
 			maxTileMs: 0,
 			avgTileMs: 0,
+			liveRenders: 0,
+			lastLiveMs: 0,
+			avgLiveMs: 0,
+			maxLiveMs: 0,
 			underlayMs: 0,
 			outrunFrames: 0,
 			reflows: 0,
@@ -106,14 +138,13 @@ export class TileEngine {
 	   ========================================================================== */
 
 	/**
-	 * Builds the offscreen renderer, scene and camera.
+	 * Builds the offscreen renderer, scene and cameras.
 	 */
 	_initRenderer() {
 
 		// how finished frames get into the tile canvases:
-		//   'draw'   - normal canvas + 2D drawImage() copy (works everywhere)
-		//   'bitmap' - OffscreenCanvas + transferToImageBitmap() into a 'bitmaprenderer'
-		//              tile (zero-copy hand-off where the browser supports it)
+		//   'draw'   - normal canvas + 2D drawImage() copy (works everywhere, allows partial copies)
+		//   'bitmap' - OffscreenCanvas + transferToImageBitmap() into a 'bitmaprenderer' tile
 		if (this.opts.copyMode === 'bitmap' && typeof OffscreenCanvas === 'undefined')
 			this.opts.copyMode = 'draw';
 		this.copyMode = this.opts.copyMode === 'bitmap' ? 'bitmap' : 'draw';
@@ -134,7 +165,7 @@ export class TileEngine {
 		// we manage device pixels ourselves
 		this.renderer.setPixelRatio(1);
 
-		// shadows only update when we render a tile, not every frame
+		// shadows only update when we render, not every frame
 		this.renderer.shadowMap.enabled = true;
 		this.renderer.shadowMap.type = THREE.PCFShadowMap;
 		this.renderer.shadowMap.autoUpdate = false;
@@ -143,11 +174,14 @@ export class TileEngine {
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(0xf0f0f0);
 
-		// orthographic camera looking straight down -z at the document plane
-		this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, this.opts.cameraZ * 4);
+		// cameras (projection matrices are built by hand per render)
+		this.orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 4000);
+		this.perspCam = new THREE.PerspectiveCamera();
+		this.camera = this.perspCam;
 
-		// reusable shear matrix
+		// reusable temps
 		this._shear = new THREE.Matrix4();
+		this._size = new THREE.Vector2();
 
 		// remember GPU limits
 		const gl = this.renderer.getContext();
@@ -178,7 +212,7 @@ export class TileEngine {
 	 */
 	_bindEvents() {
 
-		// scroll only schedules bookkeeping; the compositor already moved the tiles
+		// scroll only schedules work; the compositor already moved the tiles
 		const kick = () => this.kick();
 		window.addEventListener('scroll', kick, { passive: true });
 		if (window.visualViewport) {
@@ -206,7 +240,15 @@ export class TileEngine {
 				return;
 
 			this.theme.setMouseLight(e.pageX, e.pageY);
-			this._invalidateForMouse();
+
+			if (this.opts.parallax) {
+				// the live pass repaints what's on screen
+				this._liveDirty = true;
+				this.kick();
+			} else {
+				this.tiles.forEach((t) => { t.fresh = false; });
+				this.kick();
+			}
 		}, { passive: true });
 	}
 
@@ -334,24 +376,30 @@ export class TileEngine {
 		this.layer.style.width = `${docW}px`;
 		this.layer.style.height = `${docH}px`;
 
-		// tile height is only re-derived when the width changes, so the iOS URL bar
-		// growing/shrinking mid-scroll never throws away every tile
-		if (widthChanged || !this.tileH) {
+		// tile size is only re-derived when the width changes, so the iOS URL bar
+		// growing/shrinking mid-scroll never throws away every tile.
+		// tiles are 15% taller than the viewport so the live pass covers the screen
+		// even when the URL bar collapses.
+		if (widthChanged || !this.tilePx) {
 
 			this.dpr = Math.min(window.devicePixelRatio || 1, this.opts.dprCap);
-			this.tileH = Math.max(300, Math.round(window.innerHeight * this.opts.tileVh));
+
+			const vh = Math.max(window.innerHeight, document.documentElement.clientHeight);
+			const tileCss = Math.max(300, vh * this.opts.tileVh * 1.15);
+
+			this.tileWpx = Math.round(docW * this.dpr);
+			this.tilePx = Math.round(tileCss * this.dpr);
+			this.tileH = this.tilePx / this.dpr;
 
 			// throw away all tile canvases, their sizes are wrong now
 			this.tiles.forEach((t) => t.canvas.remove());
 			this.tiles.clear();
-			this.spareCanvases.forEach((c) => c.remove());
-			this.spareCanvases = [];
 		}
 	}
 
 
 	/* ==========================================================================
-	   REFLOW
+	   REFLOW / INVALIDATION
 	   ========================================================================== */
 
 	/**
@@ -393,6 +441,7 @@ export class TileEngine {
 
 		this.tiles.forEach((t) => { t.fresh = false; });
 		this.underlayDirty = true;
+		this._liveDirty = true;
 		this.kick();
 	}
 
@@ -407,20 +456,20 @@ export class TileEngine {
 
 
 	/* ==========================================================================
-	   RENDERING
+	   CAMERAS
 	   ========================================================================== */
 
 	/**
-	 * Points the camera at a document-space region and applies the oblique shear.
+	 * Flat mode: orthographic camera over a document region, with oblique shear.
 	 *
 	 * @param {number} x - region left (doc px)
 	 * @param {number} y - region top (doc px)
 	 * @param {number} w - region width (doc px)
 	 * @param {number} h - region height (doc px)
 	 */
-	_aimCamera(x, y, w, h) {
+	_aimOrtho(x, y, w, h) {
 
-		const cam = this.camera;
+		const cam = this.orthoCam;
 		const D = this.opts.cameraZ;
 
 		cam.left = -w / 2;
@@ -445,8 +494,75 @@ export class TileEngine {
 		);
 		cam.projectionMatrix.multiply(this._shear);
 		cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+
+		this.camera = cam;
 	}
 
+
+	/**
+	 * Parallax mode: off-axis perspective. The eye is wherever this.eye says (over the
+	 * viewport); the frustum is cut so the region's rectangle ON THE z=0 PLANE fills the
+	 * output exactly. That's what keeps z=0 locked to the DOM regardless of eye position,
+	 * and why every tile/strip rendered from the same eye lines up seamlessly.
+	 *
+	 * @param {number} x - region left (doc px)
+	 * @param {number} y - region top (doc px)
+	 * @param {number} w - region width (doc px)
+	 * @param {number} h - region height (doc px)
+	 */
+	_aimPerspective(x, y, w, h) {
+
+		const cam = this.perspCam;
+		const D = this.opts.cameraZ;
+		const E = this.eye;
+
+		const near = 10;
+		const far = D * 4;
+		const k = near / D;
+
+		// region edges on the z=0 plane (world coords)
+		const x0 = x;
+		const x1 = x + w;
+		const yTop = -y;
+		const yBot = -(y + h);
+
+		cam.near = near;
+		cam.far = far;
+		cam.position.set(E.x, E.y, D);
+		cam.rotation.set(0, 0, 0);
+		cam.updateMatrixWorld();
+
+		cam.projectionMatrix.makePerspective(
+			(x0 - E.x) * k,
+			(x1 - E.x) * k,
+			(yTop - E.y) * k,
+			(yBot - E.y) * k,
+			near,
+			far
+		);
+		cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+
+		this.camera = cam;
+	}
+
+
+	/**
+	 * Puts the eye over the current viewport (+ the old perspective offsets).
+	 *
+	 * @param {{top:number, height:number}} view - visible region in doc px
+	 */
+	_updateEye(view) {
+		this.eye.set(
+			this.docW / 2 + this.opts.eyeOffsetX,
+			-(view.top + view.height / 2 + this.opts.eyeOffsetY),
+			this.opts.cameraZ
+		);
+	}
+
+
+	/* ==========================================================================
+	   RENDERING
+	   ========================================================================== */
 
 	/**
 	 * Renders a document region into the offscreen canvas at a given pixel size.
@@ -457,19 +573,25 @@ export class TileEngine {
 	 * @param {number} h - region height (doc px)
 	 * @param {number} pxW - output width in device pixels
 	 * @param {number} pxH - output height in device pixels
+	 * @param {boolean} perspective - use the parallax camera
 	 */
-	_renderRegion(x, y, w, h, pxW, pxH) {
+	_renderRegion(x, y, w, h, pxW, pxH, perspective) {
 
 		// only resize the drawing buffer when needed (it's an allocation)
-		const size = this.renderer.getSize(new THREE.Vector2());
-		if (size.x !== pxW || size.y !== pxH)
+		this.renderer.getSize(this._size);
+		if (this._size.x !== pxW || this._size.y !== pxH)
 			this.renderer.setSize(pxW, pxH, false);
 
-		this._aimCamera(x, y, w, h);
+		if (perspective)
+			this._aimPerspective(x, y, w, h);
+		else
+			this._aimOrtho(x, y, w, h);
 
-		// let the theme move its light rig / shadow frustum to this region
-		if (this.theme)
+		// let the theme move its light rig / shadow frustum / view-dependent bits
+		if (this.theme) {
 			this.theme.prepareRegion({ x, y, w, h });
+			this.theme.prepareView(perspective ? { eye: this.eye, D: this.opts.cameraZ } : null);
+		}
 
 		this.renderer.shadowMap.needsUpdate = true;
 		this.renderer.render(this.scene, this.camera);
@@ -515,10 +637,10 @@ export class TileEngine {
 
 		// otherwise make a fresh canvas
 		if (!canvas) {
-			canvas = this.spareCanvases.pop() || document.createElement('canvas');
+			canvas = document.createElement('canvas');
 			canvas.className = 'poc-tile';
-			canvas.width = Math.round(this.docW * this.dpr);
-			canvas.height = Math.round(this.tileH * this.dpr);
+			canvas.width = this.tileWpx;
+			canvas.height = this.tilePx;
 			canvas.style.width = `${this.docW}px`;
 			canvas.style.height = `${this.tileH}px`;
 			this.layer.appendChild(canvas);
@@ -529,12 +651,19 @@ export class TileEngine {
 		canvas.style.visibility = 'hidden';
 		canvas.dataset.index = index;
 
+		// reuse the context the canvas already has (a canvas can only ever have one type)
+		if (!canvas._pocCtx) {
+			canvas._pocCtx = this.copyMode === 'bitmap'
+				? canvas.getContext('bitmaprenderer')
+				: canvas.getContext('2d');
+		} else if (this.copyMode === 'draw') {
+			canvas._pocCtx.clearRect(0, 0, canvas.width, canvas.height);
+		}
+
 		tile = {
 			index,
 			canvas,
-			ctx: this.copyMode === 'bitmap'
-				? canvas.getContext('bitmaprenderer')
-				: canvas.getContext('2d', { alpha: false }),
+			ctx: canvas._pocCtx,
 			hasContent: false,
 			fresh: false,
 			lastUsed: 0,
@@ -546,7 +675,7 @@ export class TileEngine {
 
 
 	/**
-	 * Renders one tile and copies it into its canvas.
+	 * Renders one whole tile and copies it into its canvas.
 	 *
 	 * @param {Object} tile - tile to render
 	 */
@@ -554,17 +683,14 @@ export class TileEngine {
 
 		const t0 = performance.now();
 
-		const pxW = tile.canvas.width;
-		const pxH = tile.canvas.height;
-
-		this._renderRegion(0, tile.index * this.tileH, this.docW, this.tileH, pxW, pxH);
-		this._present(tile.ctx, pxW, pxH);
+		this._renderRegion(0, tile.index * this.tileH, this.docW, this.tileH, this.tileWpx, this.tilePx, this.opts.parallax);
+		this._present(tile.ctx, this.tileWpx, this.tilePx);
 
 		tile.hasContent = true;
 		tile.fresh = true;
 		tile.canvas.style.visibility = 'visible';
 
-		// stats (drawImage waits for the GPU, so this is close to real cost)
+		// stats (the copy waits for the GPU, so this is close to real cost)
 		const ms = performance.now() - t0;
 		const s = this.stats;
 		s.tileRenders++;
@@ -575,7 +701,67 @@ export class TileEngine {
 
 
 	/**
-	 * Renders the low-res whole-document underlay.
+	 * Parallax live pass: renders one tile-sized strip starting at the top of the
+	 * viewport from the current eye, then copies the overlapping slices into whichever
+	 * tiles sit under it.
+	 *
+	 * @param {{top:number, height:number}} view - visible region in doc px
+	 * @param {number} keepFirst - first tile index we're keeping
+	 * @param {number} keepLast - last tile index we're keeping
+	 * @param {number} now - rAF timestamp
+	 */
+	_renderLive(view, keepFirst, keepLast, now) {
+
+		const t0 = performance.now();
+
+		const dpr = this.dpr;
+		const Tpx = this.tilePx;
+		const Wpx = this.tileWpx;
+
+		// strip in device pixels, snapped to whole pixels so copies line up exactly
+		const topPx = Math.max(0, Math.round(view.top * dpr));
+		const botPx = topPx + Tpx;
+
+		this._renderRegion(0, topPx / dpr, this.docW, this.tileH, Wpx, Tpx, true);
+
+		const maxIdx = Math.max(0, Math.ceil(this.docH / this.tileH) - 1);
+		const iFirst = Math.min(maxIdx, Math.floor(topPx / Tpx));
+		const iLast = Math.min(maxIdx, Math.floor((botPx - 1) / Tpx));
+
+		for (let i = iFirst; i <= iLast; i++) {
+
+			const tile = this._acquireTile(i, Math.min(keepFirst, iFirst), Math.max(keepLast, iLast));
+			tile.lastUsed = now;
+
+			const tileTop = i * Tpx;
+			const a = Math.max(topPx, tileTop);
+			const b = Math.min(botPx, tileTop + Tpx);
+			if (b <= a)
+				continue;
+
+			tile.ctx.drawImage(this.glCanvas, 0, a - topPx, Wpx, b - a, 0, a - tileTop, Wpx, b - a);
+			tile.hasContent = true;
+			tile.canvas.style.visibility = 'visible';
+
+			// a strip that covered the whole tile counts as a full render
+			if (a === tileTop && b === tileTop + Tpx)
+				tile.fresh = true;
+		}
+
+		this._liveEyeY = this.eye.y;
+		this._liveDirty = false;
+
+		const ms = performance.now() - t0;
+		const s = this.stats;
+		s.liveRenders++;
+		s.lastLiveMs = ms;
+		s.maxLiveMs = Math.max(s.maxLiveMs, ms);
+		s.avgLiveMs = s.avgLiveMs ? s.avgLiveMs * 0.9 + ms * 0.1 : ms;
+	}
+
+
+	/**
+	 * Renders the low-res whole-document underlay (always flat; it's only a safety net).
 	 */
 	_renderUnderlay() {
 
@@ -594,7 +780,7 @@ export class TileEngine {
 		const pxW = Math.max(1, Math.round(this.docW * s));
 		const pxH = Math.max(1, Math.round(this.docH * s));
 
-		this._renderRegion(0, 0, this.docW, this.docH, pxW, pxH);
+		this._renderRegion(0, 0, this.docW, this.docH, pxW, pxH, false);
 
 		const c = this.underlayCanvas;
 		c.width = pxW;
@@ -605,6 +791,10 @@ export class TileEngine {
 		this._present(this.underlayCtx, pxW, pxH);
 
 		this.stats.underlayMs = performance.now() - t0;
+
+		// the underlay render moved the shared view-dependent state; make the next
+		// live pass repaint so nothing on screen is left with it
+		this._liveDirty = true;
 	}
 
 
@@ -622,16 +812,8 @@ export class TileEngine {
 			return;
 		}
 
+		ctx.clearRect(0, 0, pxW, pxH);
 		ctx.drawImage(this.glCanvas, 0, 0, pxW, pxH, 0, 0, pxW, pxH);
-	}
-
-
-	/**
-	 * Mouse light moved: visible tiles re-render now, others when they're next needed.
-	 */
-	_invalidateForMouse() {
-		this.tiles.forEach((t) => { t.fresh = false; });
-		this.kick();
 	}
 
 
@@ -649,7 +831,7 @@ export class TileEngine {
 
 
 	/**
-	 * Schedule a bookkeeping frame (cheap if nothing needs rendering).
+	 * Schedule a frame (cheap if nothing needs rendering).
 	 */
 	kick() {
 		if (!this._raf && this._started)
@@ -673,8 +855,9 @@ export class TileEngine {
 
 
 	/**
-	 * One scheduling frame: figure out which tiles should exist, render missing ones
-	 * (visible first, then lookahead in the scroll direction), within a time budget.
+	 * One scheduling frame:
+	 *   1. parallax mode: if the eye moved, re-render the visible strip (live pass)
+	 *   2. render missing lookahead tiles in the scroll direction, within a time budget
 	 *
 	 * @param {number} now - rAF timestamp
 	 */
@@ -708,7 +891,31 @@ export class TileEngine {
 		const visFirst = clamp(Math.floor(view.top / T));
 		const visLast = clamp(Math.floor((view.top + view.height - 1) / T));
 
-		// render order: visible tiles, then lookahead outward in the scroll direction
+		// outrun detection: a visible tile with no pixels at all at the start of this frame
+		let outrun = false;
+		for (let i = visFirst; i <= visLast; i++) {
+			const t = this.tiles.get(i);
+			if (!t || !t.hasContent)
+				outrun = true;
+		}
+		if (outrun && (this.stats.tileRenders + this.stats.liveRenders) > 0)
+			this.stats.outrunFrames++;
+
+		const t0 = performance.now();
+		let rendered = 0;
+
+		// 1. parallax live pass
+		if (this.opts.parallax) {
+
+			this._updateEye(view);
+
+			if (this._liveDirty || this._liveEyeY === null || Math.abs(this.eye.y - this._liveEyeY) > 0.25) {
+				this._renderLive(view, first, last, now);
+				rendered++;
+			}
+		}
+
+		// 2. lookahead: visible first (flat mode), then outward in the scroll direction
 		const order = [];
 		for (let i = visFirst; i <= visLast; i++)
 			order.push(i);
@@ -720,20 +927,7 @@ export class TileEngine {
 			for (let i = visLast + 1; i <= last; i++) order.push(i);
 		}
 
-		// outrun detection: a visible tile with no pixels at all at the start of this frame
-		let outrun = false;
-		for (let i = visFirst; i <= visLast; i++) {
-			const t = this.tiles.get(i);
-			if (!t || !t.hasContent)
-				outrun = true;
-		}
-		if (outrun && this.stats.tileRenders > 0)
-			this.stats.outrunFrames++;
-
-		// render within budget (visible tiles always render)
-		const t0 = performance.now();
 		let pending = false;
-		let rendered = 0;
 
 		for (const i of order) {
 
@@ -743,8 +937,10 @@ export class TileEngine {
 			if (tile.fresh)
 				continue;
 
+			// in flat mode visible tiles always render; everything else respects the budget
 			const visible = i >= visFirst && i <= visLast;
-			if (!visible && rendered > 0 && performance.now() - t0 > this.opts.frameBudgetMs) {
+			const mustRender = visible && !this.opts.parallax;
+			if (!mustRender && rendered > 0 && performance.now() - t0 > this.opts.frameBudgetMs) {
 				pending = true;
 				break;
 			}
@@ -752,6 +948,9 @@ export class TileEngine {
 			this._renderTile(tile);
 			rendered++;
 		}
+
+		// parallax: lookahead tiles were rendered from the current eye, so the strip
+		// on screen still matches; nothing else to do here
 
 		if (pending) {
 			this.kick();

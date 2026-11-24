@@ -46,6 +46,7 @@ export class GlassTheme {
 		// toggles (HUD)
 		this.rimLightsEnabled = true;
 		this.transmissionEnabled = true;
+		this.paperDepth = false;          // false = paper locked to the page like the live site
 
 		// light offsets copied from the live theme (relative to "screen center" there,
 		// relative to the tile center here)
@@ -529,7 +530,10 @@ export class GlassTheme {
 		mesh.castShadow = false;
 
 		item.empties.center.add(mesh);
-		item.themeData.cover = { mesh, mat };
+		item.themeData.cover = { mesh, mat, w: 0, h: 0, depth: 100 };
+
+		this.coverItems = this.coverItems || [];
+		this.coverItems.push(item);
 
 		this._updateCover(item);
 	}
@@ -553,6 +557,9 @@ export class GlassTheme {
 		const w = item.rect.width + pad * 2;
 		const h = item.rect.height + pad * 2;
 
+		cover.w = w;
+		cover.h = h;
+		cover.depth = depth;
 		cover.mesh.scale.set(w, h, 1);
 		cover.mesh.position.set(0, 0, -depth);
 
@@ -695,6 +702,47 @@ export class GlassTheme {
 		this.rimLightR.intensity = rim;
 		this.rimLightL.position.set(cx, cy, 0).add(this.rimOffsetL);
 		this.rimLightR.position.set(cx, cy, 0).add(this.rimOffsetR);
+	}
+
+
+	/**
+	 * Called by the engine right before rendering, with the eye for parallax renders
+	 * (or null for flat renders).
+	 *
+	 * The live site counter-scales the paper plane every frame (CoverBG applyPerspectiveTransform)
+	 * so the paper stays locked to the page while things above it get parallax. Same math here.
+	 * With paperDepth on, the paper is left where it is and gets real depth parallax instead.
+	 *
+	 * @param {{eye:THREE.Vector3, D:number}|null} view - eye info or null
+	 */
+	prepareView(view) {
+
+		if (!this.coverItems)
+			return;
+
+		for (const item of this.coverItems) {
+
+			const cover = item.themeData.cover;
+			if (!cover || !item.rect)
+				continue;
+
+			// flat render, or real paper depth: plain plane at -depth
+			if (!view || this.paperDepth) {
+				cover.mesh.scale.set(cover.w, cover.h, 1);
+				cover.mesh.position.set(0, 0, -cover.depth);
+				continue;
+			}
+
+			// lock the paper's projection onto its element rect from this eye
+			const s = (view.D + cover.depth) / view.D;
+			const g = item.group.position;
+			cover.mesh.scale.set(cover.w * s, cover.h * s, 1);
+			cover.mesh.position.set(
+				(g.x - view.eye.x) * (s - 1),
+				(g.y - view.eye.y) * (s - 1),
+				-cover.depth
+			);
+		}
 	}
 
 

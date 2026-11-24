@@ -10,7 +10,9 @@
 		?dpr=1.5         device pixel ratio cap
 		?underlay=0      disable the low-res safety net
 		?mouselight=1    enable the desktop cursor light
-		?copy=bitmap     hand frames to tiles via OffscreenCanvas/ImageBitmap instead of drawImage
+		?parallax=0      flat mode (no live re-rendering while scrolling)
+		?eye=1600        eye distance in px (bigger = subtler parallax, live site = 1000)
+		?copy=bitmap     flat mode + hand frames to tiles via OffscreenCanvas/ImageBitmap
 */
 
 // app
@@ -59,6 +61,8 @@ async function main() {
 		showBorders: params.get('borders') === '1',
 		mouseLight: params.get('mouselight') === '1' && !isMobile,
 		copyMode: params.get('copy') === 'bitmap' ? 'bitmap' : 'draw',
+		parallax: params.get('parallax') !== '0' && params.get('copy') !== 'bitmap',
+		cameraZ: Number(params.get('eye')) || 1000,
 	});
 	engine.layer.classList.toggle('show-borders', engine.opts.showBorders);
 

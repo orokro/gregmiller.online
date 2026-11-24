@@ -29,6 +29,16 @@ export class Hud {
 			<div class="poc-hud-body">
 				<div class="poc-hud-stats"></div>
 				<div>
+					<label><input type="checkbox" data-opt="parallax"> parallax</label>
+					<label><input type="checkbox" data-opt="paperDepth"> paper depth</label>
+					eye <select data-opt="cameraZ">
+						<option value="600">600 (strong)</option>
+						<option value="1000">1000 (live site)</option>
+						<option value="1600">1600</option>
+						<option value="2500">2500 (subtle)</option>
+					</select>
+				</div>
+				<div>
 					<label><input type="checkbox" data-opt="showBorders"> tile borders</label>
 					<label><input type="checkbox" data-opt="underlay"> underlay</label>
 					<label><input type="checkbox" data-opt="hideTiles"> underlay only</label>
@@ -93,6 +103,26 @@ export class Hud {
 		q('[data-opt="dprCap"]').value = String(e.opts.dprCap);
 		q('[data-opt="tileVh"]').value = String(e.opts.tileVh);
 
+		q('[data-opt="parallax"]').checked = e.opts.parallax;
+		q('[data-opt="parallax"]').disabled = e.copyMode === 'bitmap';
+		q('[data-opt="paperDepth"]').checked = t.paperDepth;
+		q('[data-opt="cameraZ"]').value = String(e.opts.cameraZ);
+
+		q('[data-opt="parallax"]').addEventListener('change', (ev) => {
+			e.opts.parallax = ev.target.checked;
+			e.invalidateAll();
+		});
+
+		q('[data-opt="paperDepth"]').addEventListener('change', (ev) => {
+			t.paperDepth = ev.target.checked;
+			e.invalidateAll();
+		});
+
+		q('[data-opt="cameraZ"]').addEventListener('change', (ev) => {
+			e.opts.cameraZ = Number(ev.target.value);
+			e.invalidateAll();
+		});
+
 		q('[data-opt="showBorders"]').addEventListener('change', (ev) => {
 			e.opts.showBorders = ev.target.checked;
 			e.layer.classList.toggle('show-borders', ev.target.checked);
@@ -136,7 +166,11 @@ export class Hud {
 		});
 
 		q('[data-act="reset"]').addEventListener('click', () => {
-			Object.assign(e.stats, { tileRenders: 0, maxTileMs: 0, avgTileMs: 0, outrunFrames: 0 });
+			Object.assign(e.stats, {
+				tileRenders: 0, maxTileMs: 0, avgTileMs: 0,
+				liveRenders: 0, maxLiveMs: 0, avgLiveMs: 0,
+				outrunFrames: 0,
+			});
 			this.paint(true);
 		});
 	}
@@ -158,13 +192,16 @@ export class Hud {
 		const s = e.stats;
 		const ready = [...e.tiles.values()].filter((t) => t.hasContent).length;
 
-		this.summaryEl.textContent = `${s.avgTileMs.toFixed(0)}ms/tile · outrun ${s.outrunFrames}`;
+		this.summaryEl.textContent = e.opts.parallax
+			? `${s.avgLiveMs.toFixed(0)}ms/frame · outrun ${s.outrunFrames}`
+			: `${s.avgTileMs.toFixed(0)}ms/tile · outrun ${s.outrunFrames}`;
 
 		this.statsEl.textContent = [
 			`doc ${e.docW}×${e.docH}  dpr ${e.dpr}`,
 			`tile ${e.docW}×${e.tileH} css  (${Math.round(e.docW * e.dpr)}×${Math.round(e.tileH * e.dpr)} px)`,
 			`tiles ${ready}/${e.tiles.size}  renders ${s.tileRenders}  reflows ${s.reflows}`,
 			`tile ms  last ${s.lastTileMs.toFixed(1)}  avg ${s.avgTileMs.toFixed(1)}  max ${s.maxTileMs.toFixed(1)}`,
+			`live ms  last ${s.lastLiveMs.toFixed(1)}  avg ${s.avgLiveMs.toFixed(1)}  max ${s.maxLiveMs.toFixed(1)}  (${s.liveRenders})`,
 			`underlay ${s.underlayMs.toFixed(1)} ms   outrun frames ${s.outrunFrames}`,
 			`gpu max rb ${e.maxRenderbuffer}  copy ${e.copyMode}`,
 		].join('\n');
