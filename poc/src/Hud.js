@@ -13,20 +13,30 @@
 export class Hud {
 
 	/**
-	 * @param {TileEngine} engine - engine instance
-	 * @param {GlassTheme} theme - theme instance
+	 * @param {TileEngine|null} engine - engine instance (null when on the 2D theme)
+	 * @param {GlassTheme|null} theme - theme instance
+	 * @param {Object} info - tier info from main.js { tier, reason, gpu, benchMs, forced }
 	 */
-	constructor(engine, theme) {
+	constructor(engine, theme, info) {
 
 		this.engine = engine;
 		this.theme = theme;
+		this.info = info;
 		this._lastPaint = 0;
+
+		// 2D theme: just say why, and offer ways to try 3D
+		if (!engine) {
+			this._build2DPanel();
+			return;
+		}
 
 		this.el = document.createElement('div');
 		this.el.id = 'poc-hud';
 		this.el.innerHTML = `
 			<div class="poc-hud-head"><span>3D</span><span class="poc-hud-summary"></span><span class="poc-hud-toggle">–</span></div>
 			<div class="poc-hud-body">
+				<div class="poc-hud-tier"></div>
+				${Hud.tierButtons()}
 				<div class="poc-hud-stats"></div>
 				<div>
 					<label><input type="checkbox" data-opt="parallax"> parallax</label>
@@ -74,6 +84,8 @@ export class Hud {
 
 		this.statsEl = this.el.querySelector('.poc-hud-stats');
 		this.summaryEl = this.el.querySelector('.poc-hud-summary');
+		this.tierEl = this.el.querySelector('.poc-hud-tier');
+		Hud.bindTierButtons(this.el);
 
 		// collapse (starts collapsed on phones so it doesn't cover the page)
 		const setCollapsed = (on) => {
@@ -90,6 +102,94 @@ export class Hud {
 
 		// keep the fps readout honest when nothing is happening
 		setInterval(() => this.paint(true), 500);
+	}
+
+
+	/**
+	 * Buttons to re-test or force a tier (reload with url params).
+	 *
+	 * @returns {string} html
+	 */
+	static tierButtons() {
+		return `<div>
+			<button data-tier="rebench">re-test</button>
+			<button data-tier="parallax">force parallax</button>
+			<button data-tier="flat">force flat</button>
+			<button data-tier="2d">force 2D</button>
+		</div>`;
+	}
+
+
+	/**
+	 * Wires up the tier buttons.
+	 *
+	 * @param {HTMLElement} root - panel element
+	 */
+	static bindTierButtons(root) {
+
+		root.querySelectorAll('[data-tier]').forEach((btn) => {
+			btn.addEventListener('click', (ev) => {
+
+				ev.stopPropagation();
+				const url = new URL(location.href);
+				url.searchParams.delete('tier');
+				url.searchParams.delete('rebench');
+				url.searchParams.delete('parallax');
+
+				if (btn.dataset.tier === 'rebench')
+					url.searchParams.set('rebench', '1');
+				else
+					url.searchParams.set('tier', btn.dataset.tier);
+
+				location.href = url.toString();
+			});
+		});
+	}
+
+
+	/**
+	 * Tier summary text.
+	 *
+	 * @returns {string}
+	 */
+	_tierText() {
+		const i = this.info || {};
+		const ms = Number.isFinite(i.benchMs) && !String(i.reason).includes('ms') ? `  bench ${i.benchMs.toFixed(1)} ms` : '';
+		return `tier ${i.tier}  (${i.reason})${ms}\ngpu ${i.gpu}`;
+	}
+
+
+	/**
+	 * Minimal panel when the page fell back to the 2D theme.
+	 */
+	_build2DPanel() {
+
+		this.el = document.createElement('div');
+		this.el.id = 'poc-hud';
+		this.el.innerHTML = `
+			<div class="poc-hud-head"><span>2D theme</span><span class="poc-hud-toggle">–</span></div>
+			<div class="poc-hud-body">
+				<div class="poc-hud-tier"></div>
+				${Hud.tierButtons()}
+			</div>
+		`;
+		document.body.appendChild(this.el);
+
+		this.el.querySelector('.poc-hud-tier').textContent = this._tierText();
+		Hud.bindTierButtons(this.el);
+
+		this.el.querySelector('.poc-hud-head').addEventListener('click', () => {
+			this.el.classList.toggle('collapsed');
+		});
+	}
+
+
+	/**
+	 * Re-reads engine/theme state into the controls (after an automatic downgrade).
+	 */
+	syncControls() {
+		this.el.querySelector('[data-opt="parallax"]').checked = this.engine.opts.parallax;
+		this.paint(true);
 	}
 
 
@@ -171,6 +271,8 @@ export class Hud {
 		const e = this.engine;
 		const s = e.stats;
 
+		this.tierEl.textContent = this._tierText();
+
 		// live fps decays to 0 when idle
 		const recent = e._liveTimes.filter((t) => now - t < 1000).length;
 
@@ -188,6 +290,7 @@ export class Hud {
 			`live  ${recent} fps  cpu ms last ${s.lastLiveMs.toFixed(1)} avg ${s.avgLiveMs.toFixed(1)} max ${s.maxLiveMs.toFixed(1)}`,
 			`tile  cpu ms last ${s.lastTileMs.toFixed(1)} avg ${s.avgTileMs.toFixed(1)} max ${s.maxTileMs.toFixed(1)}`,
 			`underlay ${s.underlayMs.toFixed(1)} ms  outrun ${s.outrunFrames}  reflows ${s.reflows}`,
+			`watchdog median ${e.watchdogMedianMs.toFixed(1)} ms (${e._scrollIntervals.length} samples)`,
 			`(cpu ms excludes GPU time on Safari)`,
 		].join('\n');
 	}

@@ -45,6 +45,28 @@ Tick "paper depth" to give it real parallax instead.
 
 Mobile defaults are lighter: DPR 1.5, half-res glass refraction, and a 60 fps cap on parallax renders.
 
+## Device tiers (auto 2D fallback)
+
+Each device gets one of three tiers: **parallax**, **flat** (3D rendered once, nothing renders
+while scrolling) or **2d** (the existing non-3D theme). See `src/Capability.js`.
+
+1. **Hardware check** runs instantly, before any 3D asset downloads. It sends a device to 2D for:
+   no WebGL, max texture < 4096, Save-Data on, ≤ 2 CPU cores or ≤ 2 GB memory (Chrome-only hints),
+   or a known-weak or software GPU by name (Intel HD 2000–6000, older Mali/Adreno/PowerVR, SwiftShader…).
+   Safari hides the GPU name, so on Safari the benchmark does the deciding.
+2. **Benchmark** runs on the first visit, after the scene is built. It times 5 renders of the
+   on-screen strip, with a 1-pixel `readPixels` so GPU time is counted (Safari's CPU timers don't
+   include it). A median ≤ 14 ms gets parallax, ≤ 40 ms gets flat, and anything slower gets 2D.
+   The result is cached in `localStorage` per GPU + screen + DPR for 30 days.
+3. **Watchdog**: while scrolling, if the median frame interval over about 2 seconds of scrolling is
+   over 34 ms (in parallax mode) or 45 ms (in flat mode), it steps down one tier and remembers that.
+
+`?tier=parallax|flat|2d` forces a tier (no checks, no watchdog). `?rebench=1` forgets the cached
+result. The debug panel shows the tier and the reason, and has re-test / force buttons.
+
+On the real site this would replace the plain "WebGL exists" probe behind
+`useDeviceContext().has3DCapability`, plus a new "parallax allowed" flag.
+
 ## Debug panel (bottom-left)
 
 Tap its header to expand or collapse it. It starts collapsed on phones. The header shows live
@@ -65,6 +87,8 @@ render fps, CPU ms per render, and the outrun count.
 
 | Param | Effect |
 | --- | --- |
+| `?tier=parallax` / `flat` / `2d` | Force a tier |
+| `?rebench=1` | Forget the cached tier and test again |
 | `?parallax=0` | Flat mode |
 | `?eye=1600` | Eye distance (parallax strength) |
 | `?fps=30` | Parallax render cap (`0` = every frame) |

@@ -5,10 +5,39 @@
 	Overrides layered on top of the snapshotted site css for the POC.
 */
 
-/* the old fixed canvas + 2D fallback background are replaced by the tile layer */
-.webgl-canvas,
-.static-bg-layer {
+/* the old fixed canvas is never used */
+.webgl-canvas {
 	display: none !important;
+}
+
+/* the 2D graph paper background only shows when we fall back to the 2D theme */
+html:not(.poc-2d) .static-bg-layer {
+	display: none !important;
+}
+
+html.poc-2d #poc-gl-layer {
+	display: none !important;
+}
+
+/* status message */
+.poc-toast {
+	position: fixed;
+	top: 12px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100001;
+	font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	color: #e8f6f6;
+	background: rgba(10, 20, 24, 0.88);
+	border: 1px solid #00ABAE;
+	border-radius: 8px;
+	padding: 6px 12px;
+	transition: opacity 1s ease;
+	pointer-events: none;
+}
+
+.poc-toast.gone {
+	opacity: 0;
 }
 
 /* the 3D layer lives IN the document, so the browser scrolls it with the content */
@@ -98,6 +127,12 @@ html.poc-text-ready .dynamic-text-container .fallback-image-layer {
 #poc-hud .poc-hud-summary {
 	font-weight: normal;
 	color: #e8f6f6;
+}
+
+#poc-hud .poc-hud-tier {
+	margin: 4px 0 2px;
+	white-space: pre-wrap;
+	color: #b0ec6b;
 }
 
 #poc-hud .poc-hud-stats {

@@ -9,7 +9,8 @@
 		- downloads the server-rendered HTML
 		- downloads the page's CSS bundles into poc/snapshot/_nuxt/
 		- strips every Nuxt <script> (no hydration, the page stays static)
-		- removes the "no-3d" class everywhere, so the 3D-mode layout is used
+		- renames the "no-3d" class to "poc-no3d-slot" everywhere, so the 3D layout is used
+		  but the 2D fallback can put it back
 		- tags the 3D text header with the word it should spell
 		- injects the POC's own CSS + engine script
 
@@ -58,22 +59,6 @@ async function fetchText(url) {
 
 
 /**
- * Removes a single class token from every class="..." attribute in an HTML string.
- *
- * @param {string} html - the html to scrub
- * @param {string} token - the class name to remove
- * @returns {string} html without that class
- */
-function removeClassToken(html, token) {
-
-	return html.replace(/class="([^"]*)"/g, (match, list) => {
-		const kept = list.split(/\s+/).filter((c) => c && c !== token);
-		return `class="${kept.join(' ')}"`;
-	});
-}
-
-
-/**
  * Turns the live SSR html into a static POC page.
  *
  * @param {string} html - raw html from the live site
@@ -88,8 +73,11 @@ function transformPage(html, page) {
 	// drop module preloads / prefetches (they'd pull the Nuxt app back in)
 	html = html.replace(/<link[^>]*rel="(modulepreload|prefetch|preload)"[^>]*>/gi, '');
 
-	// 3D mode everywhere
-	html = removeClassToken(html, 'no-3d');
+	// 3D mode everywhere, but remember where "no-3d" was so the 2D fallback can restore it
+	html = html.replace(/class="([^"]*)"/g, (match, list) => {
+		const classes = list.split(/\s+/).filter(Boolean).map((c) => (c === 'no-3d' ? 'poc-no3d-slot' : c));
+		return `class="${classes.join(' ')}"`;
+	});
 
 	// the <html> element gets its device class from the POC at runtime
 	html = html.replace(/(<html[^>]*?)\sclass="[^"]*"/i, '$1');

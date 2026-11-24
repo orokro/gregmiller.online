@@ -133,6 +133,13 @@ export class TileEngine {
 		// optional HUD hook
 		this.onStats = null;
 
+		// watchdog: frame intervals while actively scrolling
+		this.onDowngrade = null;     // (tier, medianMs) => void
+		this._scrollIntervals = [];
+		this._lastFrameNow = 0;
+		this._lastScrollFrameNow = 0;
+		this.watchdogMedianMs = 0;
+
 		this._initRenderer();
 		this._initLayer();
 		this._bindEvents();
@@ -859,6 +866,9 @@ export class TileEngine {
 
 		this._raf = 0;
 
+		if (!this._started)
+			return;
+
 		const view = this._getView();
 
 		// scroll direction (sticky, so a pause doesn't flip lookahead)
@@ -866,6 +876,8 @@ export class TileEngine {
 		this._lastTop = view.top;
 		if (Math.abs(dy) > 0.5)
 			this._dir = Math.sign(dy);
+
+		this._watchdog(now, dy);
 
 		let pending = false;
 
@@ -890,6 +902,117 @@ export class TileEngine {
 
 		if (this.onStats)
 			this.onStats(this);
+	}
+
+
+	/**
+	 * Watchdog: while the page is actively scrolling, frames should come every 8-17ms.
+	 * If the median interval over a good sample is way above that, this device can't keep
+	 * up with the current tier, so ask to step down (parallax -> flat -> 2d).
+	 *
+	 * Only consecutive scroll frames count (gaps between wheel notches / touches are ignored).
+	 *
+	 * @param {number} now - rAF timestamp
+	 * @param {number} dy - scroll delta this frame
+	 */
+	_watchdog(now, dy) {
+
+		const prev = this._lastScrollFrameNow;
+
+		if (Math.abs(dy) < 0.5) {
+			this._lastScrollFrameNow = 0;
+			return;
+		}
+
+		this._lastScrollFrameNow = now;
+
+		// only intervals between back-to-back scrolling frames
+		if (!prev)
+			return;
+		const interval = now - prev;
+		if (interval > 150)
+			return;
+
+		const samples = this._scrollIntervals;
+		samples.push(interval);
+		if (samples.length > 180)
+			samples.shift();
+
+		if (samples.length < 120 || !this.onDowngrade)
+			return;
+
+		const sorted = [...samples].sort((a, b) => a - b);
+		const median = sorted[Math.floor(sorted.length / 2)];
+		this.watchdogMedianMs = median;
+
+		// under ~30fps while scrolling in parallax, or ~22fps in flat
+		const limit = this.opts.parallax ? 34 : 45;
+		if (median > limit) {
+			this._scrollIntervals = [];
+			this.onDowngrade(this.opts.parallax ? 'flat' : '2d', median);
+		}
+	}
+
+
+	/**
+	 * Benchmark: renders the on-screen strip a few times, forcing the GPU to finish each
+	 * one with a 1px readPixels so GPU time is included. First render is a warm-up
+	 * (shader compiles, texture uploads) and isn't counted.
+	 *
+	 * @param {number} runs - timed renders
+	 * @returns {number} median ms per render
+	 */
+	benchmark(runs = 5) {
+
+		const gl = this.renderer.getContext();
+		const px = new Uint8Array(4);
+		const view = this._getView();
+		this._updateEye(view);
+
+		const once = () => {
+			const t0 = performance.now();
+			this._renderLive(view);
+			gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+			return performance.now() - t0;
+		};
+
+		// warm-up (compiles shaders, uploads textures, first shadow pass)
+		once();
+
+		const times = [];
+		for (let i = 0; i < runs; i++) {
+			this._liveDirty = true;
+			times.push(once());
+		}
+
+		times.sort((a, b) => a - b);
+		this.benchmarkMs = times[Math.floor(times.length / 2)];
+
+		// don't let the benchmark pollute the HUD stats
+		Object.assign(this.stats, { liveRenders: 0, avgLiveMs: 0, maxLiveMs: 0, lastLiveMs: 0 });
+		this._liveTimes = [];
+
+		return this.benchmarkMs;
+	}
+
+
+	/**
+	 * Tears the 3D layer down completely (used when falling back to the 2D theme).
+	 */
+	destroy() {
+
+		this._started = false;
+		if (this._raf)
+			cancelAnimationFrame(this._raf);
+		this._raf = 0;
+
+		clearTimeout(this._underlayTimer);
+		clearTimeout(this._reflowTimer);
+		this.resizeObserver.disconnect();
+
+		this.renderer.dispose();
+		this.renderer.forceContextLoss();
+		this.layer.remove();
 	}
 
 
